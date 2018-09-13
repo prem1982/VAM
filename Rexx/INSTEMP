@@ -1,0 +1,335 @@
+/******************************* REXX *********************************/        
+/* REXX EXEC INSTEMP                                                  */        
+/*                                                                    */        
+/*                                                                    */        
+/******************************* REXX *********************************/        
+                                                                                
+ARG DB2SYS DSNAME .                                                             
+                                                                                
+ TRACE o                                                                        
+                                                                                
+ DB2SYS = STRIP(DB2SYS)                                                         
+ CYCLE  = STRIP(CYCLE)                                                          
+ BILL_DATE = '9999-12-31'                                                       
+ SYSTEM = '00'                                                                  
+ more ='Y'                                                                      
+ recs_to_commit = 0                                                             
+                                                                                
+ SELECT                                                                         
+   WHEN DB2SYS  = 'D001'   THEN                                                 
+        TABPREF = 'BMGVZT'                                                      
+   WHEN DB2SYS  = 'D009'   THEN                                                 
+        TABPREF = 'BMGVZP'                                                      
+   WHEN DB2SYS  = 'D38X'   THEN                                                 
+        TABPREF = 'BMGVZS'                                                      
+   OTHERWISE                                                                    
+        TABPREF = 'BMGVZP'                                                      
+ END                                                                            
+ SIGNAL OFF ERROR /* TURN ERROR-TRAPPING OFF */                                 
+ "SUBCOM DSNREXX"                                                               
+ IF RC THEN                                                                     
+    S_RC = RXSUBCOM('ADD','DSNREXX','DSNREXX')                                  
+ ADDRESS DSNREXX "CONNECT "DB2SYS                                               
+ IF SQLCODE ^= 0                                                                
+ THEN DO                                                                        
+      SAY ' ERROR CONNECTING TO ' DB2SYS                                        
+      CALL SQLCA                                                                
+      SAY '  END EXECUTION'                                                     
+      EXIT 12                                                                   
+      END                                                                       
+                                                                                
+ ADDRESS TSO "LISTCAT ENT('"DSNAME"')"                                          
+ IF RC = 0                                                                      
+ THEN DO                                                                        
+      ADDRESS TSO "ALLOC F(DFWFILE) DA('"DSNAME"') SHR"                         
+      END                                                                       
+                                                                                
+ /* READ THE DATASET */                                                         
+ "EXECIO 1 DISKR DFWFILE (STEM DFWFILE.)"                                       
+ IF RC ^= 0                                                                     
+ THEN DO                                                                        
+      if rc = 2                                                                 
+      then do                                                                   
+           say empty input file                                                 
+           exit 0                                                               
+           end                                                                  
+      SAY ERROR READING DFWFILE FILE                                            
+      EXIT 12                                                                   
+      END                                                                       
+                                                                                
+ /* first rec was a header */                                                   
+ "EXECIO 1 DISKR DFWFILE (STEM DFWFILE.)"                                       
+ IF RC ^= 0                                                                     
+ THEN DO                                                                        
+      if rc = 2                                                                 
+      then do                                                                   
+           say empty input file                                                 
+           exit 0                                                               
+           end                                                                  
+      SAY ERROR READING DFWFILE FILE                                            
+      EXIT 12                                                                   
+      END                                                                       
+                                                                                
+                                                                                
+ do while (more = 'Y')                                                          
+                                                                                
+   wk_rec = strip(DFWFILE.1)                                                    
+                                                                                
+   call parse_fields                                                            
+                                                                                
+   call insert_dfw_temp                                                         
+                                                                                
+   recs_to_commit = recs_to_commit + 1                                          
+   if recs_to_commit > 1000                                                     
+   then do                                                                      
+        call commit_work                                                        
+        recs_to_commit = 0                                                      
+        end                                                                     
+                                                                                
+   "EXECIO 1 DISKR DFWFILE (STEM DFWFILE.)"                                     
+   IF RC ^= 0                                                                   
+   THEN more = 'N'                                                              
+                                                                                
+ end                                                                            
+                                                                                
+ call commit_work                                                               
+                                                                                
+                                                                                
+ ADDRESS TSO "FREE FI(DFWFILE)"                                                 
+                                                                                
+ ADDRESS DSNREXX "DISCONNECT"                                                   
+ IF SQLCODE ^= 0                                                                
+ THEN DO                                                                        
+      SAY 'ERROR WHILE DISCONNECTING'                                           
+      CALL SQLCA                                                                
+      SAY '  END EXECUTION'                                                     
+      EXIT 12                                                                   
+      END                                                                       
+                                                                                
+ RETURN                                                                         
+ /*********************************************************************/        
+ /* NAME:     parse                                                   */        
+ /*                                                                   */        
+ /*********************************************************************/        
+ parse_fields:                                                                  
+                                                                                
+ more_fields = 'Y'                                                              
+ SAN           = ''                                                             
+ BAN = ''                                                                       
+ ORIG_SYSTEM_ID = ''                                                            
+ LINE = ''                                                                      
+ CIRCUIT = ''                                                                   
+ ACCT_NAME = ''                                                                 
+ NAME_ADDR_1 = ''                                                               
+ NAME_ADDR_2 = ''                                                               
+ NAME_ADDR_3 = ''                                                               
+ NAME_ADDR_4 = ''                                                               
+ CHGS  = 0.00                                                                   
+ VSSI_ACCT  = ''                                                                
+ VSSI_CHGS = 0.00                                                               
+                                                                                
+                                                                                
+ field_number = 0                                                               
+                                                                                
+ do while (more_fields='Y')                                                     
+                                                                                
+   field_number = field_number  + 1                                             
+   /* is the next field delimited with quotes ? */                              
+   wk_rec = strip(wk_rec)                                                       
+                                                                                
+   if substr(wk_rec,1,1) = '"'                                                  
+   then do                                                                      
+        start_field = 1                                                         
+        end_field   = index(substr(wk_rec,2),'"') + 1                           
+        this_field  = substr(wk_rec,start_field,end_field)                      
+   /*   say start_field end_field this_field  */                                
+        /* now drop the quotes */                                               
+        if this_field = '""'                                                    
+        then this_field = ''                                                    
+        else this_field = substr(this_field,2,length(this_field)-2)             
+   /*   say 'this_field = ' this_field  */                                      
+        end                                                                     
+   else do                                                                      
+        start_field = 1                                                         
+        if index(wk_rec,',') > 0                                                
+        then end_field   = index(wk_rec,',')-1;                                 
+        else end_field   = length(word(wk_rec,1)) + 1                           
+        this_field = substr(wk_rec,start_field,end_field)                       
+   /*   say 'this_field = ' this_field  */                                      
+        end                                                                     
+/* say 'remove the field at the front'    */                                    
+   /* now remove the field from the front */                                    
+   wk_rec = substr(wk_rec,end_field+1)                                          
+                                                                                
+   /* drop the leading comma */                                                 
+                                                                                
+   if index(wk_rec,',') > 0                                                     
+   then wk_rec = substr(wk_rec,index(wk_rec,',')+1)                             
+   wk_rec = strip(wk_rec)                                                       
+                                                                                
+   this_field = strip(this_field)                                               
+   /* does it have an apostrophe? */                                            
+   if index(this_field,"'") > 0                                                 
+   then this_field = translate(this_field,' ',"'")                              
+                                                                                
+   /* assign the field */                                                       
+   select                                                                       
+   when field_number = 1                                                        
+     then SAN = this_field                                                      
+   when field_number = 2                                                        
+     then BAN = this_field                                                      
+   when field_number = 3                                                        
+     then LINE = this_field                                                     
+   when field_number = 4                                                        
+     then CIRCUIT = this_field                                                  
+   when field_number = 5                                                        
+     then ACCT_NAME = this_field                                                
+   when field_number = 6                                                        
+     then NAME_ADDR_1 = this_field                                              
+   when field_number = 7                                                        
+     then NAME_ADDR_2 = this_field                                              
+   when field_number = 8                                                        
+     then NAME_ADDR_3 = this_field                                              
+   when field_number = 9                                                        
+     then NAME_ADDR_4 = this_field                                              
+   when field_number = 10                                                       
+     then CHGS  = this_field                                                    
+   when field_number = 11                                                       
+     then VSSI_ACCT  = this_field                                               
+   when field_number = 12                                                       
+     then VSSI_CHGS  = this_field                                               
+   when field_number = 13                                                       
+     then ORIG_SYSTEM_ID  = this_field                                          
+   otherwise                                                                    
+       nop                                                                      
+   end                                                                          
+                                                                                
+   /* have we reached the end of the line? */                                   
+   if wk_rec = ''                                                               
+   then more_fields = 'N'                                                       
+                                                                                
+ end                                                                            
+ /*                                                                             
+ say 'SAN          = ' SAN                                                      
+ say 'BAN          = ' BAN                                                      
+ say 'LINE         = ' LINE                                                     
+ say 'CIRCUIT      = ' CIRCUIT                                                  
+ say 'ACCT_NAME    = ' ACCT_NAME                                                
+ say 'NAME_ADDR_1  = ' NAME_ADDR_1                                              
+ say 'NAME_ADDR_2  = ' NAME_ADDR_2                                              
+ say 'NAME_ADDR_3  = ' NAME_ADDR_3                                              
+ say 'NAME_ADDR_4  = ' NAME_ADDR_4                                              
+ say 'CHGS         = ' CHGS                                                     
+ say 'VSSI_ACCT    = ' VSSI_ACCT                                                
+ say 'VSSI_CHGS    = ' VSSI_CHGS    */                                          
+                                                                                
+                                                                                
+ return                                                                         
+                                                                                
+ /*********************************************************************/        
+ /* NAME:     INSERT                                                  */        
+ /*                                                                   */        
+ /*********************************************************************/        
+ INSERT_DFW_TEMP:                                                               
+                                                                                
+  INS_SQL = "INSERT INTO "TABPREF".DFW_TEMP_T " ||,                             
+            "(SAN," ||,                                                         
+             "BAN," ||,                                                         
+             "ORIG_SYSTEM_ID," ||,                                              
+             "LINE," ||,                                                        
+             "CIRCUIT," ||,                                                     
+             "ACCT_NAME," ||,                                                   
+             "NAME_ADDR_1," ||,                                                 
+             "NAME_ADDR_2," ||,                                                 
+             "NAME_ADDR_3," ||,                                                 
+             "NAME_ADDR_4," ||,                                                 
+             "CHGS," ||,                                                        
+             "VSSI_CHGS," ||,                                                   
+             "VSSI_ACCT) " ||,                                                  
+            "VALUES" ||,                                                        
+            "('"SAN"'," ||,                                                     
+            "'"BAN"'," ||,                                                      
+            "'"ORIG_SYSTEM_ID"'," ||,                                           
+            "'"LINE"'," ||,                                                     
+            "'"CIRCUIT"'," ||,                                                  
+            "'"ACCT_NAME"'," ||,                                                
+            "'"NAME_ADDR_1"'," ||,                                              
+            "'"NAME_ADDR_2"'," ||,                                              
+            "'"NAME_ADDR_3"'," ||,                                              
+            "'"NAME_ADDR_4"'," ||,                                              
+            CHGS"," ||,                                                         
+            VSSI_CHGS"," ||,                                                    
+            "'"VSSI_ACCT"')"                                                    
+  /*                                                                            
+  SAY 'INSERT SQL....'                                                          
+  SAY INS_SQL  */                                                               
+                                                                                
+  ADDRESS DSNREXX "EXECSQL "INS_SQL                                             
+                                                                                
+  IF SQLCODE ^= 0                                                               
+  THEN DO                                                                       
+       SAY 'ERROR DURING INSERT'                                                
+       say ins_sql                                                              
+       CALL SQLCA                                                               
+       SAY '  END EXECUTION'                                                    
+       EXIT 12                                                                  
+       END                                                                      
+                                                                                
+  RETURN                                                                        
+ /*********************************************************************/        
+ /* NAME:     commit                                                  */        
+ /*                                                                   */        
+ /*********************************************************************/        
+ commit_work:                                                                   
+                                                                                
+ ADDRESS DSNREXX "EXECSQL COMMIT"                                               
+ IF SQLCODE ^= 0                                                                
+ THEN DO                                                                        
+      SAY 'ERROR WHILE COMMITING'                                               
+      CALL SQLCA                                                                
+      SAY '  END EXECUTION'                                                     
+      EXIT 12                                                                   
+      END                                                                       
+                                                                                
+ return                                                                         
+                                                                                
+ /************* SQL ERROR ROUTINE *************/                                
+ SQLCA:                                                                         
+    SAY "SQLSTATE =" SQLSTATE                                                   
+    SAY "SQLWARN =" SQLWARN.1",",                                               
+                || SQLWARN.1",",                                                
+                || SQLWARN.2",",                                                
+                || SQLWARN.3",",                                                
+                || SQLWARN.4",",                                                
+                || SQLWARN.5",",                                                
+                || SQLWARN.6",",                                                
+                || SQLWARN.7",",                                                
+                || SQLWARN.8",",                                                
+                || SQLWARN.9""                                                  
+    SAY "SQLERRD =" SQLERRD.1",",                                               
+                || SQLERRD.2",",                                                
+                || SQLERRD.3",",                                                
+                || SQLERRD.4",",                                                
+                || SQLERRD.5",",                                                
+                || SQLERRD.6                                                    
+    SAY "SQLERRP  =" SQLERRP                                                    
+    SAY "SQLERRMC =" SQLERRMC                                                   
+    SAY "SQLCODE  =" SQLCODE                                                    
+    RETURN                                                                      
+                                                                                
+ /*************  SYNTAX ERROR HANDLER **********/                               
+ CRAPCODE:                                                                      
+ SAY 'YOU HAVE CRAP CODE AT LINE' SIGL                                          
+ SAY SOURCELINE(SIGL)                                                           
+ SAY 'REXX GAVE A RETURN CODE OF' RC ', WHICH MEANS :'                          
+ SAY ERRORTEXT(RC)                                                              
+ EXIT                                                                           
+ /************* EXTERNAL ERROR HANDLER **********/                              
+                                                                                
+ BADDIES:                                                                       
+ SAY 'YOU HAVE BEEN LET DOWN ' SIGL                                             
+ SAY SOURCELINE(SIGL)                                                           
+ SAY 'RC =' RC                                                                  
+ EXIT                                                                           
+                                                                                
+                                                                                

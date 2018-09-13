@@ -1,0 +1,154 @@
+//LOADLSQL JOB (T,JZDD,JKSD0033),'UNLOAD',                              00010003
+// REGION=0K,CLASS=U,MSGCLASS=Z,NOTIFY=&SYSUID                          00020003
+/*JOBPARM S=200E                                                        00030003
+//*                                                                     00040003
+//*-------------------------------------------------------              00050003
+//LOAD     EXEC PGM=DSNUTILB,REGION=0K,PARM=(D71X,'IBRSDTTL','')        00060003
+//STEPLIB  DD DSN=DSND71X.SDSNLOAD,DISP=SHR                             00070003
+//SYSPRINT DD SYSOUT=*                                                  00080003
+//SYSTSPRT DD SYSOUT=*                                                  00090003
+//UTPRINT  DD SYSOUT=*                                                  00100003
+//SYSUDUMP DD DUMMY                                                     00110003
+//SYSREC00 DD DSN=V884647.VZWMTNUN,DISP=SHR                             00120003
+//SYSIN    DD *                                                         00130003
+  LOAD RESUME YES LOG NO NOCOPYPEND  INDDN SYSREC00 INTO TABLE          00140003
+      BMGVZP.VZW_UNBILLED_USG_T                                         00150003
+   (                                                                    00160003
+   MAN                                    POSITION(       1         )   00170003
+   CHAR(                     13) ,                                      00180003
+   BAN                                    POSITION(      14         )   00190003
+   CHAR(                     13) ,                                      00200003
+   ORIG_SYSTEM_ID                         POSITION(      27         )   00210003
+   CHAR(                      2) ,                                      00220003
+   CALENDAR_DATE                          POSITION(      29         )   00230003
+   DATE EXTERNAL(            10) ,                                      00240003
+   WIRELESS_DAN                           POSITION(      39         )   00250003
+   CHAR(                     16) ,                                      00260003
+   MTN                                    POSITION(      55         )   00270003
+   CHAR(                     10) ,                                      00280003
+   FEATURE_ID                             POSITION(      65         )   00290003
+   CHAR(                      4) ,                                      00300003
+   MTN_EFF_DT                             POSITION(      69         )   00310003
+   DATE EXTERNAL(            10) ,                                      00320003
+   MTN_STATUS                             POSITION(      79         )   00330003
+   CHAR(                      2) ,                                      00340003
+   STATUS_REASON_CD                       POSITION(      81         )   00350003
+   CHAR(                      2) ,                                      00360003
+   BILL_CYC_NO                            POSITION(      83         )   00370003
+   CHAR(                      2) ,                                      00380003
+   MOB_MOB_PEAK_MIN                       POSITION(      85:      88)   00390003
+   DECIMAL                       ,                                      00400003
+   MOB_MOB_OPEAK_MIN                      POSITION(      89:      92)   00410003
+   DECIMAL                       ,                                      00420003
+   PEAK_MIN                               POSITION(      93:      96)   00430003
+   DECIMAL                       ,                                      00440003
+   OPEAK_MIN                              POSITION(      97:     100)   00450003
+   DECIMAL                       ,                                      00460003
+   NIGHT_MIN                              POSITION(     101:     104)   00470003
+   DECIMAL                       ,                                      00480003
+   WEEKEND_MIN                            POSITION(     105:     108)   00490003
+   DECIMAL                       ,                                      00500003
+   OTHER_MIN                              POSITION(     109:     112)   00510003
+   DECIMAL                       ,                                      00520003
+   TOTAL_USAGE                            POSITION(     113:     117)   00530003
+   DECIMAL                       ,                                      00540003
+   LIMIT_INDICATOR                        POSITION(     118         )   00550003
+   CHAR(                      1) ,                                      00560003
+   COST_CENTER                            POSITION(     119         )   00570003
+   CHAR(                     15) ,                                      00580003
+   SMS_DOMESTIC_RCVD                      POSITION(     134:     136)   00590003
+   DECIMAL                       ,                                      00600003
+   SMS_DOMESTIC_SENT                      POSITION(     137:     139)   00610003
+   DECIMAL                       ,                                      00620003
+   SMS_INTL_RCVD                          POSITION(     140:     142)   00630003
+   DECIMAL                       ,                                      00640003
+   SMS_INTL_SENT                          POSITION(     143:     145)   00650003
+   DECIMAL                       ,                                      00660003
+   IN_SMS_RCVD                            POSITION(     146:     148)   00670003
+   DECIMAL                       ,                                      00680003
+   IN_SMS_SENT                            POSITION(     149:     151)   00690003
+   DECIMAL                       ,                                      00700003
+   GLOBPHONE_SMS_RCVD                     POSITION(     152:     154)   00710003
+   DECIMAL                       ,                                      00720003
+   GLOBPHONE_SMS_SENT                     POSITION(     155:     157)   00730003
+   DECIMAL                       ,                                      00740003
+   MMS_RCVD                               POSITION(     158:     160)   00750003
+   DECIMAL                       ,                                      00760003
+   MMS_SENT                               POSITION(     161:     163)   00770003
+   DECIMAL                       ,                                      00780003
+   IN_MMS_RCVD                            POSITION(     164:     166)   00790003
+   DECIMAL                       ,                                      00800003
+   IN_MMS_SENT                            POSITION(     167:     169)   00810003
+   DECIMAL                       ,                                      00820003
+   DATA_USAGE_KBU                         POSITION(     170:     175)   00830003
+   DECIMAL                       ,                                      00840003
+   DATA_USAGE_MBU                         POSITION(     176:     181)   00850003
+   DECIMAL                       ,                                      00860003
+   UPDATE_TIMESTAMP                       POSITION(     182         )   00870003
+   TIMESTAMP EXTERNAL(       26) ,                                      00880003
+   NBR_INTL_MMS_RECEIVED                  POSITION(     208         )   00890003
+   INTEGER                       ,                                      00900003
+   NBR_INTL_MMS_SENT                      POSITION(     212         )   00910003
+   INTEGER                       ,                                      00920003
+   MOBL_BBND_KB_USAGE                     POSITION(     216:     222)   00930003
+   DECIMAL                       ,                                      00940003
+   MOBL_BBND_KB_DATE                      POSITION(     223         )   00950003
+   CHAR(                     10) ,                                      00960003
+   MOBL_BBND_KB_TIME                      POSITION(     233         )   00970003
+   CHAR(                      5) ,                                      00980003
+   MOBL_BBND_MB_USAGE                     POSITION(     238:     244)   00990003
+   DECIMAL                       ,                                      01000003
+   MOBL_BBND_MB_DATE                      POSITION(     245         )   01010003
+   CHAR(                     10) ,                                      01020003
+   MOBL_BBND_MB_TIME                      POSITION(     255         )   01030003
+   CHAR(                      5) ,                                      01040003
+   GLOB_DATA_FEAT1                        POSITION(     260         )   01050003
+   VARCHAR                       ,                                      01060003
+   GLOB_DATA_FEAT2                        POSITION(     762         )   01070003
+   VARCHAR                       ,                                      01080003
+   GLOB_DATA_OTH_KB                       POSITION(    1264:    1270)   01090003
+   DECIMAL                       ,                                      01100003
+   GLOB_DATA_OTH_MB                       POSITION(    1271:    1277)   01110003
+   DECIMAL                       ,                                      01120003
+   GLOB_DATA_OTH_DATE                     POSITION(    1278         )   01130003
+   CHAR(                     10) ,                                      01140003
+   GLOB_DATA_OTH_TIME                     POSITION(    1288         )   01150003
+   CHAR(                      5) ,                                      01160003
+   GLOB_BBND_FEAT1                        POSITION(    1293         )   01170003
+   VARCHAR                       ,                                      01180003
+   GLOB_BBND_FEAT2                        POSITION(    1795         )   01190003
+   VARCHAR                       ,                                      01200003
+   GLOB_BBND_OTH_KB                       POSITION(    2297:    2303)   01210003
+   DECIMAL                       ,                                      01220003
+   GLOB_BBND_OTH_MB                       POSITION(    2304:    2310)   01230003
+   DECIMAL                       ,                                      01240003
+   GLOB_BBND_OTH_DATE                     POSITION(    2311         )   01250003
+   CHAR(                     10) ,                                      01260003
+   GLOB_BBND_OTH_TIME                     POSITION(    2321         )   01270003
+   CHAR(                      5) ,                                      01280003
+   FF_MIN                                 POSITION(    2326         )   01290003
+   INTEGER                       ,                                      01300003
+   DATA_USAGE_GBU                         POSITION(    2330:    2336)   01310003
+   DECIMAL                       ,                                      01320003
+   MOBL_BBND_GB_USAGE                     POSITION(    2337:    2343)   01330003
+   DECIMAL                       ,                                      01340003
+   MOBL_BBND_GB_DATE                      POSITION(    2344         )   01350003
+   CHAR(                     10) ,                                      01360003
+   MOBL_BBND_GB_TIME                      POSITION(    2354         )   01370003
+   CHAR(                      5)                                        01380003
+   )                                                                    01390003
+//DISCARDN DD DSN=BMGVZ0CN.LOAD.DWNLDTTL.DISCARDN,                      01400003
+//            UNIT=3390,SPACE=(CYL,(3,1),RLSE),                         01410003
+//            DISP=(MOD,CATLG,CATLG),DCB=(RECFM=VB,LRECL=32700),        01420003
+//            MGMTCLAS=NOBK07                                           01430003
+//SYSERR   DD DSN=BMGVZ0CN.LOAD.DWNLDTTL.SYSERR,                        01440003
+//            UNIT=3390,SPACE=(CYL,(3,1),RLSE),                         01450003
+//            DISP=(MOD,CATLG,CATLG),DCB=(RECFM=VB,LRECL=32700),        01460003
+//            MGMTCLAS=NOBK07                                           01470003
+//SYSMAP   DD DSN=BMGVZ0CN.LOAD.DWNLDTTL.SYSMAP,                        01480003
+//            UNIT=3390,SPACE=(CYL,(3,1),RLSE),                         01490003
+//            DISP=(MOD,CATLG,CATLG),DCB=(RECFM=VB,LRECL=32700),        01500003
+//            MGMTCLAS=NOBK07                                           01510003
+//SYSUT1   DD UNIT=3390,SPACE=(CYL,(3,1),RLSE)                          01520003
+//SORTWK01 DD UNIT=3390,SPACE=(CYL,(3,1),RLSE)                          01530003
+//SORTOUT  DD UNIT=3390,SPACE=(CYL,(3,1),RLSE)                          01540003

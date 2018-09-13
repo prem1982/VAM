@@ -1,0 +1,1301 @@
+/*REXX*/                                                                        
+/*-------------------------------------------------------------------*/         
+/*        PROGRAME TO CONVERT SQL TO SPUFI VERSION                   */         
+/* The program will produce the spufi verison of normal sql          */         
+/* 1) appending the high level qualifier to the table names          */         
+/* 2) replacing all the markers present in BMGXSTR                   */         
+/*-------------------------------------------------------------------*/         
+/*********************************************************************/         
+/*                                                                   */         
+/* MODIFICATION HISTORY                                              */         
+/*                                                                   */         
+/*    DATE     PROGRAMMER         CODE      DESCRIPTION              */         
+/*  ~~~~~~~~   ~~~~~~~~~~~~~~~~  ~~~~~~   ~~~~~~~~~~~~~~~~~~~~~~~~~~ */         
+/*  APRIL 2010 RASHEEDBASHA ODA          INITIAL PROGRAM             */         
+/*                                                                   */         
+/*********************************************************************/         
+parse external infile                                                           
+INFILE = STRIP(INFILE)                                                          
+/*-------------------------------------------------------------------*/         
+/*----     GET THE FIELDS FROM THEN INPUT FILE     ------------------*/         
+/*-------------------------------------------------------------------*/         
+ADDRESS   TSO                                                                   
+"ALLOC FILE(INN) DS('"infile"') SHR REUSE"                                      
+"EXECIO * DISKR INN (STEM INN. FINIS"                                           
+SAY "Total number of input file parameters :" inn.0                             
+DO I = 1 TO INN.0                                                               
+    IF INDEX(INn.i,'=') > 0 THEN                                                
+    DO                                                                          
+    TEST = Inn.i                                                                
+    PARSE VAR TEST PART1 '=' PART2                                              
+    if part1 = 'DB2SYS'         THEN db2_sysid        = PART2                   
+    if part1 = 'SCHEMA'         THEN high_lvq         = PART2                   
+    if part1 = 'SQLIN'          THEN sqlfilin         = PART2                   
+    if part1 = 'SQLOUT'         THEN sqlfilou         = PART2                   
+    if part1 = 'MAN'            THEN MAN              = PART2                   
+    if part1 = 'MAN_BILL_DATE'  THEN MAN_BILL_DATE    = PART2                   
+    if part1 = 'BAN'            THEN BAN              = PART2                   
+    if part1 = 'ABAN'           THEN ABAN             = PART2                   
+    if part1 = 'BILL_DATE'      THEN BILL_DATE        = PART2                   
+    IF part1 = 'ORIG_SYSTEM_ID' THEN ORIG_SYSTEM_ID   = PART2                   
+    if part1 = 'ENTITY_CD'      THEN ENTITY_CD        = PART2                   
+    if part1 = 'LOCATION_ID'    THEN LOCATION_ID      = PART2                   
+    if part1 = 'CHG_CD'         THEN CHG_CD           = PART2                   
+    if part1 = 'INV_BILL_IND'   THEN INV_BILL_IND     = PART2                   
+    if part1 = 'INV_BILLING_IND' THEN INV_BILLING_IND = PART2                   
+    if part1 = 'CONSTANT1'      THEN CONSTANT1        = PART2                   
+    IF PART1 = 'NODE_ID'        THEN NODE_ID          = PART2                   
+    if part1 = 'CONSTANT2'      THEN CONSTANT2        = PART2                   
+    if part1 = 'CONSTANT3'      THEN CONSTANT3        = PART2                   
+    if part1 = 'CONSTANT4'      THEN CONSTANT4        = PART2                   
+    if part1 = 'ASSOC_CHG_CD'    THEN ASSOC_CHG_CD    = PART2                   
+    if part1 = 'GRP_ID_1'        THEN GRP_ID_1        = PART2                   
+    if part1 = 'GRP_ID_2'        THEN GRP_ID_2        = PART2                   
+    if part1 = 'GRP_ID_3'        THEN GRP_ID_3        = PART2                   
+    if part1 = 'REGION_CD'       THEN REGION_CD       = PART2                   
+    if part1 = 'WTN'             THEN WTN             = PART2                   
+    if part1 = 'NBR'             THEN NBR             = PART2                   
+    if part1 = 'WORKING_TEL_NBR' THEN WORKING_TEL_NBR = PART2                   
+    if part1 = 'USER_OID'        THEN USER_OID        = PART2                   
+    if part1 = 'POSITION_OID'    THEN POSITION_OID    = PART2                   
+    if part1 = 'POSITION_TYPE'   THEN POSITION_TYPE   = PART2                   
+    if part1 = 'VERIFIED'        THEN VERIFIED        = PART2                   
+    if part1 = 'SUB_API_ID'      THEN SUB_API_ID        = PART2                 
+    if part1 = 'API_ID'          THEN API_ID            = PART2                 
+    if part1 = 'ORG_LEVEL1_CD'   THEN ORG_LEVEL1_CD     = PART2                 
+    if part1 = 'ORG_LEVEL2_CD'   THEN ORG_LEVEL2_CD     = PART2                 
+    if part1 = 'GBR_CLASS_CD'    THEN GBR_CLASS_CD      = PART2                 
+    if part1 = 'GBR_OSID'        THEN GBR_OSID          = PART2                 
+    if part1 = 'GBR_SVC'         THEN GBR_SVC           = PART2                 
+    if part1 = 'GBR_SSVC'        THEN GBR_SSVC          = PART2                 
+    if part1 = 'SECTION_NUM'     THEN SECTION_NUM       = PART2                 
+    if part1 = 'LOGIN_ID'        THEN LOGIN_ID          = PART2                 
+    if part1 = 'PORTAL_IND'      THEN PORTAL_IND        = PART2                 
+    if part1 = 'FROM_DATE'       THEN FROM_DATE         = PART2                 
+    if part1 = 'THRU_DATE'       THEN THRU_DATE         = PART2                 
+    if part1 = 'SUBSCRIPTION_OID' THEN SUBSCRIPTION_OID = PART2                 
+    if part1 = 'STRUCTURE_TS'    THEN  STRUCTURE_TS     = PART2                 
+    if part1 = 'STRUCTURE_TYPE'  THEN  STRUCTURE_TYPE   = PART2                 
+    if part1 = 'POSITION_TYPE'   THEN  POSITION_TYPE    = PART2                 
+    if part1 = 'POSITION_LVL'    THEN  POSITION_LVL     = PART2                 
+    if part1 = 'STRUCTURE_OID'   THEN  STRUCTURE_OID    = PART2                 
+    if part1 = 'PERMISSION'      THEN  PERMISSION       = PART2                 
+    if part1 = 'INV_DATE'        THEN  INV_DATE         = PART2                 
+    if part1 = 'INV_TYPE'        THEN  INV_TYPE         = PART2                 
+    if part1 = 'CURRENT_PAGE'    THEN  CURRENT_PAGE     = PART2                 
+    if part1 = 'CURRENT_SUBSET'  THEN  CURRENT_SUBSET   = PART2                 
+    if part1 = 'ACTION'          THEN  ACTION           = PART2                 
+    if part1 = 'SEARCH_KEY'      THEN  SEARCH_KEY       = PART2                 
+    if part1 = 'APP_TYPE'        THEN  APP_TYPE         = PART2                 
+    if part1 = 'ACCT_ALIAS'      THEN  ACCT_ALIAS       = PART2                 
+    if part1 = 'ALIAS_FLAG'      THEN  ALIAS_FLAG       = PART2                 
+    if part1 = 'MATCH_FOUND'     THEN  MATCH_FOUND      = PART2                 
+                                                                                
+    END                                                                         
+END                                                                             
+/*--------------- Display the input file parameters ----------*/                
+say 'db2_sysid'       db2_sysid                                                 
+say 'high_lvq'        high_lvq                                                  
+say 'sqlfilin'        sqlfilin                                                  
+say 'sqlfilou'        sqlfilou                                                  
+say 'man'             man                                                       
+say 'man_bill_date'   man_bill_date                                             
+say 'ban'             ban                                                       
+say 'aban'            aban                                                      
+say 'bill_date'       bill_date                                                 
+say 'orig_system_id'  orig_system_id                                            
+say 'entity_cd'       entity_cd                                                 
+say 'chg_cd'          chg_cd                                                    
+say 'location_id'     location_id                                               
+say 'inv_bill_ind'    inv_bill_ind                                              
+say 'INV_BILLING_IND' INV_BILLING_IND                                           
+say 'CONSTANT1'       CONSTANT1                                                 
+say 'NODE_ID'         NODE_ID                                                   
+say 'CONSTANT2'       CONSTANT2                                                 
+say 'CONSTANT3'       CONSTANT3                                                 
+say 'CONSTANT4'       CONSTANT4                                                 
+say 'ASSOC_CHG_CD'    ASSOC_CHG_CD                                              
+say 'GRP_ID_1'        GRP_ID_1                                                  
+say 'GRP_ID_2'        GRP_ID_2                                                  
+say 'GRP_ID_3'        GRP_ID_3                                                  
+say 'REGION_CD'       REGION_CD                                                 
+say 'WTN'             WTN                                                       
+say 'NBR'             NBR                                                       
+say 'WORKING_TEL_NBR' WORKING_TEL_NBR                                           
+say 'USER_OID'        USER_OID                                                  
+say 'POSITION_OID'    POSITION_OID                                              
+say 'POSITION_TYPE'   POSITION_TYPE                                             
+say 'VERIFIED'        VERIFIED                                                  
+say 'SUB_API_ID'       SUB_API_ID                                               
+say 'API_ID'           API_ID                                                   
+say 'ORG_LEVEL1_CD'    ORG_LEVEL1_CD                                            
+say 'ORG_LEVEL2_CD'    ORG_LEVEL2_CD                                            
+say 'GBR_CLASS_CD'     GBR_CLASS_CD                                             
+say 'GBR_OSID'         GBR_OSID                                                 
+say 'GBR_SVC'          GBR_SVC                                                  
+say 'GBR_SSVC'         GBR_SSVC                                                 
+say 'SECTION_NUM'      SECTION_NUM                                              
+say 'LOGIN_ID'         LOGIN_ID                                                 
+say 'PORTAL_IND'       PORTAL_IND                                               
+say 'FROM_DATE'        FROM_DATE                                                
+say 'THRU_DATE'        THRU_DATE                                                
+say 'SUBSCRIPTION_OID' SUBSCRIPTION_OID                                         
+say 'STRUCTURE_TS'     STRUCTURE_TS                                             
+say 'STRUCTURE_TYPE'   STRUCTURE_TYPE                                           
+say 'POSITION_TYPE'    POSITION_TYPE                                            
+say 'POSITION_LVL'     POSITION_LVL                                             
+say 'STRUCTURE_OID'    STRUCTURE_OID                                            
+say 'PERMISSION'       PERMISSION                                               
+say 'INV_DATE'         INV_DATE                                                 
+say 'INV_TYPE'         INV_TYPE                                                 
+say 'CURRENT_PAGE'     CURRENT_PAGE                                             
+say 'CURRENT_SUBSET'   CURRENT_SUBSET                                           
+say 'ACTION'           ACTION                                                   
+say 'SEARCH_KEY'       SEARCH_KEY                                               
+say 'APP_TYPE'         APP_TYPE                                                 
+say 'ACCT_ALIAS'       ACCT_ALIAS                                               
+say 'ALIAS_FLAG'       ALIAS_FLAG                                               
+say 'MATCH_FOUND'      MATCH_FOUND                                              
+/*-------- Strip the input parameters ---------------------------*/             
+db2_sysid      = STRIP(db2_sysid)                                               
+high_lvq       = STRIP(high_lvq)                                                
+input          = strip(sqlfilin)                                                
+output         = strip(sqlfilou)                                                
+man            = STRIP(man)                                                     
+man_bill_date  = STRIP(man_bill_date)                                           
+ban            = STRIP(ban)                                                     
+aban           = STRIP(aban)                                                    
+bill_date      = STRIP(bill_date)                                               
+orig_system_id = STRIP(orig_system_id)                                          
+entity_cd      = STRIP(entity_cd)                                               
+chg_cd         = STRIP(chg_cd)                                                  
+location_id    = STRIP(location_id)                                             
+inv_bill_ind   = STRIP(inv_bill_ind)                                            
+INV_BILLING_IND = STRIP(INV_BILLING_IND)                                        
+constant1      = STRIP(constant1)                                               
+NODE_ID        = STRIP(NODE_ID)                                                 
+constant2      = STRIP(constant2)                                               
+constant3      = STRIP(constant3)                                               
+constant4      = STRIP(constant4)                                               
+ASSOC_CHG_CD   = STRIP(ASSOC_CHG_CD)                                            
+GRP_ID_1       = STRIP(GRP_ID_1)                                                
+GRP_ID_2       = STRIP(GRP_ID_2)                                                
+GRP_ID_3       = STRIP(GRP_ID_3)                                                
+REGION_CD      = STRIP(REGION_CD)                                               
+WTN            = STRIP(WTN)                                                     
+NBR            = STRIP(NBR)                                                     
+WORKING_TEL_NBR= STRIP(WORKING_TEL_NBR)                                         
+USER_OID       = STRIP(USER_OID)                                                
+POSITION_OID   = STRIP(POSITION_OID)                                            
+POSITION_TYPE  = STRIP(POSITION_TYPE)                                           
+VERIFIED       = STRIP(VERIFIED)                                                
+SUB_API_ID      = STRIP(SUB_API_ID)                                             
+API_ID          = STRIP(API_ID)                                                 
+ORG_LEVEL1_CD   = STRIP(ORG_LEVEL1_CD)                                          
+ORG_LEVEL2_CD   = STRIP(ORG_LEVEL2_CD)                                          
+GBR_CLASS_CD    = STRIP(GBR_CLASS_CD)                                           
+GBR_OSID        = STRIP(GBR_OSID)                                               
+GBR_SVC         = STRIP(GBR_SVC)                                                
+GBR_SSVC        = STRIP(GBR_SSVC)                                               
+SECTION_NUM     = STRIP(SECTION_NUM)                                            
+LOGIN_ID        = STRIP(LOGIN_ID)                                               
+PORTAL_IND      = STRIP(PORTAL_IND)                                             
+FROM_DATE       = STRIP(FROM_DATE)                                              
+THRU_DATE       = STRIP(THRU_DATE)                                              
+SUBSCRIPTION_OID= STRIP(SUBSCRIPTION_OID)                                       
+STRUCTURE_TS    = STRIP(STRUCTURE_TS)                                           
+STRUCTURE_TYPE  = STRIP(STRUCTURE_TYPE)                                         
+POSITION_TYPE   = STRIP(POSITION_TYPE)                                          
+POSITION_LVL    = STRIP(POSITION_LVL)                                           
+STRUCTURE_OID   = STRIP(STRUCTURE_OID)                                          
+PERMISSION      = STRIP(PERMISSION)                                             
+INV_DATE        = STRIP(INV_DATE)                                               
+INV_TYPE        = STRIP(INV_TYPE)                                               
+CURRENT_PAGE    = STRIP(CURRENT_PAGE)                                           
+CURRENT_SUBSET  = STRIP(CURRENT_SUBSET)                                         
+ACTION          = STRIP(ACTION)                                                 
+SEARCH_KEY      = STRIP(SEARCH_KEY)                                             
+APP_TYPE        = STRIP(APP_TYPE)                                               
+ACCT_ALIAS      = STRIP(ACCT_ALIAS)                                             
+ALIAS_FLAG      = STRIP(ALIAS_FLAG)                                             
+MATCH_FOUND     = STRIP(MATCH_FOUND)                                            
+/*-------------------------------------------------------------------*/         
+/*          print stats                                              */         
+/*-------------------------------------------------------------------*/         
+say 'DB2 Subsystem ' db2_sysid                                                  
+ address TSO "SUBCOM DSNREXX"                                                   
+  IF RC THEN                                                                    
+     S_RC = RXSUBCOM('ADD','DSNREXX','DSNREXX')                                 
+  ADDRESS DSNREXX                                                               
+  "CONNECT" db2_sysid                                                           
+IF SQLCODE ^=0 THEN SAY "connection error " SQLCODE                             
+ELSE                                                                            
+ do                                                                             
+ call start_program                                                             
+end                                                                             
+"DISCONNECT"                                                                    
+EXIT                                                                            
+/***********************************************************/                   
+/*           program starts here                           */                   
+/***********************************************************/                   
+start_program:                                                                  
+TRACE                                                                           
+ADDRESS   TSO                                                                   
+"ALLOC FILE(IN) DS('"input"') SHR REUSE"                                        
+ADDRESS   TSO                                                                   
+"ALLOC FILE(OUT) DA('"output"') SHR REUSE"                                      
+"EXECIO * DISKR IN (STEM IN. FINIS"                                             
+SAY IN.0                                                                        
+IF IN.0 > 0 THEN                                                                
+DO                                                                              
+CALL SEARCH_FROM                                                                
+say search_from complete                                                        
+CALL SEARCH_JOIN                                                                
+say search_join complete                                                        
+CALL SEARCH_MARKERS                                                             
+say search_markers complete                                                     
+END                                                                             
+return                                                                          
+EXIT                                                                            
+/*******************************************************************/           
+SEARCH_FROM:                                                                    
+DO I = 1 TO IN.0                                                                
+/*in.i = translate(in.i)*/                                                      
+PART1 = ' '                                                                     
+first = ' '                                                                     
+   IF INDEX(IN.I,'FROM ') = 0 & index(in.i,'from ') = 0 THEN                    
+       DO                                                                       
+       FM.I = IN.I                                                              
+       END                                                                      
+   ELSE                                                                         
+      DO                                                                        
+          in.i = translate(in.i)                                                
+          TEST = IN.I                                                           
+          PARSE VAR TEST PART1 'FROM' PART2                                     
+          IF PART1 <> ' ' THEN                                                  
+             FIRST = PART1                                                      
+          ELSE NOP                                                              
+          IF PART2 <> ' ' THEN                                                  
+             DO                                                                 
+                 select                                                         
+                 when INDEX(PART2,'(') > 0 THEN                                 
+                 FM.I = FIRST || 'FROM ' || PART2                               
+                 when index(test,'BMGVZ') > 0 then                              
+                 fm.i = first || 'FROM ' || STRIP(PART2)                        
+                 when index(test,'SYSIBM') > 0 then                             
+                 fm.i = first || 'FROM ' || STRIP(PART2)                        
+                 otherwise                                                      
+                 FM.I = FIRST || 'FROM '|| high_lvq ||'.'|| STRIP(PART2)        
+                 end                                                            
+                 i = i + 1                                                      
+             END                                                                
+          ELSE                                                                  
+             DO                                                                 
+             FM.I = FIRST || 'FROM'                                             
+             I = I + 1                                                          
+             if index(in.i,'--') > 0 then                                       
+             do until ( index(in.i,'--') = 0 )                                  
+                fm.i = in.i                                                     
+                i = i + 1                                                       
+             end                                                                
+             NEXT = IN.I                                                        
+               DO                                                               
+                 select                                                         
+                 when INDEX(NEXT,'(') > 0 THEN                                  
+                 FM.I = NEXT                                                    
+                 when index(next,'BMGVZ') > 0 then                              
+                 fm.i = STRIP(NEXT)                                             
+                 when index(next,'SYSIBM') > 0 then                             
+                 fm.i = STRIP(NEXT)                                             
+                 when index(next,'bmgvz') > 0 then                              
+                 fm.i = STRIP(NEXT)                                             
+                 when index(next,'sysibm') > 0 then                             
+                 fm.i = STRIP(NEXT)                                             
+                 otherwise                                                      
+                 FM.I = high_lvq ||'.'|| STRIP(NEXT)                            
+                 end                                                            
+                 i = i + 1                                                      
+               END                                                              
+             END                                                                
+      END                                                                       
+      FM.I = IN.I                                                               
+END                                                                             
+"EXECIO * DISKW OUT (STEM FM. FINIS"                                            
+DROP FM.                                                                        
+DROP IN.                                                                        
+"FREE FILE(IN)"                                                                 
+"FREE FILE(OUT)"                                                                
+RETURN                                                                          
+/************** FOR JOIN *************************************/                 
+SEARCH_JOIN:                                                                    
+ADDRESS   TSO                                                                   
+"ALLOC FILE(IN)  DA('"output"') SHR REUSE"                                      
+ADDRESS   TSO                                                                   
+"ALLOC FILE(OUT) DA('"output"') SHR REUSE"                                      
+"EXECIO * DISKR IN (STEM FM. FINIS"                                             
+FIRST = ' '                                                                     
+TEST = ' '                                                                      
+NEXT = ' '                                                                      
+PART1 = ' '                                                                     
+PART2 = ' '                                                                     
+DO I = 1 TO FM.0                                                                
+/*fm.i = translate(fm.i)*/                                                      
+   IF INDEX(FM.I,'JOIN ') = 0 & index(fm.i,'join ') = 0 THEN                    
+      JN.I = FM.I                                                               
+   ELSE                                                                         
+      DO                                                                        
+         fm.i = translate(fm.i)                                                 
+         TEST = FM.I                                                            
+         PARSE VAR TEST PART1 'JOIN' PART2                                      
+        IF PART1 <> ' ' THEN                                                    
+            FIRST = PART1                                                       
+        IF PART2 <> ' ' THEN                                                    
+               DO                                                               
+                 select                                                         
+                 when INDEX(PART2,'(') > 0 THEN                                 
+                 JN.I = FIRST || 'JOIN ' || PART2                               
+                 when index(PART2,'BMGVZ') > 0 then                             
+                 jn.i = first || 'JOIN ' || STRIP(PART2)                        
+                 when index(PART2,'SYSIBM') > 0 then                            
+                 JN.i = first || 'JOIN ' || STRIP(PART2)                        
+                 otherwise                                                      
+                 JN.I = FIRST || 'JOIN '|| high_lvq ||'.'|| STRIP(PART2)        
+                 end                                                            
+                 i = i + 1                                                      
+               END                                                              
+        ELSE                                                                    
+               DO                                                               
+                  JN.I = FIRST || 'JOIN'                                        
+                  I = I + 1                                                     
+             if index(fm.i,'--') > 0 then                                       
+             do until ( index(fm.i,'--') = 0 )                                  
+                jn.i = fm.i                                                     
+                i = i + 1                                                       
+             end                                                                
+                  NEXT = FM.I                                                   
+                   DO                                                           
+                      select                                                    
+                      when INDEX(NEXT,'(') > 0 THEN                             
+                      JN.I = NEXT                                               
+                      when index(next,'BMGVZ') > 0 then                         
+                      JN.i = STRIP(NEXT)                                        
+                      when index(next,'SYSIBM') > 0 then                        
+                      JN.i = STRIP(NEXT)                                        
+                      when index(next,'bmgvz') > 0 then                         
+                      JN.i = STRIP(NEXT)                                        
+                      when index(next,'sysibm') > 0 then                        
+                      JN.i = STRIP(NEXT)                                        
+                      otherwise                                                 
+                      JN.I = high_lvq ||'.'|| STRIP(NEXT)                       
+                      end                                                       
+                      i = i + 1                                                 
+                   END                                                          
+               END                                                              
+      END                                                                       
+      JN.I = FM.I                                                               
+END                                                                             
+"EXECIO * DISKW OUT (STEM JN. FINIS"                                            
+DROP JN.                                                                        
+DROP FM.                                                                        
+RETURN                                                                          
+/*************SEARCHING QUESTION MARKS *********************/                   
+SEARCH_MARKERS:                                                                 
+ADDRESS   TSO                                                                   
+"ALLOC FILE(IN) DA('"output"') SHR REU"                                         
+"EXECIO * DISKRU IN (STEM IN. FINIS"                                            
+do i = 1 to in.0                                                                
+   IF INDEX(in.i,'?') > 0 THEN                                                  
+   DO                                                                           
+   in.i  = translate(in.i)                                                      
+   L     = length(in.i)                                                         
+   MN    =INDEX(in.i,'MAN = ?')                                                 
+   BN    =INDEX(in.i,' BAN = ?')                                                
+   BN    =INDEX(in.i,'.BAN = ?')                                                
+   ABN   =INDEX(in.i,'ABAN = ?')                                                
+   MBD   =INDEX(in.i,'MAN_BILL_DATE = ?')                                       
+   BD    =INDEX(in.i,'BILL_DATE = ?')                                           
+   OSID  =INDEX(in.i,'ORIG_SYSTEM_ID = ?')                                      
+   NODE  =INDEX(in.i,'NODE_ID = ?')                                             
+   ENTY  =INDEX(in.i,'ENTITY_CD = ?')                                           
+   LOCA  =INDEX(in.i,'LOCATION_ID = ?')                                         
+   CHGCD =INDEX(in.i,' CHG_CD = ?')                                             
+   CHGCD =INDEX(in.i,'.CHG_CD = ?')                                             
+   ACHGCD=INDEX(in.i,'ASSOC_CHG_CD = ?')                                        
+   INVBID=INDEX(in.i,'INV_BILL_IND = ?')                                        
+   INBNID=INDEX(in.i,'INV_BILLING_IND = ?')                                     
+   GRPID1=INDEX(in.i,'GRP_ID_1 = ?')                                            
+   GRPID2=INDEX(in.i,'GRP_ID_2 = ?')                                            
+   GRPID3=INDEX(in.i,'GRP_ID_3 = ?')                                            
+   RGNCD =INDEX(in.i,'REGION_CD = ?')                                           
+   WTN   =INDEX(in.i,'WTN = ?')                                                 
+   NBR   =INDEX(in.i,'NBR = ?')                                                 
+   WKTEL =INDEX(in.i,'WORKING_TEL_NBR = ?')                                     
+   USERID=INDEX(in.i,'USER_OID = ?')                                            
+   POSID =INDEX(in.i,'POSITION_OID = ?')                                        
+   POSTYP=INDEX(in.i,'POSITION_TYPE = ?')                                       
+   VERIF =INDEX(in.i,'VERIFIED = ?')                                            
+/**1* check for man ****************/                                           
+        if mn <> 0 then                                                         
+        do                                                                      
+        PART1 = SUBSTR(in.i,1,MN-1)                                             
+        PART2 = SUBSTR(in.i,MN,7)                                               
+        PART3 = SUBSTR(in.i,MN+7,L-(MN+7))                                      
+           IF PART2 = 'MAN = ?'                                                 
+           THEN DO                                                              
+           SUBST = INSERT(man"'",'MAN = ''',7)                                  
+           in.i = PART1 || SUBST || PART3                                       
+                END                                                             
+        END                                                                     
+/*2** check for man_bill_date ****************/                                 
+        if mbd <> 0 then                                                        
+        do                                                                      
+        PART1 = SUBSTR(in.i,1,MBD-1)                                            
+        PART2 = SUBSTR(in.i,MBD,17)                                             
+        PART3 = SUBSTR(in.i,MBD+17,L-(MBD+17))                                  
+           IF PART2 = 'MAN_BILL_DATE = ?'                                       
+           THEN DO                                                              
+           SUBST = INSERT(man_bill_date"'",'MAN_BILL_DATE = ''',17)             
+           in.i = PART1 || SUBST || PART3                                       
+                END                                                             
+        END                                                                     
+/*3** check for orig_system_id ***************/                                 
+        if osid <> 0 then                                                       
+        do                                                                      
+        PART1 = SUBSTR(in.i,1,osid-1)                                           
+        PART2 = SUBSTR(in.i,osid,18)                                            
+        PART3 = SUBSTR(in.i,OSID+18,L-(OSID+18))                                
+           IF PART2 = 'ORIG_SYSTEM_ID = ?'                                      
+           THEN DO                                                              
+           SUBST = INSERT(orig_system_id"'",'ORIG_SYSTEM_ID = ''',18)           
+           in.i = PART1 || SUBST || PART3                                       
+                END                                                             
+        END                                                                     
+/*3** check for NODE_id ***************/                                        
+        if NODE <> 0 then                                                       
+        do                                                                      
+        PART1 = SUBSTR(in.i,1,NODE-1)                                           
+        PART2 = SUBSTR(in.i,NODE,18)                                            
+        PART3 = SUBSTR(in.i,NODE+18,L-(NODE+18))                                
+           IF PART2 = 'NODE_ID = ?'                                             
+           THEN DO                                                              
+           SUBST = INSERT(NODE_ID"'",'NODE_ID = ''',11)                         
+           in.i = PART1 || SUBST || PART3                                       
+                END                                                             
+        END                                                                     
+/*4** check for ban ****************/                                           
+        if bn <> 0 then                                                         
+        do                                                                      
+        PART1 = SUBSTR(in.i,1,BN)                                               
+        PART2 = SUBSTR(in.i,BN,8)                                               
+        PART3 = SUBSTR(in.i,BN+8,L-(BN+8))                                      
+           IF PART2 = ' BAN = ?' | PART2 = '.BAN = ?'                           
+           THEN DO                                                              
+           SUBST = INSERT(ban"'",'BAN = ''',7)                                  
+           in.i = PART1 || SUBST || PART3                                       
+                END                                                             
+        END                                                                     
+/*5** check for bill_date ****************/                                     
+        if BD <> 0 then                                                         
+        do                                                                      
+        PART1 = SUBSTR(in.i,1,BD-1)                                             
+        PART2 = SUBSTR(in.i,BD,13)                                              
+        PART3 = SUBSTR(in.i,BD+13,L-(BD+13))                                    
+           IF PART2 = 'BILL_DATE = ?'                                           
+           THEN DO                                                              
+           SUBST = INSERT(bill_date"'",'BILL_DATE = ''',13)                     
+           in.i = PART1 || SUBST || PART3                                       
+                END                                                             
+        END                                                                     
+/*6** check for Aban ****************/                                          
+        if abn <> 0 then                                                        
+        do                                                                      
+        PART1 = SUBSTR(in.i,1,ABN-1)                                            
+        PART2 = SUBSTR(in.i,ABN,8)                                              
+        PART3 = SUBSTR(in.i,ABN+8,L-(ABN+8))                                    
+           IF PART2 = 'ABAN = ?'                                                
+           THEN DO                                                              
+           SUBST = INSERT(aban"'",'ABAN = ''',8)                                
+           in.i = PART1 || SUBST || PART3                                       
+                END                                                             
+        END                                                                     
+/*7** check ENTITY CODE ****************/                                       
+        if ENTY <> 0 then                                                       
+        do                                                                      
+        PART1 = SUBSTR(in.i,1,ENTY-1)                                           
+        PART2 = SUBSTR(in.i,ENTY,13)                                            
+        PART3 = SUBSTR(in.i,ENTY+13,L-(ENTY+13))                                
+           IF PART2 = 'ENTITY_CD = ?'                                           
+           THEN DO                                                              
+           SUBST = INSERT(entity_cd"'",'ENTITY_CD = ''',13)                     
+           in.i = PART1 || SUBST || PART3                                       
+                END                                                             
+        END                                                                     
+/*8** check LOCATION ID ****************/                                       
+        if LOCA <> 0 then                                                       
+        do                                                                      
+        PART1 = SUBSTR(in.i,1,LOCA-1)                                           
+        PART2 = SUBSTR(in.i,LOCA,15)                                            
+        PART3 = SUBSTR(in.i,ENTY+15,L-(ENTY+15))                                
+           IF PART2 = 'LOCATION_ID = ?'                                         
+           THEN DO                                                              
+           SUBST = INSERT(location_id"'",'LOCATION_ID = ''',15)                 
+           in.i = PART1 || SUBST || PART3                                       
+                END                                                             
+        END                                                                     
+/*9** check CHG_CD ****************/                                            
+        if CHGCD <> 0 then                                                      
+        do                                                                      
+        PART1 = SUBSTR(in.i,1,CHGCD)                                            
+        PART2 = SUBSTR(in.i,CHGCD,11)                                           
+        PART3 = SUBSTR(in.i,CHGCD+11,L-(CHGCD+11))                              
+           IF PART2 = ' CHG_CD = ?' | PART2 = '.CHG_CD = ?'                     
+           THEN DO                                                              
+           SUBST = INSERT(chg_cd"'",'CHG_CD = ''',10)                           
+           in.i = PART1 || SUBST || PART3                                       
+                END                                                             
+        END                                                                     
+/*9** check ASSOC_CHG_CD **********/                                            
+        if ACHGCD <> 0 then                                                     
+        do                                                                      
+        PART1 = SUBSTR(in.i,1,ACHGCD-1)                                         
+        PART2 = SUBSTR(in.i,ACHGCD,16)                                          
+        PART3 = SUBSTR(in.i,ACHGCD+16,L-(ACHGCD+16))                            
+           IF PART2 = 'ASSOC_CHG_CD = ?'                                        
+           THEN DO                                                              
+           SUBST = INSERT(assoc_chg_cd"'",'ASSOC_CHG_CD = ''',16)               
+           in.i = PART1 || SUBST || PART3                                       
+                END                                                             
+        END                                                                     
+/*10* check INV_BILL_IND **************/                                        
+        if INVBID <> 0 then                                                     
+        do                                                                      
+        PART1 = SUBSTR(in.i,1,INVBID-1)                                         
+        PART2 = SUBSTR(in.i,INVBID,16)                                          
+        PART3 = SUBSTR(in.i,INVBID+16,L-(INVBID+16))                            
+           IF PART2 = 'INV_BILL_IND = ?'                                        
+           THEN DO                                                              
+           SUBST = INSERT(inv_bill_ind"'",'INV_BILL_IND = ''',16)               
+           in.i = PART1 || SUBST || PART3                                       
+                END                                                             
+        END                                                                     
+/*10* check INV_BILLING_IND **************/                                     
+        if INBNID <> 0 then                                                     
+        do                                                                      
+        PART1 = SUBSTR(in.i,1,INBNID-1)                                         
+        PART2 = SUBSTR(in.i,INBNID,19)                                          
+        PART3 = SUBSTR(in.i,INBNID+19,L-(INBNID+19))                            
+           IF PART2 = 'INV_BILLING_IND = ?'                                     
+           THEN DO                                                              
+           SUBST = INSERT(inv_billing_ind"'",'INV_BILLING_IND = ''',19)         
+           in.i = PART1 || SUBST || PART3                                       
+                END                                                             
+        END                                                                     
+/*11* check GRP_ID_1 **************/                                            
+        if GRPID1 <> 0 then                                                     
+        do                                                                      
+        PART1 = SUBSTR(in.i,1,GRPID1-1)                                         
+        PART2 = SUBSTR(in.i,GRPID1,12)                                          
+        PART3 = SUBSTR(in.i,GRPID1+12,L-(GRPID1+12))                            
+           IF PART2 = 'GRP_ID_1 = ?'                                            
+           THEN DO                                                              
+           SUBST = INSERT(GRP_ID_1"'",'GRP_ID_1 = ''',12)                       
+           in.i = PART1 || SUBST || PART3                                       
+                END                                                             
+        END                                                                     
+/*12* check GRP_ID_2 **************/                                            
+        if GRPID2 <> 0 then                                                     
+        do                                                                      
+        PART1 = SUBSTR(in.i,1,GRPID2-1)                                         
+        PART2 = SUBSTR(in.i,GRPID2,12)                                          
+        PART3 = SUBSTR(in.i,GRPID2+12,L-(GRPID2+12))                            
+           IF PART2 = 'GRP_ID_2 = ?'                                            
+           THEN DO                                                              
+           SUBST = INSERT(GRP_ID_2"'",'GRP_ID_2 = ''',12)                       
+           in.i = PART1 || SUBST || PART3                                       
+                END                                                             
+        END                                                                     
+/*13* check GRP_ID_3 **************/                                            
+        if GRPID3 <> 0 then                                                     
+        do                                                                      
+        PART1 = SUBSTR(in.i,1,GRPID3-1)                                         
+        PART2 = SUBSTR(in.i,GRPID3,12)                                          
+        PART3 = SUBSTR(in.i,GRPID3+12,L-(GRPID3+12))                            
+           IF PART2 = 'GRP_ID_3 = ?'                                            
+           THEN DO                                                              
+           SUBST = INSERT(GRP_ID_3"'",'GRP_ID_3 = ''',12)                       
+           in.i = PART1 || SUBST || PART3                                       
+                END                                                             
+        END                                                                     
+/*14* check REGION_CD *****/                                                    
+        if RGNCD <> 0 then                                                      
+        do                                                                      
+        PART1 = SUBSTR(in.i,1,RGNCD-1)                                          
+        PART2 = SUBSTR(in.i,RGNCD,13)                                           
+        PART3 = SUBSTR(in.i,RGNCD+13,L-(RGNCD+13))                              
+           IF PART2 = 'REGION_CD = ?'                                           
+           THEN DO                                                              
+           SUBST = INSERT(REGION_CD"'",'REGION_CD = ''',13)                     
+           in.i = PART1 || SUBST || PART3                                       
+                END                                                             
+        END                                                                     
+/*15* check WTN **************/                                                 
+        if WTN <> 0 then                                                        
+        do                                                                      
+        PART1 = SUBSTR(in.i,1,WTN-1)                                            
+        PART2 = SUBSTR(in.i,WTN,7)                                              
+        PART3 = SUBSTR(in.i,WTN+7,L-(WTN+7))                                    
+           IF PART2 = 'WTN = ?'                                                 
+           THEN DO                                                              
+           SUBST = INSERT(WTN"'",'WTN = ''',7)                                  
+           in.i = PART1 || SUBST || PART3                                       
+                END                                                             
+        END                                                                     
+/*16* check NBR **************/                                                 
+        if NBR <> 0 then                                                        
+        do                                                                      
+        PART1 = SUBSTR(in.i,1,NBR-1)                                            
+        PART2 = SUBSTR(in.i,NBR,7)                                              
+        PART3 = SUBSTR(in.i,NBR+7,L-(NBR+7))                                    
+           IF PART2 = 'NBR = ?'                                                 
+           THEN DO                                                              
+           SUBST = INSERT(NBR"'",'NBR = ''',7)                                  
+           in.i = PART1 || SUBST || PART3                                       
+                END                                                             
+        END                                                                     
+/*17* check WORKING_TEL_NBR ***********/                                        
+        if WKTEL <> 0 then                                                      
+        do                                                                      
+        PART1 = SUBSTR(in.i,1,NBR-1)                                            
+        PART2 = SUBSTR(in.i,NBR,19)                                             
+        PART3 = SUBSTR(in.i,NBR+19,L-(NBR+19))                                  
+           IF PART2 = 'WORKING_TEL_NBR = ?'                                     
+           THEN DO                                                              
+           SUBST = INSERT(WORKING_TEL_NBR"'",'WORKING_TEL_NBR = ''',19)         
+           in.i = PART1 || SUBST || PART3                                       
+                END                                                             
+        END                                                                     
+/*18* check USER_OID **********/                                                
+        if USERID <> 0 then                                                     
+        do                                                                      
+        PART1 = SUBSTR(in.i,1,USERID-1)                                         
+        PART2 = SUBSTR(in.i,USERID,12)                                          
+        PART3 = SUBSTR(in.i,USERID+12,L-(USERID+12))                            
+           IF PART2 = 'USER_OID = ?'                                            
+           THEN DO                                                              
+           SUBST = INSERT(USER_OID,'USER_OID = ',12)                            
+           in.i = PART1 || SUBST || PART3                                       
+                END                                                             
+        END                                                                     
+/*19* check POSITION_OID ******/                                                
+        if POSID <> 0 then                                                      
+        do                                                                      
+        PART1 = SUBSTR(in.i,1,POSID-1)                                          
+        PART2 = SUBSTR(in.i,POSID,16)                                           
+        PART3 = SUBSTR(in.i,POSID+16,L-(POSID+16))                              
+           IF PART2 = 'POSITION_OID = ?'                                        
+           THEN DO                                                              
+           SUBST = INSERT(POSITION_OID,'POSITION_OID = ',16)                    
+           in.i = PART1 || SUBST || PART3                                       
+                END                                                             
+        END                                                                     
+/*20* check POSITION_TYPE******/                                                
+        if POSTYP <> 0 then                                                     
+        do                                                                      
+        PART1 = SUBSTR(in.i,1,POSTYP-1)                                         
+        PART2 = SUBSTR(in.i,POSTYP,17)                                          
+        PART3 = SUBSTR(in.i,POSTYP+17,L-(POSTYP+17))                            
+           IF PART2 = 'POSITION_TYPE = ?'                                       
+           THEN DO                                                              
+           SUBST = INSERT(POSITION_TYPE"'",'POSITION_TYPE = ''',17)             
+           in.i = PART1 || SUBST || PART3                                       
+                END                                                             
+        END                                                                     
+/*21* check VERIFIED *****/                                                     
+        if VERIF <> 0 then                                                      
+        do                                                                      
+        PART1 = SUBSTR(in.i,1,VERIF-1)                                          
+        PART2 = SUBSTR(in.i,VERIF,12)                                           
+        PART3 = SUBSTR(in.i,VERIF+12,L-(VERIF+12))                              
+           IF PART2 = 'VERIFIED = ?'                                            
+           THEN DO                                                              
+           SUBST = INSERT(VERIFIED"'",'VERIFIED = ''',12)                       
+           in.i = PART1 || SUBST || PART3                                       
+                END                                                             
+        END                                                                     
+/**** WRITE FOR ANY SUSBTITUTIONS ******/                                       
+   END                                                                          
+ELSE                                                                            
+   DO                                                                           
+     IF INDEX(IN.I,'%') > 0 THEN                                                
+        DO                                                                      
+        in.i = translate(in.i)                                                  
+        MN  =INDEX(in.i,'MAN%')                                                 
+        BN  =INDEX(in.i,'BAN%')                                                 
+        MBD =INDEX(in.i,'MAN_BILL_DATE%')                                       
+        BD  =INDEX(in.i,'BILL_DATE%')                                           
+        ABN =INDEX(in.i,'ABAN%')                                                
+        GBRC=INDEX(in.i,'GBR_CLAUSE%')                                          
+        GBR =INDEX(in.i,'GBR%')                                                 
+        NBR =INDEX(in.i,'NBR%')                                                 
+        OSID=INDEX(in.i,'ORIG_SYSTEM_ID%')                                      
+        CON1=INDEX(IN.I,'%CONSTANT1%')                                          
+        CON2=INDEX(IN.I,'%CONSTANT2%')                                          
+        CON3=INDEX(IN.I,'%CONSTANT3%')                                          
+        CON4=INDEX(IN.I,'%CONSTANT4%')                                          
+        NODE=INDEX(IN.I,'NODE_ID%')                                             
+/******** testing  **/                                                          
+      wtn  =INDEX(in.i,'wtn%')                                                  
+      locid=INDEX(in.i,'LOCATION_ID%')                                          
+      rgncd=INDEX(in.i,'REGION_Cd%')                                            
+      posid=INDEX(in.i,'POSITION_OID%')                                         
+      verif=INDEX(in.i,'VERIFIED%')                                             
+      grpid1=INDEX(in.i,'GRP_ID_1%')                                            
+      grpid2=INDEX(in.i,'GRP_ID_2%')                                            
+       subid=INDEX(in.i,'SUB_API_ID%')                                          
+       apid =INDEX(in.i,'API_ID%')                                              
+       orgl1=INDEX(in.i,'ORG_LEVEL1_CD%')                                       
+       orgl2=INDEX(in.i,'ORG_LEVEL2_CD%')                                       
+       gbrcc=INDEX(in.i,'GBR_CLASS_CD%')                                        
+       gbros=INDEX(in.i,'GBR_OSID%')                                            
+       gbrsv=INDEX(in.i,'GBR_SVC%')                                             
+       gbrss=INDEX(in.i,'GBR_SSVC%')                                            
+       secnm=INDEX(in.i,'SECTION_NUM%')                                         
+       logid=INDEX(IN.I,'LOGIN_ID%')                                            
+       porid=INDEX(IN.I,'PORTAL_IND%')                                          
+       fmdt =INDEX(IN.I,'FROM_DATE%')                                           
+       thdt =INDEX(IN.I,'THRU_DATE%')                                           
+       sutid=INDEX(in.i,'SUBSCRIPTION_OID%')                                    
+       strts=INDEX(in.i,'STRUCTURE_TS%')                                        
+       strty=INDEX(in.i,'STRUCTURE_TYPE%')                                      
+       posty=INDEX(in.i,'POSITION_TYPE%')                                       
+       poslv=INDEX(in.i,'POSITION_LVL%')                                        
+       strid=INDEX(in.i,'STRUCTURE_OID%')                                       
+       permi=INDEX(in.i,'PERMISSION%')                                          
+       invdt=INDEX(in.i,'INV_DATE%')                                            
+       invty=INDEX(in.i,'INV_TYPE%')                                            
+       curpg=INDEX(in.i,'CURRENT_PAGE%')                                        
+       cursu=INDEX(in.i,'CURRENT_SUBSET%')                                      
+       acton=INDEX(in.i,'ACTION%')                                              
+       skey =INDEX(IN.I,'SEARCH_KEY%')                                          
+       appty=INDEX(IN.I,'APP_TYPE%')                                            
+       acals=INDEX(IN.I,'ACCT_ALIAS%')                                          
+       alflg=INDEX(in.i,'ALIAS_FLAG%')                                          
+       mtchf=INDEX(in.i,'MATCH_FOUND%')                                         
+/*1****** man% marking *********************/                                   
+        IF MN <> 0 THEN                                                         
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,MN-1)                                         
+            PART2 = SUBSTR(IN.I,MN,4)                                           
+            part3 = SUBSTR(in.i,MN+4,l-MN+4)                                    
+            IF INDEX(PART2,'MAN%') > 0 THEN                                     
+               IN.I = PART1 || "'"MAN"'" || PART3                               
+            END                                                                 
+/*2****** man_Bill_date% marking *********************/                         
+        IF mbd <> 0 THEN                                                        
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,MBD-1)                                        
+            PART2 = SUBSTR(IN.I,MBD,14)                                         
+            part3 = SUBSTR(in.i,MBD+14,l-MBD+14)                                
+            IF INDEX(PART2,'MAN_BILL_DATE%') > 0 THEN                           
+               IN.I = PART1 || "'"MAN_BILL_DATE"'" || PART3                     
+            END                                                                 
+/*3****** ban% marking *********************/                                   
+        IF bN <> 0 THEN                                                         
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,BN-1)                                         
+            PART2 = SUBSTR(IN.I,BN-1,5)                                         
+            part3 = SUBSTR(in.i,BN+4,l-BN+4)                                    
+            IF INDEX(PART2,' BAN%') > 0 | INDEX(PART2,',BAN%') > 0 THEN         
+               IN.I = PART1 || "'"BAN"'" || PART3                               
+            END                                                                 
+/*4****** Bill_date% marking *********************/                             
+        IF bd <> 0 THEN                                                         
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,BD-1)                                         
+            PART2 = SUBSTR(IN.I,BD,10)                                          
+            part3 = SUBSTR(in.i,BD+10,l-BD+10)                                  
+            IF INDEX(PART2,'BILL_DATE%') > 0 THEN                               
+               IN.I = PART1 || "'"BILL_DATE"'" || PART3                         
+            END                                                                 
+/*5******Aban% marking *********************/                                   
+        IF ABN <> 0 THEN                                                        
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,ABN-1)                                        
+            PART2 = SUBSTR(IN.I,ABN,5)                                          
+            PART3 = SUBSTR(in.i,ABN+5,l-ABN+5)                                  
+            IF INDEX(PART2,'ABAN%') > 0 THEN                                    
+               IN.I = PART1 || "'"ABAN"'" || PART3                              
+            END                                                                 
+/*6******GBR% marking *********************/                                    
+        IF GBRC <> 0 THEN                                                       
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,GBRC-1)                                       
+            PART2 = SUBSTR(IN.I,GBRC,11)                                        
+            part3 = SUBSTR(in.i,GBRC+11,l-GBRC+11)                              
+            IF INDEX(PART2,'GBR_CLAUSE%') > 0 THEN                              
+               IN.I = PART1 || "'"GBR_CLAUSE%"'" || PART3                       
+            END                                                                 
+/*7******GBR% marking *********************/                                    
+        IF GBR <> 0 THEN                                                        
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,GBR-1)                                        
+            PART2 = SUBSTR(IN.I,GBR,4)                                          
+            part3 = SUBSTR(in.i,GBR+4,l-GBR+4)                                  
+            IF INDEX(PART2,'GBR%') > 0 THEN                                     
+               IN.I = PART1 || "'"GBR%"'" || PART3                              
+            END                                                                 
+/*8******NBR% marking *********************/                                    
+        IF NBR <> 0 THEN                                                        
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,NBR-1)                                        
+            PART2 = SUBSTR(IN.I,NBR,4)                                          
+            part3 = SUBSTR(in.i,NBR+4,l-NBR+4)                                  
+            IF INDEX(PART2,'NBR%') > 0 THEN                                     
+               IN.I = PART1 || "'"NBR%"'" || PART3                              
+            END                                                                 
+/*9****** ORIG_SYSTEM_ID% marking *********************/                        
+        IF OSID <> 0 THEN                                                       
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,OSID-1)                                       
+            PART2 = SUBSTR(IN.I,OSID,15)                                        
+            part3 = SUBSTR(in.i,OSID+15,l-OSID+15)                              
+            IF INDEX(PART2,'ORIG_SYSTEM_ID%') > 0 THEN                          
+               IN.I = PART1 || "'"ORIG_SYSTEM_ID"'" || PART3                    
+            END                                                                 
+/*9****** NODE_ID%        marking *********************/                        
+        IF node <> 0 THEN                                                       
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,node-1)                                       
+            PART2 = SUBSTR(IN.I,node,8)                                         
+            part3 = SUBSTR(in.i,node+8,l-node+8)                                
+            IF INDEX(PART2,'NODE_ID%') > 0 THEN                                 
+               IN.I = PART1 || "'"NODE_ID"'" || PART3                           
+            END                                                                 
+/*10***** %CONSTANT1% marking *********************/                            
+        IF CON1 <> 0 THEN                                                       
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,CON1-1)                                       
+            PART2 = SUBSTR(IN.I,CON1,11)                                        
+            part3 = SUBSTR(in.i,CON1+11,l-CON1+11)                              
+            IF INDEX(PART2,'%CONSTANT1%') > 0 THEN                              
+               IN.I = PART1 || "'"CONSTANT1"'" || PART3                         
+            END                                                                 
+/*11***** %CONSTANT2% marking *********************/                            
+        IF CON2 <> 0 THEN                                                       
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,CON2-1)                                       
+            PART2 = SUBSTR(IN.I,CON2,11)                                        
+            part3 = SUBSTR(in.i,CON2+11,l-CON2+11)                              
+            IF INDEX(PART2,'%CONSTANT2%') > 0 THEN                              
+               IN.I = PART1 || "'"CONSTANT2"'" || PART3                         
+            END                                                                 
+/*12***** %CONSTANT3% marking *********************/                            
+        IF CON3 <> 0 THEN                                                       
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,CON3-1)                                       
+            PART2 = SUBSTR(IN.I,CON3,11)                                        
+            part3 = SUBSTR(in.i,CON3+11,l-CON3+11)                              
+            IF INDEX(PART2,'%CONSTANT3%') > 0 THEN                              
+               IN.I = PART1 || "'"CONSTANT3"'" || PART3                         
+            END                                                                 
+/*13***** %CONSTANT4% marking *********************/                            
+        IF CON4 <> 0 THEN                                                       
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,CON4-1)                                       
+            PART2 = SUBSTR(IN.I,CON4,11)                                        
+            part3 = SUBSTR(in.i,CON4+11,l-CON4+11)                              
+            IF INDEX(PART2,'%CONSTANT4%') > 0 THEN                              
+               IN.I = PART1 || "'"CONSTANT4"'" || PART3                         
+            END                                                                 
+/*14***** wtn% marking *********************/                                   
+        IF WTN <> 0 THEN                                                        
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,WTN-1)                                        
+            PART2 = SUBSTR(IN.I,WTN,4)                                          
+            part3 = SUBSTR(in.i,WTN+4,l-WTN+4)                                  
+            IF INDEX(PART2,'WTN%') > 0 THEN                                     
+               IN.I = PART1 || "'"WTN"'" || PART3                               
+            END                                                                 
+/*15***** LOCATION_ID% marking*******/                                          
+        IF locid <> 0 THEN                                                      
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,locid-1)                                      
+            PART2 = SUBSTR(IN.I,locid,12)                                       
+            part3 = SUBSTR(in.i,locid+12,l-locid+12)                            
+            IF INDEX(PART2,'LOCATION_ID%') > 0 THEN                             
+               IN.I = PART1 || "'"LOCATION_ID"'" || PART3                       
+            END                                                                 
+/*16***** REGION_CD% marking*******/                                            
+        IF RGNCD <> 0 THEN                                                      
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,RGNCD-1)                                      
+            PART2 = SUBSTR(IN.I,RGNCD,10)                                       
+            part3 = SUBSTR(in.i,RGNCD+10,l-RGNCD+10)                            
+            IF INDEX(PART2,'REGION_CD%') > 0 THEN                               
+               IN.I = PART1 || "'"REGION_CD"'" || PART3                         
+            END                                                                 
+/*17***** GRP_ID_1% marking*******/                                             
+        IF grpid1 <> 0 THEN                                                     
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,grpid1-1)                                     
+            PART2 = SUBSTR(IN.I,grpid1,9)                                       
+            part3 = SUBSTR(in.i,grpid1+9,l-grpid1+9)                            
+            IF INDEX(PART2,'GRP_ID_1%') > 0 THEN                                
+               IN.I = PART1 || "'"GRP_ID_1"'" || PART3                          
+            END                                                                 
+/*18***** GRP_ID_2% marking*******/                                             
+        IF grpid2 <> 0 THEN                                                     
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,grpid2-1)                                     
+            PART2 = SUBSTR(IN.I,grpid2,9)                                       
+            part3 = SUBSTR(in.i,grpid2+9,l-grpid2+9)                            
+            IF INDEX(PART2,'GRP_ID_2%') > 0 THEN                                
+               IN.I = PART1 || "'"GRP_ID_2"'" || PART3                          
+            END                                                                 
+/*19***** SUB_API_ID% marking*******/                                           
+        IF subid <> 0 THEN                                                      
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,subid-1)                                      
+            PART2 = SUBSTR(IN.I,subid,11)                                       
+            part3 = SUBSTR(in.i,subid+11,l-subid+11)                            
+            IF INDEX(PART2,'SUB_API_ID%') > 0 THEN                              
+               IN.I = PART1 || "'"SUB_API_ID"'" || PART3                        
+            END                                                                 
+/*20***** API_ID% marking*******/                                               
+        IF apid <> 0 THEN                                                       
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,apid-1)                                       
+            PART2 = SUBSTR(IN.I,apid,7)                                         
+            part3 = SUBSTR(in.i,apid+7,l-apid+7)                                
+            IF INDEX(PART2,'API_ID%') > 0 THEN                                  
+               IN.I = PART1 || "'"API_ID"'" || PART3                            
+            END                                                                 
+/*21***** ORG_LEVEL1_CD% marking*******/                                        
+        IF orgl1 <> 0 THEN                                                      
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,orgl1-1)                                      
+            PART2 = SUBSTR(IN.I,orgl1,14)                                       
+            part3 = SUBSTR(in.i,orgl1+14,l-orgl1+14)                            
+            IF INDEX(PART2,'ORG_LEVEL1_CD%') > 0 THEN                           
+               IN.I = PART1 || "'"ORG_LEVEL1_CD"'" || PART3                     
+            END                                                                 
+/*22***** ORG_LEVEL2_CD% marking*******/                                        
+        IF orgl2 <> 0 THEN                                                      
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,orgl2-1)                                      
+            PART2 = SUBSTR(IN.I,orgl2,14)                                       
+            part3 = SUBSTR(in.i,orgl2+14,l-orgl2+14)                            
+            IF INDEX(PART2,'ORG_LEVEL2_CD%') > 0 THEN                           
+               IN.I = PART1 || "'"ORG_LEVEL2_CD"'" || PART3                     
+            END                                                                 
+/*23***** GBR_OSID% marking*******/                                             
+        IF gbros <> 0 THEN                                                      
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,gbros-1)                                      
+            PART2 = SUBSTR(IN.I,gbros,9)                                        
+            part3 = SUBSTR(in.i,gbros+9,l-gbros+9)                              
+            IF INDEX(PART2,'GBR_OSID%') > 0 THEN                                
+               IN.I = PART1 || "'"GBR_OSID"'" || PART3                          
+            END                                                                 
+/*24***** GBR_SVC%marking*******/                                               
+        IF gbrsv <> 0 THEN                                                      
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,gbrsv-1)                                      
+            PART2 = SUBSTR(IN.I,gbrsv,8)                                        
+            part3 = SUBSTR(in.i,gbrsv+8,l-gbrsv+8)                              
+            IF INDEX(PART2,'GBR_SVC%') > 0 THEN                                 
+               IN.I = PART1 || "'"GBR_SVC"'" || PART3                           
+            END                                                                 
+/*25***** GBR_SSVC% marking*******/                                             
+        IF gbrSS <> 0 THEN                                                      
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,gbrss-1)                                      
+            PART2 = SUBSTR(IN.I,gbrss,9)                                        
+            part3 = SUBSTR(in.i,gbrss+9,l-gbrss+9)                              
+            IF INDEX(PART2,'GBR_SSVC%') > 0 THEN                                
+               IN.I = PART1 || "'"GBR_SSVC"'" || PART3                          
+            END                                                                 
+/*26***** SECTION_NUM% marking*******/                                          
+        IF secnm <> 0 THEN                                                      
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,secnm-1)                                      
+            PART2 = SUBSTR(IN.I,secnm,12)                                       
+            part3 = SUBSTR(in.i,secnm+12,l-secnm+12)                            
+            IF INDEX(PART2,'SECTION_NUM%') > 0 THEN                             
+               IN.I = PART1 || "'"SECTION_NUM"'" || PART3                       
+            END                                                                 
+/*27***** LOGIN_ID% marking*******/                                             
+        IF logid <> 0 THEN                                                      
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,logid-1)                                      
+            PART2 = SUBSTR(IN.I,logid,9)                                        
+            part3 = SUBSTR(in.i,logid+9,l-logid+9)                              
+            IF INDEX(PART2,'LOGIN_ID%') > 0 THEN                                
+               IN.I = PART1 || "'"LOGIN_ID"'" || PART3                          
+            END                                                                 
+/*28***** PORTAL_IND% marking*******/                                           
+        IF porid <> 0 THEN                                                      
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,porid-1)                                      
+            PART2 = SUBSTR(IN.I,porid,11)                                       
+            part3 = SUBSTR(in.i,porid+11,l-porid+11)                            
+            IF INDEX(PART2,'PORTAL_IND%') > 0 THEN                              
+               IN.I = PART1 || "'"PORTAL_IND"'" || PART3                        
+            END                                                                 
+/*29***** FROM_DATE% marking*******/                                            
+        IF fmdt <> 0 THEN                                                       
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,fmdt-1)                                       
+            PART2 = SUBSTR(IN.I,fmdt,10)                                        
+            part3 = SUBSTR(in.i,fmdt+10,l-fmdt+10)                              
+            IF INDEX(PART2,'FROM_DATE%') > 0 THEN                               
+               IN.I = PART1 || "'"FROM_DATE"'" || PART3                         
+            END                                                                 
+/*30***** THRU_DATE% marking*******/                                            
+        IF thdt <> 0 THEN                                                       
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,thdt-1)                                       
+            PART2 = SUBSTR(IN.I,thdt,10)                                        
+            part3 = SUBSTR(in.i,thdt+10,l-thdt+10)                              
+            IF INDEX(PART2,'THRU_DATE%') > 0 THEN                               
+               IN.I = PART1 || "'"THRU_DATE"'" || PART3                         
+            END                                                                 
+/*31***** SUBSCRIPTION_OID% marking*******/                                     
+        IF sutid <> 0 THEN                                                      
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,sutid-1)                                      
+            PART2 = SUBSTR(IN.I,sutid,17)                                       
+            part3 = SUBSTR(in.i,sutid+17,l-sutid+17)                            
+            IF INDEX(PART2,'SUBSCRIPTION_OID%') > 0 THEN                        
+               IN.I = PART1 || "'"SUBSCRIPTION_OID"'" || PART3                  
+            END                                                                 
+/*32***** STRUCTURE_TS% marking*******/                                         
+        IF strts <> 0 THEN                                                      
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,strts-1)                                      
+            PART2 = SUBSTR(IN.I,strts,13)                                       
+            part3 = SUBSTR(in.i,strts+13,l-strts+13)                            
+            IF INDEX(PART2,'STRUCTURE_TS%') > 0 THEN                            
+               IN.I = PART1 || "'"STRUCTURE_TS"'" || PART3                      
+            END                                                                 
+/*33***** STRUCTURE_TYPE% marking*******/                                       
+        IF strty <> 0 THEN                                                      
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,strty-1)                                      
+            PART2 = SUBSTR(IN.I,strty,15)                                       
+            part3 = SUBSTR(in.i,strty+15,l-strty+15)                            
+            IF INDEX(PART2,'STRUCTURE_TYPE%') > 0 THEN                          
+               IN.I = PART1 || "'"STRUCTURE_TYPE"'" || PART3                    
+            END                                                                 
+/*34***** POSITION_TYPE%marking*******/                                         
+        IF posty <> 0 THEN                                                      
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,posty-1)                                      
+            PART2 = SUBSTR(IN.I,posty,14)                                       
+            part3 = SUBSTR(in.i,posty+14,l-posty+14)                            
+            IF INDEX(PART2,'POSITION_TYPE%') > 0 THEN                           
+               IN.I = PART1 || "'"POSITION_TYPE"'" || PART3                     
+            END                                                                 
+/*35***** POSITION_LVL% marking*******/                                         
+        IF poslv <> 0 THEN                                                      
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,poslv-1)                                      
+            PART2 = SUBSTR(IN.I,poslv,13)                                       
+            part3 = SUBSTR(in.i,poslv+13,l-poslv+13)                            
+            IF INDEX(PART2,'POSITION_LVL%') > 0 THEN                            
+               IN.I = PART1 || "'"POSITION_LVL"'" || PART3                      
+            END                                                                 
+/*36***** STRUCTURE_OID% marking*******/                                        
+        IF strid <> 0 THEN                                                      
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,strid-1)                                      
+            PART2 = SUBSTR(IN.I,strid,14)                                       
+            part3 = SUBSTR(in.i,strid+14,l-strid+14)                            
+            IF INDEX(PART2,'STRUCTURE_OID%') > 0 THEN                           
+               IN.I = PART1 || "'"STRUCTURE_OID"'" || PART3                     
+            END                                                                 
+/*37***** PERMISSION% marking*******/                                           
+        IF permi <> 0 THEN                                                      
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,permi-1)                                      
+            PART2 = SUBSTR(IN.I,permi,11)                                       
+            part3 = SUBSTR(in.i,permi+11,l-permi+11)                            
+            IF INDEX(PART2,'PERMISSION%') > 0 THEN                              
+               IN.I = PART1 || "'"PERMISSION"'" || PART3                        
+            END                                                                 
+/*38***** INV_DATE% marking*******/                                             
+        IF invdt <> 0 THEN                                                      
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,invdt-1)                                      
+            PART2 = SUBSTR(IN.I,invdt,9)                                        
+            part3 = SUBSTR(in.i,invdt+9,l-invdt+9)                              
+            IF INDEX(PART2,'INV_DATE%') > 0 THEN                                
+               IN.I = PART1 || "'"INV_DATE"'" || PART3                          
+            END                                                                 
+/*39***** INV_TYPE% marking*******/                                             
+        IF invty <> 0 THEN                                                      
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,invty-1)                                      
+            PART2 = SUBSTR(IN.I,invty,9)                                        
+            part3 = SUBSTR(in.i,invty+9,l-invty+9)                              
+            IF INDEX(PART2,'INV_TYPE%') > 0 THEN                                
+               IN.I = PART1 || "'"INV_TYPE"'" || PART3                          
+            END                                                                 
+/*40***** CURRENT_PAGE% marking*******/                                         
+        IF curpg <> 0 THEN                                                      
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,curpg-1)                                      
+            PART2 = SUBSTR(IN.I,curpg,13)                                       
+            part3 = SUBSTR(in.i,curpg+13,l-curpg+13)                            
+            IF INDEX(PART2,'CURRENT_PAGE%') > 0 THEN                            
+               IN.I = PART1 || "'"CURRENT_PAGE"'" || PART3                      
+            END                                                                 
+/*41***** CURRENT_SUBSET% marking*******/                                       
+        IF cursu <> 0 THEN                                                      
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,cursu-1)                                      
+            PART2 = SUBSTR(IN.I,cursu,15)                                       
+            part3 = SUBSTR(in.i,cursu+15,l-cursu+15)                            
+            IF INDEX(PART2,'CURRENT_SUBSET%') > 0 THEN                          
+               IN.I = PART1 || "'"CURRENT_SUBSET"'" || PART3                    
+            END                                                                 
+/*42***** ACTION% marking*******/                                               
+        IF acton <> 0 THEN                                                      
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,acton-1)                                      
+            PART2 = SUBSTR(IN.I,acton,7)                                        
+            part3 = SUBSTR(in.i,acton+7,l-acton+7)                              
+            IF INDEX(PART2,'ACTION%') > 0 THEN                                  
+               IN.I = PART1 || "'"ACTION"'" || PART3                            
+            END                                                                 
+/*43***** SEARCH_KEY% marking*******/                                           
+        IF skey <> 0 THEN                                                       
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,skey-1)                                       
+            PART2 = SUBSTR(IN.I,skey,11)                                        
+            part3 = SUBSTR(in.i,skey+11,l-skey+11)                              
+            IF INDEX(PART2,'SEARCH_KEY%') > 0 THEN                              
+               IN.I = PART1 || "'"SEARCH_KEY"'" || PART3                        
+            END                                                                 
+/*44***** APP_TYPE% marking*******/                                             
+        IF appty <> 0 THEN                                                      
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,appty-1)                                      
+            PART2 = SUBSTR(IN.I,appty,9)                                        
+            part3 = SUBSTR(in.i,appty+9,l-appty+9)                              
+            IF INDEX(PART2,'APP_TYPE%') > 0 THEN                                
+               IN.I = PART1 || "'"APP_TYPE"'" || PART3                          
+            END                                                                 
+/*45***** ACCT_ALIAS% marking*******/                                           
+        IF acals <> 0 THEN                                                      
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,acals-1)                                      
+            PART2 = SUBSTR(IN.I,acals,11)                                       
+            part3 = SUBSTR(in.i,acals+11,l-acals+11)                            
+            IF INDEX(PART2,'ACCT_ALIAS%') > 0 THEN                              
+               IN.I = PART1 || "'"ACCT_ALIAS"'" || PART3                        
+            END                                                                 
+/*46***** ALIAS_FLAG% marking*******/                                           
+        IF alflg <> 0 THEN                                                      
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,alflg-1)                                      
+            PART2 = SUBSTR(IN.I,alflg,11)                                       
+            part3 = SUBSTR(in.i,alflg+11,l-alflg+11)                            
+            IF INDEX(PART2,'ALIAS_FLAG%') > 0 THEN                              
+               IN.I = PART1 || "'"ALIAS_FLAG"'" || PART3                        
+            END                                                                 
+/*47***** MATCH_FOUND% marking*******/                                          
+        IF mtchf <> 0 THEN                                                      
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,mtchf-1)                                      
+            PART2 = SUBSTR(IN.I,mtchf,12)                                       
+            part3 = SUBSTR(in.i,mtchf+12,l-mtchf+12)                            
+            IF INDEX(PART2,'MATCH_FOUND%') > 0 THEN                             
+               IN.I = PART1 || "'"MATCH_FOUND"'" || PART3                       
+            END                                                                 
+/*48***** POSITION_OID% marking*******/                                         
+        IF POSID <> 0 THEN                                                      
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,posid-1)                                      
+            PART2 = SUBSTR(IN.I,posid,13)                                       
+            part3 = SUBSTR(in.i,posid+13,l-posid+13)                            
+            IF INDEX(PART2,'POSITION_OID%') > 0 THEN                            
+               IN.I = PART1 || "'"POSITION_OID"'" || PART3                      
+            END                                                                 
+/*49***** VERIFIED% marking*******/                                             
+        IF verif <> 0 THEN                                                      
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,verif-1)                                      
+            PART2 = SUBSTR(IN.I,verif,9)                                        
+            part3 = SUBSTR(in.i,verif+9,l-verif+9)                              
+            IF INDEX(PART2,'VERIFIED%') > 0 THEN                                
+               IN.I = PART1 || "'"VERIFIED"'" || PART3                          
+            END                                                                 
+/*50***** GBR_CLASS_CD% marking*******/                                         
+        IF gbrcc <> 0 THEN                                                      
+            DO                                                                  
+            l = length(in.i)                                                    
+            PART1 = SUBSTR(IN.I,1,gbrcc-1)                                      
+            PART2 = SUBSTR(IN.I,gbrcc,13)                                       
+            part3 = SUBSTR(in.i,gbrcc+13,l-gbrcc+13)                            
+            IF INDEX(PART2,'GBR_CLASS_CD%') > 0 THEN                            
+               IN.I = PART1 || "'"GBR_CLASS_CD"'" || PART3                      
+            END                                                                 
+/******** add if any % for masking ****************/                            
+        END                                                                     
+   END                                                                          
+"EXECIO * DISKW IN (STEM IN. FINIS"                                             
+END                                                                             
+"FREE FILE(IN)"                                                                 
+"FREE FILE(OUT)"                                                                
+RETURN                                                                          

@@ -1,0 +1,170 @@
+/* rexx */                                                              00010000
+/* TO UPDATE BM_CONFIG_PROC_T TABLE IN PROD    */                       00020000
+address TSO                                                             00070000
+ trace O                                                                00090000
+acctsfile="BMGVZ0CN.BMGBM3C.FILELIST.MERGE1"                            00100029
+"ALLOC FI(recfil) DA('"acctsfile"') SHR REUSE"                          00110000
+"execio * diskr recfil (stem row. finis"                                00120000
+"free FI(recfil)"                                                       00130000
+ say 'No of records from I/P file = ' row.0                             00131000
+/************* input parameters *************************************/  00140000
+/********************************************************************/  00160000
+  SSID="D009"                                                           00170000
+ address TSO "SUBCOM DSNREXX"                                           00180000
+ out.0=0                                                                00181000
+ stat = " "                                                             00182000
+ stat_ind = yes                                                         00182100
+ incount = 0                                                            00183000
+  IF RC <> 0 THEN                                                       00190000
+     S_RC = RXSUBCOM('ADD','DSNREXX','DSNREXX')                         00200000
+     display 'add dsnrexx = ' s_rc                                      00201031
+   ADDRESS DSNREXX                                                      00210000
+  "CONNECT" SSID                                                        00220000
+IF SQLCODE ^=0 THEN SAY "connection error " SQLCODE                     00230000
+ELSE                                                                    00240000
+     do i = 1 to row.0                                                  00250000
+     stat_ind = yes                                                     00260000
+     man = strip(substr(row.i,1,13))                                    00280000
+     v450  = strip(substr(row.i,27,44))                                 00281000
+     cust  = strip(substr(row.i,71,5))                                  00282000
+     conf  = strip(substr(row.i,76,2))                                  00283000
+     billd = strip(substr(row.i,79,10))                                 00284000
+     vload = strip(substr(row.i,99,10))                                 00285000
+     acctsd = strip(substr(row.i,111,26))                               00285100
+/*                     */                                               00285200
+     say 'man='       man                                               00285330
+     say 'v450='      v450                                              00285430
+     say 'cust='      cust                                              00285530
+     say 'conf='      conf                                              00285630
+     say 'billd='     billd                                             00285730
+     say 'vload='     vload                                             00285830
+     say 'acctsd='   acctsd                                             00285930
+     call bill_man                                                      00286000
+/*   say 'after bill & config_man '||stat_ind  */                       00286100
+     if stat_ind = yes then                                             00287000
+     do                                                                 00288000
+     call insert_man                                                    00290000
+     end                                                                00310000
+     end                                                                00310100
+     say 'No of inserts done in BM_CONFIG_PROC_T =' incount             00310600
+     out.0=i                                                            00311000
+   "disconnect"                                                         00312100
+     address TSO                                                        00312200
+     "ALLOC FI(outpt) DA('bmgvz0cn.procdb2.output') SHR REUSE"          00320000
+     "execio * diskw outpt (stem out. finis"                            00330000
+     "free FI(outpt)"                                                   00340000
+ exit                                                                   00360000
+                                                                        00370000
+ bill_man:                                                              00380000
+ sqlstmt = 'select a.acct_status_ind,a.orig_system_id from',            00400000
+           'bmgvzp.acct_sum_t A where man ',                            00410000
+  '= '||"'"||strip(man)||"'"|| 'and man_bill_date ',                    00420000
+  '=' || "'"||strip(billd)|| "'" ||'and man=ban with ur'                00430000
+    say 'sqlstmt='  sqlstmt                                             00440030
+ colsqlda.sqld = 2                                                      00460000
+colsqlda.1.sqldata = 0   /* Value in variable is H      */              00470000
+EXECSQl 'DECLARE C1 CURSOR FOR S1'                                      00480000
+EXECSQL 'PREPARE S1 FROM :sqlSTMT'                                      00490000
+EXECSQL open c1                                                         00500000
+if (sqlcode = 0)  then do                                               00510000
+  EXECSQL 'FETCH C1 USING DESCRIPTOR :colsqlda'                         00520000
+  if sqlcode = 0 then                                                   00550000
+    do                                                                  00560000
+    status = colsqlda.1.sqldata                                         00570000
+    orig = colsqlda.2.sqldata                                           00580000
+/*                     */                                               00580100
+    say 'status='  status                                               00580230
+    say  'orig='   orig                                                 00580330
+    stat_ind = yes                                                      00581000
+/*  say 'after bill_man' ||stat_ind  */                                 00582000
+    call config_man                                                     00590000
+    end                                                                 00610000
+  if sqlcode = 100 then                                                 00670100
+    do                                                                  00670200
+    stat = 'No data in ACCT_SUM_T'                                      00670400
+    stat_ind = no                                                       00670500
+    call write_out                                                      00670600
+    end                                                                 00670700
+    end                                                                 00670800
+EXECSQL 'close C1'                                                      00672000
+ return                                                                 00680000
+ config_man:                                                            00681000
+ sqlstmt = 'select a.lob,a.bill_period from',                           00682000
+           'bmgvzp.bm_config_t A where a.customer_id ',                 00683000
+  '= '||"'"||strip(cust)||"'"|| 'and a.config_id ',                     00684000
+  '=' || "'"||strip(conf)|| "'" ||'and',                                00685000
+  'a.effective_dt = ( select max(effective_dt) from',                   00685100
+  'bmgvzp.bm_config_t c where c.customer_id = a.customer_id and',       00685200
+  'c.config_id = a.config_id) with ur'                                  00685300
+    say 'sqlstmt1=' sqlstmt                                             00685430
+ colsqlda.sqld = 2                                                      00686000
+colsqlda.1.sqldata = 0   /* Value in variable is H      */              00687000
+EXECSQl 'DECLARE C51 CURSOR FOR S51'                                    00688000
+EXECSQL 'PREPARE S51 FROM :sqlstmt'                                     00689000
+EXECSQL open C51                                                        00689200
+if (sqlcode = 0)  then do                                               00689500
+  EXECSQL 'FETCH C51 USING DESCRIPTOR :colsqlda'                        00689600
+  if sqlcode = 0 then                                                   00689800
+    do                                                                  00689900
+    lob = colsqlda.1.sqldata                                            00690100
+    billp = colsqlda.2.sqldata                                          00690200
+/*                     */                                               00690300
+    say 'billp=' billp                                                  00690430
+    say 'lob='      lob                                                 00690530
+    stat_ind = yes                                                      00690600
+/*  say 'after config_man' ||stat_ind  */                               00690700
+    end                                                                 00690800
+  if sqlcode = 100 then                                                 00690900
+    do                                                                  00691000
+    stat = 'No data in BM_CONFIG_T'                                     00693000
+    stat_ind = no                                                       00693100
+    call write_out                                                      00693200
+    end                                                                 00695000
+    end                                                                 00696000
+   EXECSQL 'close C51'                                                  00696600
+ return                                                                 00698000
+ insert_man:                                                            00698100
+ i1 = 'insert into bmgvzp.bm_config_proc_t ( ',                         00698300
+       'customer_id,config_id,man,man_bill_date,',                      00698400
+       'orig_system_id,bill_period,vam_load_date,',                     00698500
+       'vz450_dsname,lob_ind,acct_status_ind,' ,                        00698600
+       'acct_sent_dt,bm_process_dt,portal_upload_dt,',                  00698700
+       'cd_cut_dt,cd_mail_dt,status_flag,valid_flag)',                  00698800
+       'values ('                                                       00699100
+     i2 = " "                                                           00699230
+/* i1=strip(g1)||strip(g2)||strip(g3)||strip(g4)||strip(g5) */          00699300
+i2 = "'"||strip(cust)||"'"||','||"'"||strip(conf)||"'"||',',            00699400
+   "'"||strip(man)||"'"||','||"'"||strip(billd)||"'"||',',              00699500
+   "'"||strip(orig)||"'"||','||"'"||strip(billp)||"'"||',',             00699600
+   "'"||strip(vload)||"'"||','||"'"||strip(v450)||"'"||',',             00699700
+   "'"||strip(lob)||"'"||','||"'"||strip(status)||"'"||',',             00699800
+   "'"||strip(acctsd)||"'"||",",                                        00700000
+   "'"||'9999-12-31-00.00.00.000000'||"'"||"," ,                        00700100
+   "'"||'9999-12-31-00.00.00.000000'||"'"||"," ,                        00700200
+   "'"||'9999-12-31-00.00.00.000000'||"'"||"," ,                        00700300
+   "'"||'9999-12-31-00.00.00.000000'||"'"||",",                         00700700
+   "'"||'N'||"'"||","||"'"||'Y'||"')"                                   00700800
+   i3=i1||i2                                                            00701000
+    say ' i1='i1                                                        00701129
+    say 'i2=' i2                                                        00701229
+    say 'i3=' i3                                                        00701329
+/* Do the insert */                                                     00701400
+"EXECSQL EXECUTE IMMEDIATE :i3"                                         00701500
+If SQLCODE = 0 Then                                                     00701600
+   do                                                                   00701700
+   incount = incount +1                                                 00701800
+   proc_name = 'COMMIT'                                                 00701900
+   "EXECSQL COMMIT"                                                     00702000
+   stat = "Inserted in BM_CONFIG_PROC_T"                                00702100
+   write_out                                                            00703000
+   end                                                                  00703100
+ELSE                                                                    00703200
+  do                                                                    00706000
+ stat = "SQL error in insert code=" ||sqlcode                           00706100
+ wirte_out                                                              00706200
+  end                                                                   00706300
+ write_out:                                                             00706400
+ spac = "             "                                                 00707000
+ rec =  strip(man)||spac||strip(cust)||strip(conf)||spac||strip(stat)   00730000
+ out.i = rec                                                            00740000
+ return                                                                 00760000

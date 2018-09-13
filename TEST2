@@ -1,0 +1,39 @@
+ SELECT TB1.COLUMN_1       COL0                                                 
+--     ,TB1.COLUMN_2       COL1                                                 
+--     ,IN3.COUNT          COUNT                                                
+--     ,IN3.PARTIC_LINES COL2                                                   
+       ,CASE WHEN IN3.COUNT = 2                                                 
+              AND IN3.PARTIC_LINES = TB1.COLUMN_2                               
+             THEN ' '                                                           
+             ELSE IN3.PARTIC_LINES END TEST                                     
+       ,CASE WHEN IN3.COUNT = 2                                                 
+              AND TB1.COLUMN_2 <> IN3.PARTIC_LINES                              
+            THEN 'ROWSPAN_2'                                                    
+            ELSE ' '     END TARGET_FORMAT                                      
+       ,TB1.COLUMN_3       COL3                                                 
+       ,TB1.COLUMN_4       COL4                                                 
+       ,TB1.COLUMN_5       COL5                                                 
+     FROM D009.BMGVZP.VZ450_VMT50204_T TB1                                      
+    INNER JOIN (                                                                
+     SELECT IN2.USAGE_TYPE                                                      
+           ,MAX(IN2.PARTIC_LINES) PARTIC_LINES                                  
+           ,COUNT(*) COUNT                                                      
+       FROM (                                                                   
+      SELECT SUBSTR(IN1.COLUMN_1,1,25) USAGE_TYPE                               
+            ,IN1.COLUMN_2 PARTIC_LINES                                          
+          FROM D009.BMGVZP.VZ450_VMT50204_T IN1                                 
+          WHERE IN1.MAN = '7CLTZBNPE'                                           
+            AND IN1.MAN_BILL_DATE = '2012-08-01'                                
+            AND IN1.ORIG_SYSTEM_ID = 'VW'                                       
+            AND IN1.SEQ_CD IN ('DD')                                            
+            AND IN1.SYSTEM_ID = 'OSU'                                           
+            ) IN2                                                               
+      GROUP BY IN2.USAGE_TYPE                                                   
+               ) IN3                                                            
+       ON SUBSTR(TB1.COLUMN_1,1,25) = IN3.USAGE_TYPE                            
+     WHERE TB1.MAN = '7CLTZBNPE'                                                
+       AND TB1.MAN_BILL_DATE = '2012-08-01'                                     
+       AND TB1.ORIG_SYSTEM_ID = 'VW'                                            
+       AND TB1.SEQ_CD IN ('DD')                                                 
+       AND TB1.SYSTEM_ID = 'OSU'                                                
+       ;                                                                        

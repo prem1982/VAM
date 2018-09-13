@@ -1,0 +1,24 @@
+/*REXX TPEVZ450: REXX TO CREATE NDM PROCESS OVERRIDES*/                         
+ARG TESTID BCFNY0PN BMGVZ0CN FILEID JULCYCL                                     
+LBLDSN   = TESTID".TPEVZ450."FILEID"."JULCYCL                                   
+PROCCRDS = TESTID".TPEVZ450.DATASET.NAMES"                                      
+NOTIFYID = SYSVAR(SYSUID)                                                       
+/****************************************************/                          
+"FREE FI(LBLDSN)"                                                               
+"DELETE '"LBLDSN"'"                                                             
+"ALLOC FI(LBLDSN) DA('"LBLDSN"') NEW DATACLAS(PSFB80)"                          
+QUEUE BMGVZ0CN"."FILEID".VAMS."JULCYCL                                          
+"EXECIO * DISKW LBLDSN (FINIS"                                                  
+"FREE FI(LBLDSN)"                                                               
+/****************************************************/                          
+"FREE FI(PROCCRDS)"                                                             
+"DELETE '"PROCCRDS"'"                                                           
+"ALLOC FI(PROCCRDS) DA('"PROCCRDS"') NEW"                                       
+QUEUE "   SUB PROC=TPEVZ450 -"                                                  
+QUEUE "       &BCFNY0PN="BCFNY0PN" -"                                           
+QUEUE "       &BMGVZ0CN="BMGVZ0CN" -"                                           
+QUEUE "       &NOTIFYID="TESTID" -"                                             
+QUEUE "       &FILEID="FILEID" -"                                               
+QUEUE "       &JULIAN="JULCYCL" -"                                              
+"EXECIO * DISKW PROCCRDS (FINIS"                                                
+"FREE FI(PROCCRDS)"                                                             

@@ -1,0 +1,44 @@
+/*REXX CANTHRDS: REXX TO CANCEL DB2 THREAD */                           00010000
+ARG TESTID DB2SYS                                                       00020001
+DB2CNTL = TESTID"."DB2SYS".CANCEL.THREADS"                              00030000
+/****************************************************/                  00030100
+"EXECIO * DISKR DETAILS (STEM THRD. FINIS"                              00032000
+/****************************************************/                  00040000
+"FREE FI(DB2CNTL)"                                                      00050000
+"DELETE '"DB2CNTL"'"                                                    00060000
+"ALLOC FI(DB2CNTL) DA('"DB2CNTL"') NEW"                                 00070000
+QUEUE "  DSN SYSTEM("DB2SYS")"                                          00070104
+BEGX = 'N'                                                              00071002
+DO TX = 1 TO THRD.0                                                     00071200
+   AUTHID = 'ZZTOP'                                                     00071305
+   IF BEGX = 'N' THEN                                                   00071400
+      DO                                                                00071500
+         NAMEX =  SUBSTR(THRD.TX,1,4)                                   00071603
+         IF NAMEX = 'NAME' THEN BEGX = 'Y'                              00071700
+      END                                                               00071800
+   ELSE                                                                 00071900
+      DO                                                                00072000
+         BYTE1 =  SUBSTR(THRD.TX,1,1)                                   00072103
+         IF BYTE1 ^= ' ' THEN                                           00072200
+            DO                                                          00072300
+               TOKEN = SUBSTR(THRD.TX,57,6)                             00072403
+               AUTHID = SUBSTR(THRD.TX,34,7)                            00072505
+               SVC = SUBSTR(THRD.TX,1,8)                                00072605
+               SAY SVC ' TOKEN=' TOKEN AUTHID                           00072705
+               IF SVC = 'DISPLAY ' THEN BEGX = 'N'                      00072805
+            END                                                         00072905
+      END                                                               00073005
+   IF AUTHID = 'USSLBMG' THEN                                           00073105
+      DO                                                                00074000
+   QUEUE "  -CANCEL THREAD("TOKEN")"                                    00090000
+   /*                                                                   00091004
+   QUEUE "  -CANCEL DDF THREAD("TOKEN")"                                00100000
+   QUEUE "  -CANCEL DDF THREAD("TOKEN") MODE(FORCE)"                    00110000
+   QUEUE "  -CANCEL THREAD("TOKEN") MODE(FORCE)"                        00120000
+   */                                                                   00121004
+      END                                                               00130100
+END                                                                     00131000
+QUEUE "  END"                                                           00132004
+QUEUE                                                                   00133004
+"EXECIO * DISKW DB2CNTL (FINIS"                                         00140000
+"FREE FI(DB2CNTL)"                                                      00150000

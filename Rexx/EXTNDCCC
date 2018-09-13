@@ -1,0 +1,433 @@
+/******************************* REXX *********************************/        
+/******************************* REXX *********************************/        
+                                                                                
+ARG db2sys .                                                                    
+                                                                                
+ trace o                                                                        
+                                                                                
+ db2sys       = strip(db2sys)                                                   
+ x = "|"                                                                        
+ numeric digits 10                                                              
+                                                                                
+ SELECT                                                                         
+   WHEN DB2SYS  = 'D001'                                                        
+     then do                                                                    
+          TABPREF = 'BMGVZT'                                                    
+          end                                                                   
+   WHEN DB2SYS  = 'D009'                                                        
+     then do                                                                    
+          TABPREF = 'BMGVZP'                                                    
+          end                                                                   
+   WHEN DB2SYS  = 'D38X'                                                        
+     then do                                                                    
+          TABPREF = 'BMGVZS'                                                    
+          end                                                                   
+   OTHERWISE                                                                    
+          do                                                                    
+          TABPREF = 'BMGVZP'                                                    
+          end                                                                   
+ END                                                                            
+                                                                                
+ SIGNAL OFF ERROR /* TURN ERROR-TRAPPING OFF */                                 
+ "SUBCOM DSNREXX"                                                               
+ IF RC THEN                                                                     
+    S_RC = RXSUBCOM('ADD','DSNREXX','DSNREXX')                                  
+                                                                                
+ ADDRESS DSNREXX "CONNECT "DB2SYS                                               
+ IF SQLCODE ^= 0                                                                
+ then do                                                                        
+      SAY ' ERROR CONNECTING TO ' db2sys                                        
+      CALL SQLCA                                                                
+      SAY '  END EXECUTION'                                                     
+      exit 12                                                                   
+      END                                                                       
+                                                                                
+ more = 'Y'                                                                     
+                                                                                
+ "EXECIO * DISKR CONFIGS (STEM cfgs.)"                                          
+ if RC ^= 0                                                                     
+ then do                                                                        
+      say error reading CONFIGS file                                            
+      if rc = 2                                                                 
+      then do                                                                   
+           say rc                                                               
+           say Empty input file                                                 
+           exit 0                                                               
+           end                                                                  
+      exit 12                                                                   
+      end                                                                       
+                                                                                
+                                                                                
+                                                                                
+ do i = 1 to cfgs.0                                                             
+   customer_id = substr(cfgs.i,1,5)                                             
+   config_type = substr(cfgs.i,6,1)                                             
+   config_number = substr(cfgs.i,7,2)                                           
+                                                                                
+   /* get the ccc row  */                                                       
+   ccc_found = 'N'                                                              
+   call get_ccc                                                                 
+                                                                                
+   if ccc_found = 'Y'                                                           
+   then do                                                                      
+        say 'found ccc row:' c_contract_id                                      
+        say 'contract:' c_contract_st_dt c_contract_end_dt                      
+        say 'commit  :' c_commit_start_dt c_commit_end_dt                       
+        say 'commit_prd_amt:' c_commit_prd_amt                                  
+        new_prd_amt = c_commit_prd_amt/4                                        
+        say 'new commit_prd_amt:' new_prd_amt                                   
+        /* update the contract end date to */                                   
+        new_end_dt = '2009-11-01'                                               
+        call update_contract                                                    
+        /* insert a new commitment row */                                       
+        new_start_dt = '2009-08-02'                                             
+        new_term_lnth = 3                                                       
+                                                                                
+        call insert_ccc                                                         
+        end                                                                     
+                                                                                
+ end                                                                            
+                                                                                
+                                                                                
+ return                                                                         
+                                                                                
+/************* get ccc              *************/                              
+get_ccc:                                                                        
+                                                                                
+                                                                                
+ profile_sql =,                                                                 
+      "SELECT CUSTOMER_ID," ||,                                                 
+             "CONFIG_TYPE," ||,                                                 
+             "CONFIG_NUMBER," ||,                                               
+             "DISC_PLAN_ID," ||,                                                
+             "CONTRACT_ST_DT," ||,                                              
+             "CONTRACT_END_DT," ||,                                             
+             "COMMIT_START_DT," ||,                                             
+             "COMMIT_END_DT," ||,                                               
+             "CONTRACT_ID," ||,                                                 
+             "CONTR_TERM_LNTH," ||,                                             
+             "COMM_TERM_LNTH," ||,                                              
+             "COMMIT_PRD_AMT," ||,                                              
+             "COMMIT_TRK_OPT," ||,                                              
+             "COMMIT_RPT_PRD," ||,                                              
+             "ONL_UPDT_USR_ID," ||,                                             
+             "UPDATE_TIME," ||,                                                 
+             "CONT_ASSOC," ||,                                                  
+             "SUBSCRIBER_OID   " ||,                                            
+        "FROM "tabpref".PFLV0CCC " ||,                                          
+        "WHERE CUSTOMER_ID = '"customer_id"' "||,                               
+        "  AND CONFIG_TYPE = '"config_type"' "||,                               
+        "  AND CONFIG_NUMBER = '"config_number"' "||,                           
+        "  AND DISC_PLAN_ID = 'VIP' "||,                                        
+        "  AND CURRENT DATE BETWEEN "||,                                        
+        "        CONTRACT_ST_DT AND CONTRACT_END_DT "||,                        
+        "  AND CURRENT DATE BETWEEN "||,                                        
+        "        COMMIT_START_DT AND COMMIT_END_DT "||,                         
+      "WITH UR "                                                                
+                                                                                
+/**** FETCH PARAMETERS *****/                                                   
+CPARMS= ":c_CUSTOMER_ID,",                                                      
+      ||":c_CONFIG_TYPE,",                                                      
+      ||":c_CONFIG_NUMBER,",                                                    
+      ||":c_DISC_PLAN_ID,",                                                     
+      ||":c_CONTRACT_ST_DT,",                                                   
+      ||":c_CONTRACT_END_DT,",                                                  
+      ||":c_COMMIT_START_DT,",                                                  
+      ||":c_COMMIT_END_DT,",                                                    
+      ||":c_CONTRACT_ID,",                                                      
+      ||":c_CONTR_TERM_LNTH,",                                                  
+      ||":c_COMM_TERM_LNTH,",                                                   
+      ||":c_COMMIT_PRD_AMT,",                                                   
+      ||":c_COMMIT_TRK_OPT,",                                                   
+      ||":c_COMMIT_RPT_PRD,",                                                   
+      ||":c_ONL_UPDT_USR_ID,",                                                  
+      ||":c_UPDATE_TIME,",                                                      
+      ||":c_CONT_ASSOC,",                                                       
+      ||":c_SUBSCRIBER_OID"                                                     
+                                                                                
+CSQL = "FETCH C52 INTO "CPARMS                                                  
+                                                                                
+/**** DECLARE CURSOR *****/                                                     
+DCLSQL2 = "DECLARE C52 CURSOR FOR S52"                                          
+ADDRESS DSNREXX "EXECSQL "DCLSQL2                                               
+IF SQLCODE ^= 0                                                                 
+then do                                                                         
+     SAY 'ERROR DECLARING CURSOR C52 - SQLCODE=' SQLCODE                        
+     CALL SQLCA                                                                 
+     exit 12                                                                    
+     END                                                                        
+                                                                                
+/**** PREPARE SELECT SQL ****/                                                  
+ADDRESS DSNREXX "EXECSQL PREPARE S52 FROM :PROFILE_SQL"                         
+IF SQLCODE ^= 0                                                                 
+then do                                                                         
+     SAY 'ERROR PREPARING 'PROFILE_SQL ' - SQLCODE=' SQLCODE                    
+     CALL SQLCA                                                                 
+     exit 12                                                                    
+     END                                                                        
+                                                                                
+/**** OPEN CURSOR ****/                                                         
+ADDRESS DSNREXX "EXECSQL OPEN C52"                                              
+IF SQLCODE ^= 0                                                                 
+then do                                                                         
+     SAY 'ERROR OPENING CURSOR C52 - SQLCODE=' SQLCODE                          
+     CALL SQLCA                                                                 
+     exit 12                                                                    
+     END                                                                        
+                                                                                
+ADDRESS DSNREXX "EXECSQL "CSQL                                                  
+                                                                                
+if SQLCODE = 0                                                                  
+then do                                                                         
+     ccc_found = 'Y'                                                            
+     end                                                                        
+                                                                                
+                                                                                
+ADDRESS DSNREXX "EXECSQL CLOSE C52"                                             
+IF SQLCODE ^= 0                                                                 
+then do                                                                         
+     SAY 'ERROR CLOSING CURSOR C52 - SQLCODE=' SQLCODE                          
+     CALL SQLCA                                                                 
+     exit 12                                                                    
+     END                                                                        
+                                                                                
+                                                                                
+return                                                                          
+                                                                                
+                                                                                
+/************* update_contract      *************/                              
+update_contract:                                                                
+                                                                                
+                                                                                
+ upd_sql =,                                                                     
+      "UPDATE "tabpref".PFLV0CCC "||,                                           
+        " SET CONTRACT_END_DT = '"new_end_dt"',"||,                             
+        "     ONL_UPDT_USR_ID = 'EXTNDCCC', "||,                                
+        "     UPDATE_TIME = CURRENT TIME, "||,                                  
+        "     UPDATE_DATE = CURRENT DATE "||,                                   
+        "WHERE CUSTOMER_ID = '"customer_id"' "||,                               
+        "  AND CONFIG_TYPE = '"config_type"' "||,                               
+        "  AND CONFIG_NUMBER = '"config_number"' "||,                           
+        "  AND DISC_PLAN_ID = 'VIP' "||,                                        
+        "  AND CONTRACT_ST_DT = '"c_contract_st_dt"' "||,                       
+        "  AND CONTRACT_END_DT = '"c_contract_end_dt"' "||,                     
+        "  AND COMMIT_START_DT = '"c_commit_start_dt"' "||,                     
+        "  AND COMMIT_END_DT = '"c_commit_end_dt"' "                            
+                                                                                
+  ADDRESS DSNREXX "EXECSQL "UPD_SQL                                             
+                                                                                
+  IF SQLCODE ^= 0                                                               
+  then do                                                                       
+       SAY 'ERROR DURING UPDATE'                                                
+       CALL SQLCA                                                               
+       SAY '  END EXECUTION'                                                    
+       EXIT 12                                                                  
+       END                                                                      
+                                                                                
+                                                                                
+return                                                                          
+                                                                                
+                                                                                
+/************* insert_ccc           *************/                              
+insert_ccc:                                                                     
+                                                                                
+                                                                                
+ ins_sql =,                                                                     
+      "INSERT INTO "tabpref".PFLV0CCC "||,                                      
+        " (CUSTOMER_ID     "||,                                                 
+        " ,CONFIG_TYPE      "||,                                                
+        " ,CONFIG_NUMBER    "||,                                                
+        " ,DISC_PLAN_ID    "||,                                                 
+        " ,CONTRACT_ST_DT   "||,                                                
+        " ,CONTRACT_END_DT  "||,                                                
+        " ,COMMIT_START_DT  "||,                                                
+        " ,COMMIT_END_DT    "||,                                                
+        " ,CONTRACT_ID     "||,                                                 
+        " ,CONTR_TERM_LNTH  "||,                                                
+        " ,COMM_TERM_LNTH  "||,                                                 
+        " ,COMMIT_PRD_AMT  "||,                                                 
+        " ,COMMIT_TRK_OPT  "||,                                                 
+        " ,COMMIT_RPT_PRD  "||,                                                 
+        " ,ONL_UPDT_USR_ID "||,                                                 
+        " ,UPDATE_DATE     "||,                                                 
+        " ,UPDATE_TIME     "||,                                                 
+        " ,CONT_ASSOC     "||,                                                  
+        " ,SUBSCRIBER_OID) "||,                                                 
+        " VALUES( "||,                                                          
+        "  '"c_CUSTOMER_ID"' "||,                                               
+        " ,'"c_CONFIG_TYPE"' "||,                                               
+        " ,'"c_CONFIG_NUMBER"' "||,                                             
+        " ,'"c_DISC_PLAN_ID"' "||,                                              
+        " ,'"c_CONTRACT_ST_DT"' "||,                                            
+        " ,'"new_end_dt"' "||,                                                  
+        " ,'"new_start_dt"' "||,                                                
+        " ,'"new_end_dt"' "||,                                                  
+        " ,'"c_CONTRACT_ID"' "||,                                               
+        " ,"C_CONTR_TERM_LNTH" "||,                                             
+        " ,"new_term_lnth" "||,                                                 
+        " ,"new_prd_amt" "||,                                                   
+        " ,'"c_COMMIT_TRK_OPT"' "||,                                            
+        " ,'"c_COMMIT_RPT_PRD"' "||,                                            
+        " ,'EXTNDCCC' "||,                                                      
+        " ,CURRENT DATE "||,                                                    
+        " ,CURRENT TIME "||,                                                    
+        " ,'"c_CONT_ASSOC"' "||,                                                
+        " ,"c_SUBSCRIBER_OID" ) "                                               
+                                                                                
+  ADDRESS DSNREXX "EXECSQL "INS_SQL                                             
+                                                                                
+  IF SQLCODE ^= 0                                                               
+  then do                                                                       
+       SAY 'ERROR DURING INSERT'                                                
+       CALL SQLCA                                                               
+       SAY '  END EXECUTION'                                                    
+       EXIT 12                                                                  
+       END                                                                      
+                                                                                
+                                                                                
+return                                                                          
+                                                                                
+                                                                                
+/************* SQL ERROR ROUTINE *************/                                 
+SQLCA:                                                                          
+                                                                                
+if right(sqlerrmc,1) <> 'FF'x then sqlerrmc = sqlerrmc || 'FF'x                 
+if sqlwarna          <> 'W'   then sqlwarna = ' '                               
+                                                                                
+SQLCA = 'SQLCA   '||,                                                           
+        x2c(d2x(136,8))||,                                                      
+        X2C(D2X(SQLCODE,8))||,                                                  
+        x2c(d2x(length(sqlerrmc),4))||,                                         
+        left(sqlerrmc,70)||,                                                    
+        left(SQLERRP,8)||,                                                      
+        x2c(d2x(sqlerrd.1,8))||,                                                
+        x2c(d2x(sqlerrd.2,8))||,                                                
+        x2c(d2x(sqlerrd.3,8))||,                                                
+        x2c(d2x(sqlerrd.4,8))||,                                                
+        x2c(d2x(sqlerrd.5,8))||,                                                
+        x2c(d2x(sqlerrd.6,8))||,                                                
+        left(SQLWARN.1,1)||,                                                    
+        left(SQLWARN.2,1)||,                                                    
+        left(SQLWARN.3,1)||,                                                    
+        left(SQLWARN.4,1)||,                                                    
+        left(SQLWARN.5,1)||,                                                    
+        left(SQLWARN.6,1)||,                                                    
+        left(SQLWARN.7,1)||,                                                    
+        left(SQLWARN.8,1)||,                                                    
+        left(SQLWARN.9,1)||,                                                    
+        left(SQLWARN.10,1)||,                                                   
+        left(SQLWARNA,1)||,                                                     
+        left(SQLSTATE,5)                                                        
+                                                                                
+message_llen  = 79                                                              
+message_lines = 12                                                              
+message_area  = x2c(d2x(message_llen*message_lines,4))||,                       
+                copies(' ',message_llen*message_lines)                          
+message_lrecl = x2c(d2x(message_llen,8))                                        
+address linkpgm "DSNTIAR sqlca message_area message_lrecl"                      
+message_line_start = 3                                                          
+                                                                                
+do messagei = 1 to message_lines                                                
+  message_line = substr(message_area,message_line_start,message_llen)           
+  message_line_start = message_line_start + message_llen                        
+  if message_line = '' then ITERATE                                             
+  msgtext=strip(message_line)                                                   
+  rc= say_msg(0)                                                                
+end                                                                             
+                                                                                
+msgtext='SQLSTATE='SQLSTATE                                                     
+rc= say_msg(0)                                                                  
+msgtext='SQLWARN ='SQLWARN.0",",                                                
+            || SQLWARN.1",",                                                    
+            || SQLWARN.2",",                                                    
+            || SQLWARN.3",",                                                    
+            || SQLWARN.4",",                                                    
+            || SQLWARN.5",",                                                    
+            || SQLWARN.6",",                                                    
+            || SQLWARN.7",",                                                    
+            || SQLWARN.8",",                                                    
+            || SQLWARN.9",",                                                    
+            || SQLWARN.10                                                       
+rc= say_msg(0)                                                                  
+msgtext='SQLERRD ='SQLERRD.1",",                                                
+            || SQLERRD.2",",                                                    
+            || SQLERRD.3",",                                                    
+            || SQLERRD.4",",                                                    
+            || SQLERRD.5",",                                                    
+            || SQLERRD.6                                                        
+rc= say_msg(0)                                                                  
+msgtext='SQLERRP  ='SQLERRP                                                     
+rc= say_msg(0)                                                                  
+msgtext='SQLERRMC ='SQLERRMC                                                    
+rc= say_msg(0)                                                                  
+msgtext='SQLCODE  ='SQLCODE                                                     
+rc= say_msg(0)                                                                  
+                                                                                
+if sqlstmt <> '' & sqlerrd.5 > 0 then                                           
+  do                                                                            
+    do i_text_pos = 1 to length(sqlstmt) by 72                                  
+      msgtext=substr(sqlstmt,i_text_pos,72)                                     
+      rc= say_msg(0)                                                            
+      if (sqlerrd.5 >= i_text_pos) &,                                           
+         (sqlerrd.5 <= i_text_pos+71) then                                      
+        do                                                                      
+          i_syn_pos = sqlerrd.5 - i_text_pos + 1                                
+          select                                                                
+            when i_syn_pos = 1 then                                             
+              syn_err_message = '|<- ThereØs a syntax error here *****'         
+            when i_syn_pos < 5 then                                             
+              syn_err_message = copies('*',i_syn_pos-1)||,                      
+                                '|<- ThereØs a syntax error here *****'         
+            when i_syn_pos < 34 then                                            
+              syn_err_message = '****'copies(' ',i_syn_pos-5)||,                
+                                '|<- ThereØs a syntax error here *****'         
+            otherwise                                                           
+              syn_err_message = '****'copies(' ',i_syn_pos-30)||,               
+                                'ThereØs a syntax error here ->| *****'         
+          end                                                                   
+          msgtext=syn_err_message                                               
+           rc= say_msg(0)                                                       
+       end                                                                      
+     end                                                                        
+   end                                                                          
+                                                                                
+return                                                                          
+                                                                                
+pad_field:                                                                      
+arg fl,len                                                                      
+                                                                                
+pad_fl = "'"left(fl,len,' ')"'"                                                 
+                                                                                
+return pad_fl                                                                   
+                                                                                
+                                                                                
+SAY_MSG:                                                                        
+arg bl                                                                          
+if datatype(msgtext.0) = 'NUM' then ,                                           
+   do m=1 to msgtext.0                                                          
+      m=right(m,2,0)                                                            
+      say msgtext.m                                                             
+   end                                                                          
+else ,                                                                          
+   do                                                                           
+      say msgtext                                                               
+   end                                                                          
+do bl                                                                           
+   say ' '                                                                      
+end                                                                             
+drop msgtext.                                                                   
+RETURN 1                                                                        
+                                                                                
+/*************  SYNTAX ERROR HANDLER **********/                                
+CRAPCODE:                                                                       
+SAY 'YOU HAVE CRAP CODE AT LINE' SIGL                                           
+SAY SOURCELINE(SIGL)                                                            
+SAY 'REXX GAVE A RETURN CODE OF' RC ', WHICH MEANS :'                           
+SAY ERRORTEXT(RC)                                                               
+EXIT                                                                            
+/************* EXTERNAL ERROR HANDLER **********/                               
+BADDIES:                                                                        
+SAY 'YOU HAVE BEEN LET DOWN BY FACTORS BEYOND YOUR CONTROL AT LINE' SIGL        
+SAY SOURCELINE(SIGL)                                                            
+SAY 'RC =' RC                                                                   
+EXIT                                                                            

@@ -1,0 +1,99 @@
+//SYNCSLCW JOB (T,JZDD,JKSD0033),'TEST CYCLE',                                  
+// CLASS=U,MSGCLASS=Z,NOTIFY=&SYSUID                                            
+//*********************************************************************         
+//MYPROCS JCLLIB ORDER=(NECNE0EN.PROD.PROCLIB,                                  
+// NECNE0PN.TEST.PROCLIB,                                                       
+// SYS3.PROCLIB)                                                                
+//*********************************************************************         
+//SORTFILE EXEC SORTOUT,                                                        
+//         DATACLAS=COMPRESS,LRECL=631,MGMTCLAS=LUSE15,                         
+//         SORTFLIN=VGWNY0CN.NDM.VZWVEAST.J12136.T4ETL.INVENTRY,                
+//         SORTFLOT=BMGVZ0CN.NDM.VZWVEAST.J12136.T4ETL.INVENTRY                 
+//SORT.SORTOUT DD SPACE=(CYL,(2,5),RLSE),RECFM=FB                               
+//SORT.SORTIN DD                                                                
+//SORT.SYSIN DD *                                                               
+  SORT    FIELDS=COPY                                                           
+  INCLUDE COND=(491,10,CH,EQ,C'0001026814',OR,                                  
+                491,10,CH,EQ,C'0002467985',OR,                                  
+                491,10,CH,EQ,C'0001011831',OR,                                  
+                491,10,CH,EQ,C'0001011916',OR,                                  
+                491,10,CH,EQ,C'0000588901',OR,                                  
+                491,10,CH,EQ,C'0001026406',OR,                                  
+                491,10,CH,EQ,C'0001026409',OR,                                  
+                491,10,CH,EQ,C'0001026414',OR,                                  
+                491,10,CH,EQ,C'0001070364',OR,                                  
+                491,10,CH,EQ,C'0000000061',OR,                                  
+                491,10,CH,EQ,C'0000564326',OR,                                  
+                491,10,CH,EQ,C'0001034590',OR,                                  
+                491,10,CH,EQ,C'0000006200',OR,                                  
+                491,10,CH,EQ,C'0001507721',OR,                                  
+                491,10,CH,EQ,C'0000891802',OR,                                  
+                491,10,CH,EQ,C'0000575732',OR,                                  
+                491,10,CH,EQ,C'0000615750',OR,                                  
+                491,10,CH,EQ,C'0000919412',OR,                                  
+                491,10,CH,EQ,C'0001080905',OR,                                  
+                491,10,CH,EQ,C'0001028526',OR,                                  
+                491,10,CH,EQ,C'0002271110',OR,                                  
+                491,10,CH,EQ,C'0000030404')                                     
+//SORTFIL1 EXEC SORTOUT,                                                        
+//         DATACLAS=COMPRESS,LRECL=631,MGMTCLAS=LUSE15,                         
+//****        SORTFLIN=VGWNY0CN.NDM.VZWVNRTH.J11241.ETL.INVENTRY,               
+//         SORTFLIN=VGWNY0CN.NDM.VZWVNRTH.J12136.T4ETL.INVENTRY,                
+//         SORTFLOT=BMGVZ0CN.NDM.VZWVNRTH.J12136.T4ETL.INVENTRY                 
+//SORT.SORTOUT DD SPACE=(CYL,(2,5),RLSE),RECFM=FB                               
+//SORT.SORTIN DD                                                                
+//SORT.SYSIN DD *                                                               
+  SORT    FIELDS=COPY                                                           
+  INCLUDE COND=(491,10,CH,EQ,C'0001026814',OR,                                  
+                491,10,CH,EQ,C'0002467985',OR,                                  
+                491,10,CH,EQ,C'0001011831',OR,                                  
+                491,10,CH,EQ,C'0001011916',OR,                                  
+                491,10,CH,EQ,C'0000588901',OR,                                  
+                491,10,CH,EQ,C'0001026406',OR,                                  
+                491,10,CH,EQ,C'0001026409',OR,                                  
+                491,10,CH,EQ,C'0001026414',OR,                                  
+                491,10,CH,EQ,C'0001070364',OR,                                  
+                491,10,CH,EQ,C'0000000061',OR,                                  
+                491,10,CH,EQ,C'0000564326',OR,                                  
+                491,10,CH,EQ,C'0001034590',OR,                                  
+                491,10,CH,EQ,C'0000006200',OR,                                  
+                491,10,CH,EQ,C'0001507721',OR,                                  
+                491,10,CH,EQ,C'0000891802',OR,                                  
+                491,10,CH,EQ,C'0000575732',OR,                                  
+                491,10,CH,EQ,C'0000615750',OR,                                  
+                491,10,CH,EQ,C'0000919412',OR,                                  
+                491,10,CH,EQ,C'0001080905',OR,                                  
+                491,10,CH,EQ,C'0001028526',OR,                                  
+                491,10,CH,EQ,C'0002271110',OR,                                  
+                491,10,CH,EQ,C'0000030404')                                     
+//SORTFIL2 EXEC SORTOUT,                                                        
+//         DATACLAS=COMPRESS,LRECL=631,MGMTCLAS=LUSE15,                         
+//*        SORTFLIN=VGWNY0CN.NDM.VZWVWEST.J11241.ETL.INVENTRY,                  
+//         SORTFLIN=VGWNY0CN.NDM.VZWVWEST.J12136.T4ETL.INVENTRY,                
+//         SORTFLOT=BMGVZ0CN.NDM.VZWVWEST.J12136.T4ETL.INVENTRY                 
+//SORT.SORTOUT DD SPACE=(CYL,(2,5),RLSE),RECFM=FB                               
+//SORT.SORTIN DD                                                                
+//SORT.SYSIN DD *                                                               
+  SORT    FIELDS=COPY                                                           
+  INCLUDE COND=(491,10,CH,EQ,C'0001026814',OR,                                  
+                491,10,CH,EQ,C'0002467985',OR,                                  
+                491,10,CH,EQ,C'0001011831',OR,                                  
+                491,10,CH,EQ,C'0001011916',OR,                                  
+                491,10,CH,EQ,C'0000588901',OR,                                  
+                491,10,CH,EQ,C'0001026406',OR,                                  
+                491,10,CH,EQ,C'0001026409',OR,                                  
+                491,10,CH,EQ,C'0001026414',OR,                                  
+                491,10,CH,EQ,C'0001070364',OR,                                  
+                491,10,CH,EQ,C'0000000061',OR,                                  
+                491,10,CH,EQ,C'0000564326',OR,                                  
+                491,10,CH,EQ,C'0001034590',OR,                                  
+                491,10,CH,EQ,C'0000006200',OR,                                  
+                491,10,CH,EQ,C'0001507721',OR,                                  
+                491,10,CH,EQ,C'0000891802',OR,                                  
+                491,10,CH,EQ,C'0000575732',OR,                                  
+                491,10,CH,EQ,C'0000615750',OR,                                  
+                491,10,CH,EQ,C'0000919412',OR,                                  
+                491,10,CH,EQ,C'0001080905',OR,                                  
+                491,10,CH,EQ,C'0001028526',OR,                                  
+                491,10,CH,EQ,C'0002271110',OR,                                  
+                491,10,CH,EQ,C'0000030404')                                     

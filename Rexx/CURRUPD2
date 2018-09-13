@@ -1,0 +1,61 @@
+/*REXX CURRUPD2:REXX TO DELETE CURR_CHAR_T ROW*/                                
+ARG CURRCHXT                                                                    
+MAN              = SUBSTR(CURRCHXT,1,13)                                        
+MAN_BILL_DATE    = SUBSTR(CURRCHXT,14,10)                                       
+ORIG_SYSTEM_ID   = SUBSTR(CURRCHXT,24,2)                                        
+BAN              = SUBSTR(CURRCHXT,26,13)                                       
+BILL_DATE        = SUBSTR(CURRCHXT,39,10)                                       
+ENTITY_CD        = SUBSTR(CURRCHXT,49,5)                                        
+INV_BILL_IND     = SUBSTR(CURRCHXT,54,1)                                        
+CHG_AMT          = SUBSTR(CURRCHXT,55,13)                                       
+DIFF_AMTX        = SUBSTR(CURRCHXT,68,1)                                        
+DIFF_AMTZ        = SUBSTR(CURRCHXT,80,12)                                       
+DIFF_AMT = DIFF_AMTX||DIFF_AMTZ                                                 
+CHG_AMTZ = SUBSTR(CHG_AMT,1,1)                                                  
+FOUNDX = 'N'                                                                    
+LNG = LENGTH(DIFF_AMT)                                                          
+BEG2 = 2                                                                        
+DO WHILE FOUNDX = 'N'                                                           
+   CHX = SUBSTR(DIFF_AMT,BEG2,1)                                                
+   IF CHX ^= '0' THEN                                                           
+      DO                                                                        
+         FOUNDX = 'Y'                                                           
+      END                                                                       
+   ELSE                                                                         
+      DO                                                                        
+         IF BEG2 >= LNG THEN FOUNDX = 'Y'                                       
+         ELSE BEG2 = BEG2 + 1                                                   
+      END                                                                       
+END                                                                             
+FOUNDX = 'N'                                                                    
+LNG = LENGTH(CHG_AMT)                                                           
+BEG = 2                                                                         
+DO WHILE BEG <= LNG                                                             
+   CHX = SUBSTR(CHG_AMT,BEG,1)                                                  
+   IF FOUNDX = 'N' THEN                                                         
+      DO                                                                        
+        SELECT                                                                  
+          WHEN CHX = '0' THEN FOUNDX = 'N'                                      
+          WHEN CHX = '1' THEN                                                   
+               DO                                                               
+                  FOUNDX = 'Y'                                                  
+                  IF BEG <= BEG2 THEN CHX = '0'                                 
+               END                                                              
+          OTHERWISE FOUNDX = 'Y'                                                
+        END                                                                     
+      END                                                                       
+   CHG_AMTZ = CHG_AMTZ||CHX                                                     
+   BEG = BEG + 1                                                                
+END                                                                             
+SAY 'CHG_AMTZ='CHG_AMTZ',CHG_AMT='CHG_AMT',DIFF='DIFF_AMT                       
+/**** CREATE SELECT STRING *****/                                               
+SQLX = " UPDATE BMGVZP.CURR_CHAR_T" ||,                                         
+       " SET ENTITY_TOT_CHG = "CHG_AMTZ"" ||,                                   
+        " WHERE MAN = '"MAN"'" ||,                                              
+          " AND MAN_BILL_DATE = '"MAN_BILL_DATE"'" ||,                          
+          " AND BAN = '"BAN"'" ||,                                              
+          " AND BILL_DATE = '"BILL_DATE"'" ||,                                  
+          " AND INV_BILL_IND = '"INV_BILL_IND"'" ||,                            
+          " AND ENTITY_CD = '"ENTITY_CD"'" ||,                                  
+          " AND ORIG_SYSTEM_ID = '"ORIG_SYSTEM_ID"'"                            
+RETURN SQLX                                                                     

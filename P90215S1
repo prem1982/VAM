@@ -1,0 +1,23 @@
+   SELECT SC1.COL_NAME                                                          
+           ,'NOLINE' TARGET_FMT                                                 
+         ,SC1.COL_VAL                                                           
+           ,'NOLINE' TARGET_FMT                                                 
+      FROM (                                                                    
+      SELECT CASE RF.CODE_DESC_KEY                                              
+           WHEN 1 THEN 'For your reference, your data usage'                    
+                    || ' is also shown in Megabytes'                            
+           WHEN 2 THEN 'Date of Usage'                                          
+           WHEN 3 THEN 'Gigabytes'                                              
+           WHEN 4 THEN 'Megabytes (Rounded Up)'                                 
+                ELSE ''                                                         
+             END COL_NAME                                                       
+            ,CASE RF.CODE_DESC_KEY                                              
+           WHEN 1 THEN ''                                                       
+           WHEN 2 THEN FROM_DATE% || ' to ' || THRU_DATE%                       
+           WHEN 3 THEN CHAR(CAREA_2~)                                           
+           WHEN 4 THEN CHAR(INTEGER(ROUND(CAREA_2~*1024,0)))                    
+                  ELSE ''                                                       
+             END COL_VAL                                                        
+       FROM REF_CODES_95_T RF                                                   
+      WHERE RF.CODE_DESC_KEY BETWEEN 1 AND 4                                    
+      ) SC1                                                                     

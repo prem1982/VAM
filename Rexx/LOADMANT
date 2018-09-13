@@ -1,0 +1,145 @@
+/* rexx */                                                                      
+arg db2sys tblhilvl                                                             
+ssid = db2sys                                                                   
+tbl_prefix = tblhilvl                                                           
+/******************************************************/                        
+/*    load mastacct dd records into mastrec. stem     */                        
+/******************************************************/                        
+address tso                                                                     
+signal on error name baddies /* Routine for external errors */                  
+signal on syntax name crapcode /* Routine for code errors */                    
+msgs = msg(on) /* TSO/E message switch  - c.f. CONTROL MSG in CLIST */          
+"execio * diskr mastacct (stem mastrec. finis"                                  
+/******************************************************/                        
+/*          Establish the DB2 connection              */                        
+/******************************************************/                        
+signal off error /* Turn error-trapping off */                                  
+"SUBCOM DSNREXX"                                                                
+signal on error name baddies /* Routine for external errors */                  
+if RC then                                                                      
+   s_rc = RXSUBCOM('ADD','DSNREXX','DSNREXX')                                   
+                                                                                
+address DSNREXX "CONNECT" ssid                                                  
+If SQLCODE ^= 0 Then Call SQLCA                                                 
+/******************************************************/                        
+/*       delete all rows from MASTER_ACCT_TEMP_T      */                        
+/******************************************************/                        
+say 'Deleting all rows from MASTER_ACCT_TEMP_T table'                           
+signal off error                                                                
+call dletmant tbl_prefix                                                        
+/******************************************************/                        
+/*          insert each man from mastrec stem         */                        
+/******************************************************/                        
+say 'Inserting new rows into MASTER_ACCT_TEMP_T table'                          
+proc_ct = 0                                                                     
+do tx = 1 to mastrec.0                                                          
+   /* Call member processing sub-routine */                                     
+   man            = SUBSTR(mastrec.tx,1,13)                                     
+   man_bill_date  = SUBSTR(mastrec.tx,14,10)                                    
+   orig_system_id = SUBSTR(mastrec.tx,31,2)                                     
+   call isrt1row tbl_prefix man man_bill_date orig_system_id                    
+   proc_ct = proc_ct + 1                                                        
+end /* do tx = 1 to tblrec.0*/                                                  
+                                                                                
+say 'Total MASTER_ACCT_TEMP_T rows inserted = ' proc_ct                         
+/******************************************************/                        
+/*              Break the DB2 connection              */                        
+/******************************************************/                        
+Address DSNREXX "DISCONNECT"                                                    
+If SQLCODE ^= 0 Then Call SQLCA                                                 
+exit                                                                            
+/************************** end of main program *******************/            
+/************************** end of main program *******************/            
+/************************** end of main program *******************/            
+/************************** end of main program *******************/            
+                                                                                
+/******************************************************************/            
+/* dletmant process: deletes all rows in MASTER_ACCT_TEMP_T table */            
+/******************************************************************/            
+dletmant: PROCEDURE                                                             
+arg tbl_prefix                                                                  
+table = tbl_prefix".MASTER_ACCT_TEMP_T"                                         
+Address DSNREXX "EXECSQL DELETE FROM "table                                     
+If SQLCODE ^= 0 Then Call SQLCA                                                 
+Address DSNREXX "EXECSQL COMMIT"                                                
+return 0                                                                        
+/*********************** end of isrt1row sub routine *****************/         
+/*********************** end of isrt1row sub routine *****************/         
+/*********************** end of isrt1row sub routine *****************/         
+/*********************** end of isrt1row sub routine *****************/         
+                                                                                
+/******************************************************************/            
+/*   isrt1row process: insert 1 row into MASTER_ACCT_TEMP_T table */            
+/******************************************************************/            
+isrt1row: PROCEDURE                                                             
+arg tbl_prefix man man_bill_date orig_system_id                                 
+table = tbl_prefix".MASTER_ACCT_TEMP_T"                                         
+Address DSNREXX "EXECSQL INSERT INTO "table" (",                                
+        " MAN, MAN_BILL_DATE, ORIG_SYSTEM_ID )",                                
+        " VALUES (",                                                            
+        " '"man"', '"man_bill_date"', '"orig_system_id"' )"                     
+If SQLCODE ^= 0 Then Call SQLCA                                                 
+Address DSNREXX "EXECSQL COMMIT"                                                
+return 0                                                                        
+/*********************** end of isrt1row sub routine *****************/         
+/*********************** end of isrt1row sub routine *****************/         
+/*********************** end of isrt1row sub routine *****************/         
+/*********************** end of isrt1row sub routine *****************/         
+                                                                                
+/******************************************************************/            
+/*      sqlca process: display sqlca info when db2 error occurs   */            
+/******************************************************************/            
+SQLCA:                                                                          
+  say "SQLSTATE =" SQLSTATE                                                     
+  say "SQLWARN =" SQLWARN.0",",                                                 
+              || SQLWARN.1",",                                                  
+              || SQLWARN.2",",                                                  
+              || SQLWARN.3",",                                                  
+              || SQLWARN.4",",                                                  
+              || SQLWARN.5",",                                                  
+              || SQLWARN.6",",                                                  
+              || SQLWARN.7",",                                                  
+              || SQLWARN.8",",                                                  
+              || SQLWARN.9",",                                                  
+              || SQLWARN.10""                                                   
+  say "SQLERRD =" SQLERRD.1",",                                                 
+              || SQLERRD.2",",                                                  
+              || SQLERRD.3",",                                                  
+              || SQLERRD.4",",                                                  
+              || SQLERRD.5",",                                                  
+              || SQLERRD.6                                                      
+  say "SQLERRP  =" SQLERRP                                                      
+  say "SQLERRMC =" SQLERRMC                                                     
+  say "SQLCODE  =" SQLCODE                                                      
+  Exit 20                                                                       
+/*********************** end of sqlca sub routine *****************/            
+/*********************** end of sqlca sub routine *****************/            
+/*********************** end of sqlca sub routine *****************/            
+/*********************** end of sqlca sub routine *****************/            
+                                                                                
+/******************************************************************/            
+/*    crapcode: Syntax error-handling routine                     */            
+/******************************************************************/            
+crapcode:                                                                       
+say 'You have crap code at line' sigl                                           
+say sourceline(sigl)                                                            
+say 'REXX gave a return code of' rc ', which means :'                           
+say errortext(rc)                                                               
+EXIT                                                                            
+/******************** end of crapcode sub routine *****************/            
+/******************** end of crapcode sub routine *****************/            
+/******************** end of crapcode sub routine *****************/            
+/******************** end of crapcode sub routine *****************/            
+                                                                                
+/******************************************************************/            
+/*    baddies: External error sub routine.                        */            
+/******************************************************************/            
+baddies:                                                                        
+say 'You have been let down by factors beyond your control at line' sigl        
+say sourceline(sigl)                                                            
+say 'RC =' rc                                                                   
+EXIT                                                                            
+/******************** end of baddies sub routine *****************/             
+/******************** end of baddies sub routine *****************/             
+/******************** end of baddies sub routine *****************/             
+/******************** end of baddies sub routine *****************/             

@@ -1,0 +1,544 @@
+        /* --------------------  rexx procedure  -------------------- *         
+         * Name:      XMITIPCU                                        *         
+         *                                                            *         
+         * Function:  Customization defintions for XMITIP             *         
+         *                                                            *         
+         * Syntax:    Invoked as a rexx function                      *         
+         *                                                            *         
+         *            x = xmitipcu()                                  *         
+         *                                                            *         
+         *            Must reside in the sysproc or sysexec           *         
+         *            concatenation.                                  *         
+         *                                                            *         
+         * Author:    Lionel B. Dyck                                  *         
+         *            Kaiser Permanente                               *         
+         *            Walnut Creek, CA 94598                          *         
+         *            (925) 926-5332                                  *         
+         *            Internet: lionel.b.dyck@kp.org                  *         
+         *                                                            *         
+         * History:                                                   *         
+         *            11/12/01 - add font_size and def_orient         *         
+         *            10/25/01 - correction to time for timezones     *         
+         *                       not on hour boundaries (9:30)        *         
+         *            10/19/01 - antispoof option                     *         
+         *            10/10/01 - New batch_idval option for lookup    *         
+         *            08/22/01 - Add Empty D/S Option                 *         
+         *            07/27/01 - Add disclaimer option                *         
+         *            06/06/01 - Add character set use option         *         
+         *            05/29/01 - Add character set (char)             *         
+         *            05/09/01 - Add required from option for ispf    *         
+         *            05/07/01 - Round timezone to nearest hour       *         
+         *                       thx to Terry Miller(tkmille@ppco.com)*         
+         *            04/23/01 - add AtSign variable                  *         
+         *            01/30/01 - add mail_relay variable              *         
+         *            01/23/01 - add default file suffix              *         
+         *                       clean up history                     *         
+         *            01/03/01 - add default for paper size           *         
+         *            12/06/00 - add create_dsn_lrecl                 *         
+         *                     - add receipt type option              *         
+         *            11/22/00 - update for batch_idval               *         
+         *            11/21/00 - change to fit cols 1-72              *         
+         *            11/14/00 - add variable for no batch id valid   *         
+         *            11/13/00 - add variable for load lib for xmitb64*         
+         *            10/12/00 - add support for INFOZIP              *         
+         *            10/03/99 - creation from xmitip                 *         
+         *                                                            *         
+         * ---------------------------------------------------------- *         
+         * Timezone subroutine from Leland.Lucius@ecolab.com          *         
+         * ---------------------------------------------------------- */        
+                                                                                
+         parse value "" with null zone smtp vio center font ,                   
+                             smtp_secure smtp_address smtp_domain ,             
+                             text_enter sysout_class from_center ,              
+                             from_default append_domain ,                       
+                             zip_type zip_load zip_unit ,                       
+                             writer top bottom left right ,                     
+                             interlink size_limit b64_load,                     
+                             batch_idval create_dsn_lrecl ,                     
+                             receipt_type paper_size file_suf ,                 
+                             mail_relay AtSign ispffrom char ,                  
+                             charuse disclaim empty_opt ,                       
+                             font_size def_orient ,                             
+                             antispoof                                          
+                                                                                
+        /* ----------------------------------------------------- *              
+         * Set to ATSIGN VALUE from SMTPCONF (Default= "@")      *              
+         * ----------------------------------------------------- */             
+         AtSign = "@"                                                           
+                                                                                
+        /* --------------------------------------------------------- *          
+         * Set the Mime Character Set                                *          
+         * --------------------------------------------------------- */         
+         char = '"iso-8859-1"'                                                  
+                                                                                
+        /* --------------------------------------------------------- *          
+         * Character set use option.                                 *          
+         *     0 = use everywhere                                    *          
+         *     1 = do not use for text or rtf                        *          
+         *     anything else acts like 0                             *          
+         *                                                           *          
+         * Note: some mail systems object to the charset for text    *          
+         *       and rtf (I don't know why)                          *          
+         * --------------------------------------------------------- */         
+         charuse = 1                                                            
+                                                                                
+        /* --------------------------------------------------------- *          
+         * If ISPFFROM is null then the XMITIP Panel will not requir *          
+         * a from address. If 1 then the Panel will require a from   *          
+         * address.                                                  *          
+         * --------------------------------------------------------- */         
+         ispffrom = 1                                                           
+                                                                                
+        /* ----------------------------------------------------- *              
+         * If Interlink set to 1 else set to 0                   *              
+         * ----------------------------------------------------- */             
+         interlink = 0                                                          
+                                                                                
+        /* -------------------------- *                                         
+         * Get current IP Domain      *                                         
+         * -------------------------- */                                        
+        if interlink = 0 then do                                                
+           res    = Socket('Initialize','ANYNAME')                              
+           host   = Socket('GetHostId')                                         
+           name   = word(Socket('GetHostname'),2)                               
+           domain = word(Socket('GetDomainName'),2)                             
+           res    = Socket('Terminate')                                         
+           end                                                                  
+                                                                                
+        /* -------------------------- *                                         
+         * Define the Center which    *                                         
+         * is the nje node name where *                                         
+         * the smtp server is running.*                                         
+         * -------------------------- */                                        
+                                                            /* BAMod */         
+                                                                                
+sysname  = MVSVAR('SYMDEF',SYSNAME)                                             
+sysloc  = substr(sysname,2,1) /* Get 2nd Char of name, eg. D of SD67  */        
+select                                                                          
+ when sysloc = 'D' then Center = 'BADEVL'                                       
+ when sysloc = 'J' then Center = 'BAQUAL'                                       
+ when sysloc = 'L' then Center = 'BATEST'                                       
+ when sysloc = 'Q' then Center = 'BAFREE1'                                      
+ when sysloc = 'R' then Center = 'BAFREE2'                                      
+ when sysloc = 'T' then Center = 'BAFREE3'                                      
+ when sysloc = 'P' then Center = 'BAFREE4'                                      
+ when sysloc = 'F' then Center = 'BAFAIR1'                                      
+ when sysloc = 'H' then Center = 'BAFAIR2'                                      
+ when sysloc = 'S' then Center = 'BAPLT'                                        
+ when sysloc = 'Y' then Center = 'BAYEAR2K'                                     
+ otherwise              Center = SYSVAR('sysnode') /* punt */                   
+end                                                                             
+                                                            /* BAMod */         
+  /*    Center      = sysvar('sysnode')        */                               
+        From_Center = center                                                    
+                                                                                
+        /* ----------------------------------------------------- *              
+         * Time-Zone Setup                                       *              
+         * set to your local time zone (e.g. PST)                *              
+         * or set to null to force call to timezone function     *              
+         * which sets the timezone based on cvt gmt offset       *              
+         * ----------------------------------------------------- */             
+        zone   = null                                                           
+        /* or call timezone routine */                                          
+        if zone = null then                                                     
+           zone = timezone()                                                    
+                                                                                
+        /* ----------------------------------------------------- *              
+         * Local NJE, Dasd and SMTP Server Setup                 *              
+         *                                                       *              
+         * center is the NJE node where the SMTP server runs     *              
+         *                                                       *              
+         * smtp is the started task name for the SMTP server     *              
+         *   - used to generate the DEST for SYSOUT alloc on     *              
+         *     WORKDD alloc in XMITIP                            *              
+         *                                                       *              
+         * writer is the name of the SMTP started task           *              
+         *   - null is acceptable                                *              
+         *   - setting to the smtp variable is probably normal   *              
+         *   - if specified will override DEST on SYSOUT for     *              
+         *     WORKDD alloc in XMITIP                            *              
+         *                                                       *              
+         * vio is the esoteric for the vio virtual dasd          *              
+         *                                                       *              
+         * This allows this same code to run on multiple nodes   *              
+         * ----------------------------------------------------- */             
+  /*                                                           BAMod            
+        select                                                                  
+          when center = "NKAISER2" then do                                      
+                                                               BAMod */         
+               smtp   = "SMTP"                                                  
+               writer = null                                                    
+               vio    = "sysda"                                                 
+  /*                                                           BAMod            
+               end                                                              
+          when left(center,2) = "NK" then do                                    
+               center = "NKAISERA"                                              
+               smtp   = "SMTP"                                                  
+               writer = null                                                    
+               vio    = "VIO"                                                   
+               end                                                              
+          when center = "SKAISERC" then do                                      
+               center = "NKAISERA"                                              
+               smtp   = "SMTP"                                                  
+               writer = null                                                    
+               vio    = "sysda"                                                 
+               end                                                              
+          when left(center,2) = "SK" then do                                    
+               center = "SKAISERB"                                              
+               smtp   = "TCPSMTP"                                               
+               writer = null                                                    
+               vio    = "sysda"                                                 
+               end                                                              
+          otherwise do                                                          
+               center = "NKAISERA"                                              
+               smtp   = "SMTP"                                                  
+               writer = null                                                    
+               vio    = "sysda"                                                 
+               end                                                              
+          end                                                                   
+                                                               BAMod */         
+                                                                                
+        /* -------------------------- *                                         
+         * Secure SMTP option         *                                         
+         * set to 1 for secure        *                                         
+         * -------------------------- */                                        
+        /* smtp_secure = 1 */                                                   
+        smtp_secure = null                                                      
+                                                                                
+        /* -------------------------- *                                         
+         * nje address of smtp server *                                         
+         * -------------------------- */                                        
+        if interlink = 0 then                                                   
+           smtp_address = center"."smtp                                         
+        else                                                                    
+           smtp_address = smtp                                                  
+                                                                                
+        /* -------------------------- *                                         
+         * domain name of smtp server *                                         
+         * -------------------------- */                                        
+                                                            /* BAMod */         
+         smtp_domain = "bellatlantic.com"                                       
+                                                            /* BAMod */         
+        /* smtp_domain = "crdc.kp.org"  */                                      
+                                                                                
+        /* ----------------------------------------------------- *              
+         * append_domain                                         *              
+         *  if not null then used to append to e-mail addresses  *              
+         *  that are specified without a domain.                 *              
+         *  Note: do NOT code the @ symbol - it will be added    *              
+         *        by default.                                    *              
+         * ----------------------------------------------------- */             
+         /* append_domain = "kp.org" */                                         
+         append_domain = null                                                   
+                                                                                
+        /* ----------------------------------------------------- *              
+         * set default font                                      *              
+         * Use quotes if a blank is part of the font name.       *              
+         * An alternative font is "Courier".                     *              
+         * NOTE: if you change the font name you also have to    *              
+         *       change the rtf tag font family to a valid family*              
+         *       fmodern is valid for Courier and Courier New    *              
+         * ----------------------------------------------------- */             
+         font = "Courier New"                                                   
+                                                                                
+        /* ----------------------------------------------------- *              
+         * Set text_enter to null if you do not want the msgds * *              
+         * process to begin with the TE (Text Enter) command.    *              
+         * ----------------------------------------------------- */             
+         /* text_enter = null */                                                
+            text_enter = "Y"                                                    
+                                                                                
+        /* ----------------------------------------------------- *              
+         * Set the sysout class to a external writer sysout      *              
+         * class if you are a JES3 shop.                         *              
+         * ----------------------------------------------------- */             
+         sysout_class = "A"                                                     
+                                                                                
+        /* ----------------------------------------------------- *              
+         * Margin defaults:                                      *              
+         * ----------------------------------------------------- */             
+         top    = "1.0"                                                         
+         bottom = "1.0"                                                         
+         left   = "0.8"                                                         
+         right  = "0.8"                                                         
+                                                                                
+        /* ----------------------------------------------------- *              
+         * Setup the From Default                                *              
+         * This section should be customized for each shop       *              
+         * or at least reviewed.  Interlink users must customize *              
+         * ----------------------------------------------------- */             
+           msgid = sysvar("sysicmd")":"                                         
+           if length(msgid) = 0 then                                            
+              msgid = sysvar("syspcmd")":"                                      
+           uid = sysvar('sysuid')                                               
+           if from_center = center then                                         
+              from_default = uid||AtSign||center"."domain                       
+           else                                                                 
+              from_default = uid"%"from_center||AtSign||center"."smtp_domain    
+                                                                                
+        /* ----------------------------------------------------- *              
+         * Setup ZIP variables                                   *              
+         *   zip_type:  PKZIP for PKZIP/MVS                      *              
+         *              ISPZIP for ASE's ISP/ZIP                 *              
+         *              INFOZIP                                  *              
+         *   if null then not supported by your shop             *              
+         *   zip_load:  load.library(module)                     *              
+         *   zip_unit:  defines the dasd work device to use      *              
+         *              NOT an esoteric - try 3390               *              
+         *              Or * to use the system default           *              
+         * ----------------------------------------------------- */             
+                                                                                
+           zip_type = "PKZIP"                                                   
+                                                                                
+        /* Now setup the load library for PKZIP */                              
+           env = mvsvar('symdef','ksysenv')                                     
+           zip_load = "'sysl.pkzipmvs."env".loadlib(pkzip)'"                    
+           zip_unit = "*"                                                       
+                                                                                
+        /* zip_type = "ISPZIP"                                                  
+           zip_load = "'syslbd.ispzip.load(ispzip)'" */                         
+                                                                                
+        /* zip_type = "INFOZIP"                                                 
+           zip_load = "'syslbd.infozip.link'" */                                
+                                                                                
+        /* ----------------------------------------------------- *              
+         * Set size limit in bytes. 0 is unlimited (no commas)   *              
+         * ----------------------------------------------------- *              
+         *            | 10 million                               *              
+         *            || 1 million                               *              
+         *            ||| 100K                                   *              
+         *            |||| 10K                                   *              
+         *            ||||| 1k                                   */             
+         size_limit = 0  /* unlimited size */                                   
+                                                                                
+        /* ----------------------------------------------------- *              
+         * Define the load library for the XMITB64 load module   *              
+         * if null then the load module should be in the         *              
+         * Steplib or Linklist                                   *              
+         * ----------------------------------------------------- */             
+         /* b64_load = "'syslbd.lionel.load(xmitb64)'" */                       
+         b64_load = null                                                        
+                                                                                
+        /* ----------------------------------------------------- *              
+         * Allow E-Mail address (ID) validation via LDAP         *              
+         * 0 = Allow in both Batch and ISPF (w/lookup)           *              
+         * 1 = Do Not Allow in Batch or ISPF                     *              
+         * 2 = Do Not Allow in Batch - Allow in ISPF (w/lookup)  *              
+         * 3 = Allow lookup only - no validation                 *              
+         * ----------------------------------------------------- */             
+         batch_idval = 2                                                        
+                                                                                
+        /* ----------------------------------------------------- *              
+         * Create_DSN_Lrecl default is 255                       *              
+         * used for FILE *CREATE*                                *              
+         * ----------------------------------------------------- */             
+         create_dsn_lrecl = 255                                                 
+                                                                                
+        /* ----------------------------------------------------- *              
+         * Receipt Type indicator                                *              
+         * 1 = Return-Receipt-To                                 *              
+         * 2 = Disposition-Notification-To (default)             *              
+         * ----------------------------------------------------- */             
+         receipt_type = 2                                                       
+                                                                                
+        /* ---------------------------------------------------------- *         
+         * Set the default paper size.  This allows sites to          *         
+         * set the size to something other than Letter (e.g. A4)      *         
+         * ---------------------------------------------------------- */        
+         paper_size = "Letter"                                                  
+                                                                                
+        /* --------------------------------------------------------- *          
+         * Default Font Size                                         *          
+         * --------------------------------------------------------- */         
+         font_size = 9                                                          
+                                                                                
+        /* --------------------------------------------------------- *          
+         * Default Page Orientation (Portrait or Landscape)          *          
+         * --------------------------------------------------------- */         
+         def_orient = "Portrait"                                                
+         /* def_orient = "Landscape" */                                         
+                                                                                
+        /* --------------------------------------------------------- *          
+         * Define a default file suffix in case one is not defined   *          
+         * in FORMAT and a FILENAME is not defined.                  *          
+         * Note: a value of null is acceptable.                      *          
+         * --------------------------------------------------------- */         
+         file_suf = ".txt"                                                      
+                                                                                
+        /* --------------------------------------------------------- *          
+         * Set mail relay address for those requiring it.            *          
+         * Will result in RCPT TO: relay:address                     *          
+         * --------------------------------------------------------- */         
+         mail_relay = null                                                      
+                                                                                
+        /* --------------------------------------------------------- *          
+         * Disclaimer specification. Defines a data set containing   *          
+         * a standard disclaimer or null.                            *          
+         * --------------------------------------------------------- */         
+         disclaim = null                                                        
+                                                                                
+         /* disclaim = "'syslbd.xmitip.disclaim'" */                            
+                                                                                
+        /* --------------------------------------------------------- *          
+         * Antispoof setting: if this variable is set then the value *          
+         * will be inserted into the message text for all outgoing   *          
+         * e-mails after any signature.                              *          
+         *                                                           *          
+         * Comment this call out if you don't use it                 *          
+         * --------------------------------------------------------- */         
+          call set_antispoof                                                    
+                                                                                
+        /* --------------------------------------------------------- *          
+         * Empty Data Set option:                                    *          
+         *      0 = warn message and continue                        *          
+         *      1 = error message and exit                           *          
+         * --------------------------------------------------------- */         
+         empty_opt = 0                                                          
+                                                                                
+        /* ----------------------------------------------------- *              
+         * Now return to the caller with each value separated    *              
+         * by a /.                                               *              
+         * ----------------------------------------------------- */             
+        return  center "/" zone "/" smtp "/" ,                                  
+                vio "/" smtp_secure "/" smtp_address "/" ,                      
+                smtp_domain "/" font "/" text_enter "/" ,                       
+                sysout_class "/" from_center "/" writer "/" ,                   
+                top "/" bottom "/" left "/" right "/" ,                         
+                host "/" name "/" domain "/" from_default ,                     
+                "/" append_domain "/" zip_type "/" zip_load "/" ,               
+                zip_unit "/" interlink "/" size_limit "/" b64_load ,            
+                "/" batch_idval "/" create_dsn_lrecl ,                          
+                "/" receipt_type "/" paper_size "/" file_suf ,                  
+                "/" mail_relay "/" AtSign "/" ispffrom ,                        
+                "/" char "/" charuse "/" disclaim "/" empty_opt ,               
+                "/" font_size "/" def_orient ,                                  
+                "/" antispoof                                                   
+                                                                                
+        /* =========================================== *                        
+         * Important: the antispoof value must be the  *                        
+         *            last as it could contain a /     *                        
+         * =========================================== */                       
+                                                                                
+        exit                                                                    
+                                                                                
+        /* --------------------------------------------------------- *          
+         * Set_AntiSpoof Routine: this routine will set the antispoo *          
+         * variable.                                                 *          
+         *                                                           *          
+         * You must define which security system you are using for   *          
+         * this to work.                                             *          
+         *                                                           *          
+         * ACF2 Note: You may need to change the parse if the        *          
+         *            user name is in a different position and       *          
+         *            if there is something after the name.          *          
+         * --------------------------------------------------------- */         
+         Set_AntiSpoof: procedure expose antispoof                              
+         sec = "RACF"                                                           
+         /* sec = "ACF2" */                                                     
+         /* sec = "TOPSECRET" */                                                
+         Select                                                                 
+           When sec = "RACF" then do                                            
+                call outtrap 's.'                                               
+                "lu" sysvar("sysuid")                                           
+                call outtrap 'off'                                              
+                parse value s.1 with . "NAME=" name "OWNER" .                   
+                end                                                             
+           When sec = "ACF2" then do                                            
+                call outtrap 's.'                                               
+                queue "SET TERSE"                                               
+                queue "LIST " sysvar("sysuid")                                  
+                queue "END"                                                     
+                queue                                                           
+                "ACF"                                                           
+                call outtrap 'off'                                              
+                parse var s.1 a b name                                          
+                end                                                             
+           When sec = "TOPSECRET" then do                                       
+                cvt      = storage(10,4)                                        
+                ascb     = storage(d2x(c2d(cvt)+568),4)                         
+                ascbx    = storage(d2x(c2d(ascb)+108),4)                        
+                acee     = storage(d2x(c2d(ascbx)+200),4)                       
+                acex     = storage(d2x(c2d(acee)+152),4)                        
+                name     = storage(d2x(c2d(acex)+261),32)                       
+                end                                                             
+           otherwise do                                                         
+              say "ERROR: An Invalid Security system was defined."              
+              say "       try again....."                                       
+              say "..... exiting now!"                                          
+              exit 16                                                           
+              end                                                               
+           end                                                                  
+         name = strip(name)                                                     
+        /* --------------------------------------------------------- *          
+         * The antispoof variable must have a ## following the userid*          
+         * and the users name.                                       *          
+         * --------------------------------------------------------- */         
+         antispoof = "Userid:" sysvar("sysuid") "##" ,                          
+                     "User name:" name "##" ,                                   
+                     "From system" mvsvar("sysname")                            
+         return                                                                 
+                                                                                
+        /*                                                                      
+        || =============================================================        
+        || Function:      Timezone    : Calculates the offset from GMT          
+        || Arguments:     (none)      : nothing is required                     
+        || Return:        offset      : offset in (-)HHMM format                
+        || Exposed vars:  (none)      : nothing is exposed                      
+        ||                                                                      
+        || Note:  Uses the CVTLDTO field in one of the CVT extensions.          
+        ||        It looks like this field was added sometime in 1991,          
+        ||        so this routine will not work on any OS version older         
+        ||        than that.                                                    
+        || =============================================================        
+        */                                                                      
+        Timezone:                                                               
+        PROCEDURE                                                               
+                                                                                
+          /* ===========================================================        
+          || We're gonna have a big number                                      
+          */                                                                    
+          NUMERIC DIGITS 21                                                     
+                                                                                
+          /* ===========================================================        
+          || Get current CVTLDTO                                                
+          ||   (Local Date Time Offset in STCK format))                         
+          */                                                                    
+          cvt     = C2d( Storage( D2x( 16 ), 4 ) )                              
+          cvttz   = C2d( Storage( D2x( cvt + 304 ), 4 ) )                       
+          cvtext2 = C2d( Storage( D2x( cvt + 328 ), 4 ) )                       
+          cvtldto = C2d( Storage( D2x( cvtext2 + 56 ), 8 ), 8 )                 
+                                                                                
+          /* ===========================================================        
+          || Calc the current offset in hours and minutes                       
+          ||    (work with absolute)                                            
+          */                                                                    
+          absldto = Abs( cvtldto )                                              
+          hours   = absldto % x2d('D693A400000' )                               
+          minutes = ( absldto % x2d('3938700000') ) // 60                       
+                                                                                
+          /* ===========================================================        
+          || Correction to Round to nearest hour                                
+          */                                                                    
+          If minutes <> "00"  Then Do                                           
+             If minutes > 30 Then                                               
+                 hours = hours + 1                                              
+             /* minutes = 00 */                                                 
+          End                                                                   
+                                                                                
+          /* ===========================================================        
+          || Format to ANSI standard X3.51-1975                                 
+          */                                                                    
+          zone    = Right( hours, 2, "0" )Right( minutes, 2, "0" )              
+          IF cvtldto < 0 THEN DO                                                
+            zone      = "-"zone                                                 
+          END                                                                   
+          ELSE DO                                                               
+           zone = "+"zone                                                       
+          END                                                                   
+                                                                                
+          /* ===========================================================        
+          || Reset                                                              
+          */                                                                    
+          NUMERIC DIGITS                                                        
+                                                                                
+        RETURN zone                                                             

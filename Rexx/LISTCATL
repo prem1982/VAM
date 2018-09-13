@@ -1,0 +1,4 @@
+/*REXX*/                                                                        
+ARG LISTDSN LISTDD                                                              
+"LISTCAT LEVEL('"LISTDSN"') OUTFILE(LISTDD)"                                    
+RETURN 0                                                                        

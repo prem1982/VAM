@@ -1,0 +1,48 @@
+  SELECT SC1.ORDER_TYPE                                                         
+        ,SC1.TRN_DATE                                                           
+        ,SC1.WIRELESS_DAN                                                       
+        ,SC1.MDN                                                                
+    FROM (                                                                      
+  SELECT CASE WHEN WD.WAIVER_TYPE = 'EU'                                        
+              THEN 'Upgrade Waiver'                                             
+              WHEN WD.WAIVER_TYPE = 'ET'                                        
+              THEN 'Termination Fee'                                            
+              ELSE ' '                                                          
+              END ORDER_TYPE                                                    
+         ,WD.TRN_DATE                                                           
+         ,WD.WIRELESS_DAN                                                       
+         ,WD.MDN                                                                
+           FROM STRUCTURES_T STR                                                
+     INNER JOIN VZW_DW_WAIV_DETL_T WD                                           
+        ON STR.MAN = WD.MAN                                                     
+        AND STR.OSID = WD.ORIG_SYSTEM_ID                                        
+        AND STR.WTN = WD.MDN                                                    
+      WHERE STR.REPORT_ID_TS  = STRUCTURE_TS%                                   
+        AND STR.ELEMENT_TYPE  = 'SP'                                            
+        AND STR.POSITION_TYPE = ?                                               
+        AND STR.POSITION_OID = ?                                                
+      ) SC1                                                                     
+   WFILTER = ?                                                                  
+--SELECT SC1.ORDER_TYPE                                                         
+--      ,SC1.TRN_DATE                                                           
+--      ,SC1.WIRELESS_DAN                                                       
+--      ,SC1.MDN                                                                
+--  FROM (                                                                      
+--SELECT CASE WHEN WD.WAIVER_TYPE = 'EU'                                        
+--            THEN 'Upgrade Waiver'                                             
+--            WHEN WD.WAIVER_TYPE = 'ET'                                        
+--            THEN 'Termination Fee'                                            
+--            ELSE ' '                                                          
+--            END ORDER_TYPE                                                    
+--       ,WD.TRN_DATE                                                           
+--       ,WD.WIRELESS_DAN                                                       
+--       ,WD.MDN                                                                
+--         FROM STRUCTURES_T STR                                                
+--   INNER JOIN VZW_DW_WAIV_DETL_T WD                                           
+--      ON STR.ELEMENT_OID    = WD.SUBSCRIBER_OID                               
+--    WHERE STR.REPORT_ID_TS  = STRUCTURE_TS%                                   
+--      AND STR.ELEMENT_TYPE  = 'SB'                                            
+--      AND STR.POSITION_TYPE = ?                                               
+--      AND STR.POSITION_OID  = ?                                               
+--    ) SC1                                                                     
+-- WFILTER = ?                                                                  

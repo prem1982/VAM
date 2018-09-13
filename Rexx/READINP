@@ -1,0 +1,50 @@
+/******************************* REXX *********************************/        
+/* REXX EXEC bldsort     v 1.0                                        */        
+/******************************* REXX *********************************/        
+                                                                                
+ARG .                /* no arguments */                                         
+                                                                                
+ trace o                                                                        
+                                                                                
+                                                                                
+"EXECIO * DISKR inputls (STEM inputls.)"                                        
+if RC ^= 0                                                                      
+then do                                                                         
+     say error reading inputls file                                             
+     exit 12                                                                    
+     end                                                                        
+                                                                                
+                                                                                
+line_count = 0                                                                  
+lines. = ''                                                                     
+wk_act = ''                                                                     
+wk_act_len = 0                                                                  
+do i = 1 to inputls.0                                                           
+                                                                                
+  wk_line = strip(inputls.i)                                                    
+  do x = 1 to length(wk_line)                                                   
+    if substr(wk_line,x,1) = ','                                                
+    then do                                                                     
+         if wk_act_len ^= 10                                                    
+         then eyecatch = '!!!!!'                                                
+         else eyecatch = ''                                                     
+         say 'acct:  ' wk_act ' length ' wk_act_len ' ' eyecatch                
+         wk_act = ''                                                            
+         wk_act_len = 0                                                         
+         end                                                                    
+    else do                                                                     
+         wk_act_len = wk_act_len + 1                                            
+         wk_act = wk_act || substr(wk_line,x,1)                                 
+         end                                                                    
+  end                                                                           
+end                                                                             
+if wk_act_len > 0                                                               
+then do                                                                         
+     say 'acct:  ' wk_acct ' length ' wk_act_len ' ' eyecatch                   
+     end                                                                        
+                                                                                
+                                                                                
+                                                                                
+return                                                                          
+                                                                                
+                                                                                

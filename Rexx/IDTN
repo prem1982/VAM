@@ -1,0 +1,11 @@
+/*** IDTN: REXX TO CONVERT ID TO USER NAME****/                                 
+  ARG USERID                                                                    
+  SELECT                                                                        
+     WHEN USERID = 'ZSVRMCE' THEN USERTN = '781-466-2269'                       
+     WHEN USERID = 'D14XMRL' THEN USERTN = '781-466-2270'                       
+     WHEN USERID = 'DA8MWVD' THEN USERTN = '781-466-2271'                       
+     WHEN USERID = 'Z615127' THEN USERTN = '781-466-4367'                       
+    OTHERWISE                                                                   
+        USERTN = '718-466-2269'                                                 
+  END                                                                           
+  RETURN USERTN                                                                 

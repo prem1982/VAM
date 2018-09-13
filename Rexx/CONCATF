@@ -1,0 +1,71 @@
+/*REXX*/                                                                        
+ARG DDNAME DSNAME DISPOS                                                        
+X = OUTTRAP(LINE.)                                                              
+"LISTA ST"                                                                      
+CURRDD = 'X'                                                                    
+CURRDDNUM = 0                                                                   
+ENDNUM = LINE.0 - 1                                                             
+DDLIST.0 = 0                                                                    
+DDDISP.0 = 0                                                                    
+DO I = 2 TO ENDNUM                                                              
+   J = I + 1                                                                    
+   WORDONE = WORD(LINE.I,1)                                                     
+   SELECT                                                                       
+     WHEN WORDONE = 'NULLFILE' THEN                                             
+          DO                                                                    
+             CURRDD = WORD(LINE.I,2)                                            
+             CURRDDNUM = 1                                                      
+             CURRDS = WORDONE                                                   
+             CURRDISP = ''                                                      
+          END                                                                   
+     WHEN WORDONE = 'TERMFILE' THEN                                             
+          DO                                                                    
+             CURRDD = WORD(LINE.I,2)                                            
+             CURRDDNUM = 1                                                      
+             CURRDS = WORDONE                                                   
+             CURRDISP = ''                                                      
+          END                                                                   
+     OTHERWISE                                                                  
+          DO                                                                    
+             BYTE1 = SUBSTR(LINE.I,1,1)                                         
+             IF BYTE1 ^= ' ' THEN                                               
+                CURRDS = WORD(LINE.I,1)                                         
+                DO                                                              
+                   DDNM = SUBSTR(LINE.J,3,8)                                    
+                   IF DDNM ^= '        ' THEN                                   
+                      DO                                                        
+                         CURRDD = WORD(LINE.J,1)                                
+                         CURRDDNUM = 1                                          
+                         CURRDISP = WORD(LINE.J,2)                              
+                      END                                                       
+                   ELSE                                                         
+                      DO                                                        
+                         CURRDDNUM = CURRDDNUM + 1                              
+                         CURRDISP = WORD(LINE.J,1)                              
+                      END                                                       
+                END                                                             
+                I = I + 1                                                       
+          END                                                                   
+   END                                                                          
+   IF CURRDD = DDNAME THEN                                                      
+      DO                                                                        
+         IF CURRDS ^= DSNAME THEN                                               
+            DO                                                                  
+               DDDISP.0 = CURRDDNUM                                             
+               DDLIST.0 = CURRDDNUM                                             
+               DDDISP.CURRDDNUM = CURRDISP                                      
+               DDLIST.CURRDDNUM = CURRDS                                        
+            END                                                                 
+      END                                                                       
+END                                                                             
+X_STRING = " DA('"DSNAME"'"                                                     
+DO I = 1 TO DDLIST.0                                                            
+   X_STRING = X_STRING",'"DDLIST.I"'"                                           
+END                                                                             
+"FREE FI("DDNAME")"                                                             
+X = OUTTRAP("OFF")                                                              
+"ALLOC FI("DDNAME") "X_STRING") "DISPOS                                         
+IF RC > 0 THEN                                                                  
+   DO                                                                           
+      SAY "ERROR ON ALLOC FI("DDNAME") "X_STRING") "DISPOS                      
+   END                                                                          

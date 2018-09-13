@@ -1,0 +1,39 @@
+     SELECT V50S.MAN                                                            
+           ,V50S.MAN_BILL_DATE                                                  
+           ,V50S.ORIG_SYSTEM_ID                                                 
+           ,V50S.WORKING_TEL_NBR                                                
+           ,V50S.USER_NAME                                                      
+           ,V50S.COST_CNTR                                                      
+           ,V50S.PLAN_DESC                                                      
+           ,V50S.CHARGE_AMT TOT_CURR_CHGS                                       
+           ,CASE WHEN V50S.MAN_BILL_DATE >='2012-08-01'                         
+                 THEN INTEGER(V50S.USG_COL1)                                    
+                 ELSE 0 END        VOICE_USAGE_NEW                              
+           ,CASE WHEN V50S.MAN_BILL_DATE >='2012-08-01'                         
+                 THEN INTEGER(V50S.USG_COL2)                                    
+                 ELSE 0 END         MSG_USAGE_NEW                               
+           ,CASE WHEN V50S.MAN_BILL_DATE >='2012-08-01'                         
+                 THEN INTEGER(V50S.USG_COL3)                                    
+                 ELSE 0 END         DATA_USAGE_NEW                              
+           ,CASE WHEN V50S.MAN_BILL_DATE >='2012-08-01'                         
+                 THEN INTEGER(V50S.USG_COL4)                                    
+                 ELSE 0 END         VOICE_ROAMING_NEW                           
+           ,CASE WHEN V50S.MAN_BILL_DATE >='2012-08-01'                         
+                 THEN INTEGER(V50S.USG_COL5)                                    
+                 ELSE 0 END         MSG_ROAMING_NEW                             
+           ,CASE WHEN V50S.MAN_BILL_DATE >='2012-08-01'                         
+                 THEN INTEGER(V50S.USG_COL6)                                    
+                 ELSE 0 END         DATA_ROAMING_NEW                            
+           ,CASE WHEN V50S.MAN_BILL_DATE < '2012-08-01'                         
+                 THEN INTEGER(V50S.USG_COL2)                                    
+                 ELSE 0 END         VOICE_PLAN_OLD                              
+           ,CASE WHEN V50S.MAN_BILL_DATE < '2012-08-01'                         
+                 THEN INTEGER(V50S.USG_COL6)                                    
+                 ELSE 0 END         VOICE_ROAM_OLD                              
+         FROM BMGVZP.VZ450_VMT50200_T V50S                                      
+        WHERE V50S.MAN = '1SCLMTD'                                              
+          AND V50S.MAN_BILL_DATE = '2012-08-01'                                 
+          AND V50S.ORIG_SYSTEM_ID = 'VW'                                        
+          AND V50S.CHARGE_CD = '0100'                                           
+        ORDER BY V50S.WORKING_TEL_NBR                                           
+                                                                                

@@ -1,0 +1,69 @@
+     SELECT WTX.MAN                                                             
+           ,WTX.MAN_BILL_DATE                                                   
+           ,WTX.ORIG_SYSTEM_ID                                                  
+           ,WTX.BAN                                                             
+           ,WTX.BILL_DATE                                                       
+           ,CASE WHEN WTX.COST_CNTR = '' THEN 'No Cost-Center'                  
+              ELSE WTX.COST_CNTR END COST_CNTR                                  
+           ,WTX.WORKING_TEL_NBR                                                 
+           ,CASE WHEN WTX.WORKING_TEL_NBR = 'SHELLACCT'                         
+                  AND WTX.CHG_CD_1945     = 0                                   
+                  THEN 'Account Charges'                                        
+                 WHEN WTX.WORKING_TEL_NBR = 'SHELLACCT'                         
+                  AND WTX.CHG_CD_1945    <> 0                                   
+                   THEN WTX.MAN                                                 
+                 ELSE WTX.WORKING_TEL_NBR                                       
+             END WTN                                                            
+           ,SUBSTR(WTX.USER_NAME,1,28) CUST_ID_CD                               
+           ,CASE WHEN WTX.WORKING_TEL_NBR = 'SHELLACCT'                         
+                      THEN 'Y' ELSE 'N'                                         
+                 END ACCT_LVL_IND                                               
+           ,WTX.ACCT_LVL_CHGS                                                   
+           ,CASE WHEN WTX.WORKING_TEL_NBR = 'SHELLACCT'                         
+                 THEN WTX.CHG_CD_1945                                           
+                 ELSE WTX.CHG_CD_1946                                           
+            END  THIRD_PARTY                                                    
+           ,WTX.MONTHLY_CHGS MO_ACCESS                                          
+           ,WTX.WTN_HAS_USAGE USAGE_IND                                         
+           ,CASE WHEN WTX.WORKING_TEL_NBR = 'SHELLACCT'                         
+                 THEN WTX.VOICE_CHGS                                            
+                    + WTX.DATA_CHGS                                             
+                    + WTX.ROAMING_CHGS                                          
+                    + WTX.CHG_CD_1944                                           
+                 ELSE WTX.VOICE_CHGS                                            
+                    + WTX.DATA_CHGS                                             
+                    + WTX.ROAMING_CHGS                                          
+                    + WTX.CHG_CD_1944                                           
+                 END   TOTAL_USAGE                                              
+           ,WTX.EQUIP_CHGS EQUIPMENT                                            
+           ,DECIMAL(CASE WHEN LENGTH(WTX.DID_INFO) = 0                          
+                    THEN '+000000000.00'                                        
+                    ELSE                                                        
+              CASE WHEN SUBSTR(HEX(SUBSTR(WTX.DID_INFO,1,6)),12,1)              
+                = 'D' THEN '-' ELSE '+' END                                     
+              || SUBSTR(HEX(SUBSTR(WTX.DID_INFO,1,6)),1,9) || '.'               
+              || SUBSTR(HEX(SUBSTR(WTX.DID_INFO,1,6)),10,2)                     
+                      END,11,2) AS TOTAL_CHARGES                                
+           ,DECIMAL(CASE WHEN LENGTH(WTX.DID_INFO) = 0                          
+                    THEN '+000000000.00'                                        
+                    ELSE                                                        
+              CASE WHEN SUBSTR(HEX(SUBSTR(WTX.DID_INFO,31,6)),12,1)             
+                = 'D' THEN '-' ELSE '+' END                                     
+              || SUBSTR(HEX(SUBSTR(WTX.DID_INFO,31,6)),1,9) || '.'              
+              || SUBSTR(HEX(SUBSTR(WTX.DID_INFO,31,6)),10,2)                    
+                      END,11,2) AS TAXES_SURCHGS                                
+           ,DECIMAL(CASE WHEN LENGTH(WTX.DID_INFO) = 0                          
+                    THEN '+000000000.00'                                        
+                    ELSE                                                        
+              CASE WHEN SUBSTR(HEX(SUBSTR(WTX.DID_INFO,37,6)),12,1)             
+                = 'D' THEN '-' ELSE '+' END                                     
+              || SUBSTR(HEX(SUBSTR(WTX.DID_INFO,37,6)),1,9) || '.'              
+              || SUBSTR(HEX(SUBSTR(WTX.DID_INFO,37,6)),10,2)                    
+                      END,11,2) AS TAXES_FEES                                   
+         FROM BMGVZP.STG_SEARCH2_T STG                                          
+        INNER JOIN BMGVZP.WTN_T WTX                                             
+          ON STG.BAN = WTX.BAN                                                  
+         AND STG.BILL_DATE = WTX.BILL_DATE                                      
+         AND STG.ORIG_SYSTEM_ID = WTX.ORIG_SYSTEM_ID                            
+         AND STG.WTN_CKT_CLI = WTX.WORKING_TEL_NBR                              
+        WHERE STG.REPORT_ID_TS = '2012-02-15-10.16.07.421045'                   

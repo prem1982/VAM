@@ -1,0 +1,25 @@
+/*REXX LOADNDMV: REXX TO UPDATE DB2 LOAD CARDS */                       00010001
+ARG BMGNY0PN OWNER TBLNAME DB2SYS RESUME                                00020000
+CALL GETNAMEL TBLNAME                                                   00030000
+LONGNAME = RESULT                                                       00040000
+LOADCDS = BMGNY0PN".LOADNDMV."TBLNAME"."DB2SYS".LDCD"                   00050002
+"EXECIO * DISKR LOADCARD (FINIS STEM CARDSIN."                          00051002
+"FREE FI(LOADCDS)"                                                      00060000
+"DELETE '"LOADCDS"'"                                                    00070000
+"ALLOC FI(LOADCDS) DA('"LOADCDS"') NEW"                                 00080000
+IF RESUME = "YES" THEN                                                  00090000
+   DO                                                                   00091002
+     QUEUE "   LOAD DATA INDDN SYSREC00 RESUME "RESUME" LOG(NO)"        00100002
+   END                                                                  00101002
+ELSE                                                                    00110000
+   DO                                                                   00111002
+     QUEUE "   LOAD DATA INDDN SYSREC00 LOG(NO) REPLACE" ||,            00120002
+         " STATISTICS TABLE INDEX(ALL)"                                 00121002
+   END                                                                  00122002
+QUEUE "        INTO TABLE "OWNER"."LONGNAME""                           00130000
+DO XX = 3 TO CARDSIN.0                                                  00131102
+    QUEUE CARDSIN.XX                                                    00131202
+END                                                                     00132002
+QUEUE                                                                   00133002
+"EXECIO * DISKW LOADCDS (FINIS"                                         00140000
+"FREE FI(LOADCDS)"                                                      00150000

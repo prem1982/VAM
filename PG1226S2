@@ -1,0 +1,37 @@
+ SELECT  SC1.WTN                                                                
+        ,SC1.REQ_DATE                                                           
+        ,SC1.REQ_STRUCT                                                         
+        ,SC1.BILL_PERIOD                                                        
+        ,SC1.EMAIL                                                              
+        ,SC1.COMMENTS                                                           
+      FROM (                                                                    
+    SELECT COALESCE(PE.SERVICE_ID,' ') WTN                                      
+  ,DATE(PL.CREATED_TIMESTAMP) REQ_DATE                                          
+  ,(STR.LVL_0_NAME ||'/'|| STR.LVL_1_NAME||'/'||                                
+  STR.LVL_2_NAME) || ' ' REQ_STRUCT                                             
+  ,PL.PARAM7 || ' ' BILL_PERIOD                                                 
+  ,PE.EMAIL_TO_ADDR || ' ' EMAIL                                                
+  ,CASE WHEN PL.ERROR_MSG = ' '                                                 
+        THEN 'SENT'                                                             
+ WHEN PL.ERROR_MSG ='#########Only Header List was sent. No Content List        
+.############. So not calling processMemoBill.Exiting.'                         
+        THEN 'NO EMAIL AVAILABLE FOR MTN'                                       
+ WHEN PL.ERROR_MSG ='Exception::\tmp\memobill-347-225-7467.pdf (The syst        
+em cannot find the path specified)'                                             
+        THEN 'CANNOT FIND THE PATH SPECIFIED'                                   
+        END COMMENTS                                                            
+         FROM STRUCTURES_T STR                                                  
+        INNER JOIN USER_PROFILE UP                                              
+           ON UP.LOGIN_ID = LOGIN_ID%                                           
+        INNER JOIN PL_REQSTATUS PL                                              
+           ON UP.LOGIN_ID = PL.LOGINID                                          
+        LEFT OUTER JOIN PL_EMAIL_LOG PE                                         
+           ON PL.REQUEST_ID = PE.EMAIL_REF_ID                                   
+        WHERE STR.REPORT_ID_TS  = STRUCTURE_TS%                                 
+--        AND STR.POSITION_TYPE = ?                                             
+--        AND STR.POSITION_OID = ?                                              
+          AND STR.ELEMENT_TYPE = POSITION_TYPE%                                 
+          AND STR.ELEMENT_OID = POSITION_OID%                                   
+          AND PL.TYPE           = 'MEMO_BILL'                                   
+    ) SC1                                                                       
+  WFILTER = ?                                                                   

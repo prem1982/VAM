@@ -1,0 +1,16 @@
+/*REXX DROPCRDS: REXX TO CREATE DB2 DROP CARDS */                       00010002
+ARG TESTID TBLHILVL TBLNAME DB2SYS                                      00020003
+CALL GETNAMEL TBLNAME                                                   00021005
+LONGNAME = RESULT                                                       00022005
+/****************************************************/                  00030000
+/****       CREATE DROP TABLE CARDS             *****/                  00040005
+/****************************************************/                  00050000
+DROPCDS = TESTID".DROP."TBLNAME"."DB2SYS                                00060000
+"FREE FI(DROPCDS)"                                                      00070000
+"DELETE '"DROPCDS"'"                                                    00080000
+"ALLOC FI(DROPCDS) DA('"DROPCDS"') NEW"                                 00090004
+QUEUE "DROP TABLE "TBLHILVL"."LONGNAME";"                               00100005
+"EXECIO * DISKW DROPCDS (FINIS"                                         00120001
+"FREE FI(DROPCDS)"                                                      00130001
+LOADCDS = TESTID".LOAD."TBLNAME"."DB2SYS                                00210005
+"FREE FI(LOADCDS)"                                                      00220005

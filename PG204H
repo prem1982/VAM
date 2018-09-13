@@ -1,0 +1,106 @@
+    SELECT HDR204.ACCT_NBR                                                      
+          ,HDR204.ACCT_NBR ACCT_NBR20                                           
+          ,HDR204.ACCT_ALIAS                                                    
+          ,HDR204.ACCT_ALIAS ACCT_ALIAS20                                       
+          ,HDR204.COST_CNTR                                                     
+          ,HDR204.WORKING_TEL_NBR                                               
+          ,HDR204.WORKING_TEL_NBR WTN2                                          
+          ,HDR204.CUST_ID_CD                                                    
+          ,HDR204.BILL_DATE                                                     
+          ,HDR204.INV_NBR                                                       
+          ,HDR204.BILL_CYCLE                                                    
+          ,HDR204.CURR_CHGS_LIT                                                 
+          ,CHAR(HDR204.MO_ACCESS) MO_ACCESS                                     
+          ,CHAR(HDR204.MO_ACCESS) MO_ACCESS2                                    
+          ,HDR204.USAGE_LIT                                                     
+          ,CHAR(HDR204.VOICE_USAGE) VOICE_USAGE                                 
+          ,CHAR(HDR204.TXT_MSG)     TXT_MSG                                     
+          ,CHAR(HDR204.DATA_USAGE) DATA_USAGE                                   
+          ,CHAR(HDR204.ROAMING_CHGS) ROAMING_CHGS                               
+          ,CHAR(HDR204.TOTAL_USAGE) TOTAL_USAGE                                 
+          ,CHAR(HDR204.EQUIPMENT) EQUIPMENT                                     
+          ,CHAR(HDR204.TAXES_SURCHGS) TAXES_SURCHGS                             
+          ,CHAR(HDR204.TAXES_FEES) TAXES_FEES                                   
+          ,CHAR(HDR204.THIRD_PARTY) THIRD_PARTY                                 
+          ,CHAR(HDR204.TOT_CURR_CHGS) TOT_CURR_CHGS                             
+       FROM (                                                                   
+     SELECT WTX.WIRELESS_DAN ACCT_NBR                                           
+           ,RTRIM(COALESCE(CB.ACCT_ALIAS,' ')) || ' ' ACCT_ALIAS                
+           ,VWM.UIM_COST_CTR_CD COST_CNTR                                       
+           ,WTX.WORKING_TEL_NBR                                                 
+           ,SUBSTR(VWM.USER_NAME,1,20) CUST_ID_CD                               
+           ,WTX.BILL_DATE                                                       
+           ,ACT.INVOICE_NBR INV_NBR                                             
+           ,CASE                                                                
+              SUBSTR(CHAR(WTX.BILL_DATE - 1 MONTH + 1 DAY),6,2)                 
+                 WHEN '01' THEN 'Jan'                                           
+                 WHEN '02' THEN 'Feb'                                           
+                 WHEN '03' THEN 'Mar'                                           
+                 WHEN '04' THEN 'Apr'                                           
+                 WHEN '05' THEN 'May'                                           
+                 WHEN '06' THEN 'Jun'                                           
+                 WHEN '07' THEN 'Jul'                                           
+                 WHEN '08' THEN 'Aug'                                           
+                 WHEN '09' THEN 'Sep'                                           
+                 WHEN '10' THEN 'Oct'                                           
+                 WHEN '11' THEN 'Nov'                                           
+                 WHEN '12' THEN 'Dec'                                           
+                 ELSE ' ' END                                                   
+             || ' '                                                             
+             ||  SUBSTR(CHAR(WTX.BILL_DATE - 1 MONTH + 1 DAY),9,2)              
+             || ' - '                                                           
+             || CASE SUBSTR(CHAR(WTX.BILL_DATE),6,2)                            
+                 WHEN '01' THEN 'Jan'                                           
+                 WHEN '02' THEN 'Feb'                                           
+                 WHEN '03' THEN 'Mar'                                           
+                 WHEN '04' THEN 'Apr'                                           
+                 WHEN '05' THEN 'May'                                           
+                 WHEN '06' THEN 'Jun'                                           
+                 WHEN '07' THEN 'Jul'                                           
+                 WHEN '08' THEN 'Aug'                                           
+                 WHEN '09' THEN 'Sep'                                           
+                 WHEN '10' THEN 'Oct'                                           
+                 WHEN '11' THEN 'Nov'                                           
+                 WHEN '12' THEN 'Dec'                                           
+                 ELSE ' ' END                                                   
+             || ' '                                                             
+             ||  SUBSTR(CHAR(WTX.BILL_DATE),9,2)                                
+                  AS BILL_CYCLE                                                 
+          ,' ' CURR_CHGS_LIT                                                    
+          ,WTX.CHG_CD_1931 MO_ACCESS                                            
+          ,' ' USAGE_LIT                                                        
+          ,WTX.CHG_CD_1935 VOICE_USAGE                                          
+          ,WTX.CHG_CD_1944 TXT_MSG                                              
+          ,WTX.CHG_CD_1936 DATA_USAGE                                           
+          ,WTX.CHG_CD_1942 ROAMING_CHGS                                         
+          ,WTX.CHG_CD_1935                                                      
+             + WTX.CHG_CD_1944                                                  
+             + WTX.CHG_CD_1936                                                  
+             + WTX.CHG_CD_1942 TOTAL_USAGE                                      
+          ,WTX.CHG_CD_1940 EQUIPMENT                                            
+          ,WTX.CHG_CD_1937 TAXES_SURCHGS                                        
+          ,WTX.CHG_CD_1938 TAXES_FEES                                           
+          ,WTX.CHG_CD_1946 THIRD_PARTY                                          
+          ,WTX.CHG_CD_0100 TOT_CURR_CHGS                                        
+        FROM WTN_T WTX                                                          
+       INNER JOIN VZW_MTN_T VWM                                                 
+          ON WTX.MAN = VWM.MAN                                                  
+         AND WTX.BAN = VWM.BAN                                                  
+         AND WTX.ORIG_SYSTEM_ID = VWM.ORIG_SYSTEM_iD                            
+         AND WTX.WORKING_TEL_NBR = VWM.MTN                                      
+         AND VWM.ACTIVE_END_DATE = '9999-12-31'                                 
+      INNER JOIN ACCT_SUM_T ACT                                                 
+         ON WTX.MAN = ACT.MAN                                                   
+        AND WTX.MAN_BILL_DATE = ACT.MAN_BILL_DATE                               
+        AND WTX.ORIG_SYSTEM_ID = ACT.ORIG_SYSTEM_ID                             
+        AND WTX.BAN = ACT.BAN                                                   
+        AND WTX.BILL_DATE = ACT.BILL_DATE                                       
+       LEFT OUTER JOIN CURRENT_BAN_T CB                                         
+          ON WTX.MAN = CB.MAN                                                   
+         AND WTX.BAN = CB.BAN                                                   
+         AND WTX.ORIG_SYSTEM_ID = CB.ORIG_SYSTEM_ID                             
+       WHERE WTX.BAN = ?                                                        
+         AND WTX.BILL_DATE = ?                                                  
+         AND WTX.ORIG_SYSTEM_ID = ?                                             
+         AND WTX.WORKING_TEL_NBR = ?                                            
+       ) HDR204                                                                 

@@ -1,0 +1,13 @@
+/*REXX MVSBACHA: REXX TO CREATE SYSTSIN CARDS */                        00010000
+ARG TESTID CYCLE VZREGION                                               00020000
+/****************************************************/                  00023000
+/****       CREATE BATCH TSO INPUT CARDS        *****/                  00024000
+/****************************************************/                  00025000
+SYSTSCDS = TESTID"."VZREGION||CYCLE".MVSBACHA.SYSTSIN"                  00026000
+"FREE FI(SYSTSCDS)"                                                     00027000
+"DELETE '"SYSTSCDS"'"                                                   00028000
+"ALLOC FI(SYSTSCDS) DA('"SYSTSCDS"') NEW"                               00029000
+QUEUE " EXECUTIL SEARCHDD(YES)"                                         00030000
+QUEUE " %ALLOCMTN "VZREGION||CYCLE" "TESTID                             00031001
+"EXECIO * DISKW SYSTSCDS (FINIS"                                        00050000
+"FREE FI(SYSTSCDS)"                                                     00060000

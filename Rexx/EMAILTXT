@@ -1,0 +1,14 @@
+/*REXX EMAILTXT:CREATE EMAILS FOR BATCH PORTAL REPORTS*/                00010000
+ARG OUTDSN EMAILREX                                                     00020000
+/*                                                                      00030000
+X = OUTTRAP(DSN.)                                                       00040000
+*/                                                                      00050000
+"DELETE '"OUTDSN"'"                                                     00110000
+CALL EMAILREX                                                           00120000
+QUEUE                                                                   00130000
+"ALLOC FI(EMAILTXT) DA('"OUTDSN"')",                                    00140000
+ " NEW CATALOG DATACLAS(PSFB80)",                                       00150000
+ " LRECL(256)"                                                          00160000
+"EXECIO * DISKW EMAILTXT (FINIS"                                        00170000
+"FREE FI(EMAILTXT)"                                                     00180000
+EXIT                                                                    00190000

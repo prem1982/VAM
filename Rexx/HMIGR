@@ -1,0 +1,6 @@
+/*REXX*/                                                                        
+ARG DSNAME                                                                      
+SAY 'DSNAME='DSNAME                                                             
+/******** MIGRATE DATASET ******/                                               
+"HMIGRATE '"DSNAME"'"                                                           
+EXIT                                                                            

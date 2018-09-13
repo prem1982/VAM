@@ -1,0 +1,68 @@
+/* REXX */                                                                      
+ARG  YYMMM PATH APPL RLSENUM STAGE                                              
+YY = SUBSTR(YYMMM,1,2)                                                          
+MMM = SUBSTR(YYMMM,3,3)                                                         
+XSYS = APPL                                                                     
+XSUBSYS = APPL                                                                  
+SELECT                                                                          
+    WHEN MMM = 'JAN' THEN MM = '01'                                             
+    WHEN MMM = 'FEB' THEN MM = '02'                                             
+    WHEN MMM = 'MAR' THEN MM = '03'                                             
+    WHEN MMM = 'APR' THEN MM = '04'                                             
+    WHEN MMM = 'MAY' THEN MM = '05'                                             
+    WHEN MMM = 'JUN' THEN MM = '06'                                             
+    WHEN MMM = 'JUL' THEN MM = '07'                                             
+    WHEN MMM = 'AUG' THEN MM = '08'                                             
+    WHEN MMM = 'SEP' THEN MM = '09'                                             
+    WHEN MMM = 'OCT' THEN MM = '10'                                             
+    WHEN MMM = 'NOV' THEN MM = '11'                                             
+    WHEN MMM = 'DEC' THEN MM = '12'                                             
+END                                                                             
+IF RLSENUM = '00' THEN CCID = APPL||YY||MM                                      
+ELSE CCID = APPL"UM"YY||MM||RLSENUM                                             
+"EXECIO * DISKR ELEMENTS (FINIS STEM ELEMREC."                                  
+DO I = 1 TO ELEMREC.0                                                           
+  IF     SUBSTR(ELEMREC.I,1,1)  = '*'                                           
+  THEN ITERATE                                                                  
+  ELSE                                                                          
+    DO                                                                          
+      SAY 'GETTING ' ELEMREC.I                                                  
+      MEMBER = WORD(ELEMREC.I,1)                                                
+      TYPE   = WORD(ELEMREC.I,2)                                                
+      PROC   = WORD(ELEMREC.I,3)                                                
+      QUEUE " RETRIEVE ELEMENT '"MEMBER"'"                                      
+      IF STAGE = 'P' THEN                                                       
+         DO                                                                     
+             QUEUE "     FROM ENVIRONMENT RELEASE "                             
+         END                                                                    
+      IF STAGE = 'S' THEN                                                       
+         DO                                                                     
+             QUEUE "     FROM ENVIRONMENT PREREL "                              
+         END                                                                    
+      IF STAGE = 'A' THEN                                                       
+         DO                                                                     
+             XSYS = APPL||PATH                                                  
+             QUEUE "     FROM ENVIRONMENT TEST "                                
+         END                                                                    
+      IF STAGE = 'I' THEN                                                       
+         DO                                                                     
+             XSYS = APPL||PATH                                                  
+             QUEUE "     FROM ENVIRONMENT TEST "                                
+         END                                                                    
+      QUEUE "          SYSTEM '"XSYS"' SUBSYSTEM '"XSUBSYS"'"                   
+      QUEUE "          TYPE '"TYPE"'"                                           
+      QUEUE "          STAGE "STAGE                                             
+      QUEUE "       TO FILE '"TYPE"'"                                           
+      QUEUE " OPTIONS CCID '"CCID"'"                                            
+      QUEUE "         OVERRIDE SIGNOUT"                                         
+      QUEUE "         REPLACE"                                                  
+      QUEUE "         NOSEARCH"                                                 
+      QUEUE "         COMMENTS 'ADDED TO INT FOR "YY||MM"'."                    
+    END                                                                         
+END                                                                             
+QUEUE "*"                                                                       
+QUEUE "  ."                                                                     
+"ALLOC FI(CARDDSN) DA('BMGVZ0CN.UNIT.SCL(A"USERID()")') SHR"                    
+"EXECIO * DISKW CARDDSN (FINIS"                                                 
+"FREE FI(CARDDSN)"                                                              
+"REPRO INFILE(ELEMENTS) OUTFILE(ELEMENTX)"                                      

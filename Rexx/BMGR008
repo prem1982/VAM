@@ -1,0 +1,150 @@
+/* ==== REXX ====================================================== */          
+/* REXX EXEC NAME: RXPBDATA                                         */          
+/* DESCRIPTION:    USE THE LISTC COMMAND TO RETURN FILE NAMES FOR   */          
+/*                 THE POWERBILL/BILL MANAGER APPLICATION DATA.     */          
+/*                                                                  */          
+/* DATE WRITTEN:   AUGUST 13, 2001.                                 */          
+/* WRITTEN BY:     NICK CHARLES AND RAVI SANKAR                     */          
+/*                                                                  */          
+/* CALLED BY:      EWEB FRONT-END APPLICATION                       */          
+/* CALLS:                                                           */          
+/*                                                                  */          
+/* INPUT:  INPUT_PARM                                               */          
+/*   PARMS RECEIVED:                                                */          
+/*   USER_ID,CONFIG_ID,BTN_NUM,APP_NAME,DATE_IN                     */          
+/*   (USE A "," TO SEPARATE EACH OF THE PARMS. E.G. 01,99,2001.220) */          
+/* OUTPUT:  OUT_STRING                                              */          
+/*   A STRING OF FILE NAMES MATCHING THE INPUT PARM CRITERIA.       */          
+/*                                                                  */          
+/* ================================================================ */          
+/* ================================================================ */          
+/* TRACE ?R */ /* TRACE IS USED ONLY IN TESTING/DEBUGGING MODE.     */          
+   TRACE R                                                                      
+ ARG INPUT_PARM                                                                 
+/************************************************************/                  
+/* THIS IS THE MAIN SECTION.                                */                  
+/************************************************************/                  
+ PGM_MAINLINE:                                                                  
+  /* "CLS"   *//* CLEAR THE SCREEN */                                           
+  CALL PGM_INIT                                                                 
+  /* THIS SAY STATEMENT IS FOR TESTING ONLY */                                  
+  SAY '* INPUT_PARM=' INPUT_PARM                                                
+  CALL PROCESS_LISTCAT_FILELIST                                                 
+  CALL EXIT_PGM                                                                 
+ RETURN 0                                                                       
+ PGM_INIT:                                                                      
+  PGM_NAME    = 'BMGR008'            /* THE NAME OF THIS REXX EXEC   */         
+  FILELIST   = ""                                                               
+  USER_ID     = ""                                                              
+  CONFIG_ID  = ""                                                               
+  CUST_NODE  = ""                                                               
+  CONFIG_NODE  = ""                                                             
+  OUT_STRING = ""                                                               
+  OUT_STRING_ALL = ""                                                           
+ RETURN 0                                                                       
+/*--------------------------------------------------------*/                    
+/*========================================================*/                    
+/* USE OUTTRAP() TO GET THE DATASET NAMES FROM LISTCAT,   */                    
+/* THEN, WE USE REXX TO INTEROGATE THE RESULTING LIST OF  */                    
+/* FILES AND FILTER OUT THOSE NOT MATCHING THE INPUT PARM */                    
+/* CRITERIA (BTN-CUSID, CUSNUM-CNFIGID, DATE-IN).         */                    
+/*========================================================*/                    
+ PROCESS_LISTCAT_FILELIST:                                                      
+  FILE_CNT = 0                                                                  
+  FILE_HLQ = 'BMGNS0PN'                                                         
+  FILE_IND = 'VSAM -----'                                                       
+  FILE_REGYRCYC = '*'                                                           
+  DATE_IND = 'CREATION'                                                         
+  /* USER_ID,CONFIG_ID,BTN_NUM,APP_NAME,DATE_IN */                              
+  PARSE VAR INPUT_PARM I1 "," I2 "," I3 "," I4 "," I5 "," I6                    
+  USER_ID   = I1                                                                
+  CONFIG_ID = I2                                                                
+  BTN_NUM   = I3                                                                
+  APP_NAME  = I4                                                                
+  DATE_IN   = I5                                                                
+  SAY 'APP_NAME = ' APP_NAME                                                    
+  SAY 'DATE_IN = ' DATE_IN                                                      
+  T6  =   SUBSTR(APP_NAME,1,2)                                                  
+  APP_NODE = APP_NAME                                                           
+  SAY ' APP_NAME OF 2 '     T6                                                  
+  IF T6 = "BM" THEN                                                             
+   DO                                                                           
+       IF USER_ID    <> ""  THEN                                                
+       DO                                                                       
+          CUST_NODE = C||USER_ID                                                
+       END                                                                      
+       IF CONFIG_ID      <> ""  THEN                                            
+       DO                                                                       
+         CONFIG_NODE  = C||CNFIG_ID                                             
+       END                                                                      
+   END                                                                          
+  IF T6 = "PB" THEN                                                             
+   DO                                                                           
+        IF USER_ID <> "" THEN                                                   
+        DO                                                                      
+           CUST_NODE  = C||USER_ID                                              
+        END                                                                     
+        IF BTN_NUM <> "" THEN                                                   
+        DO                                                                      
+           CONFIG_NODE = C||SUBSTR(BTN_NUM,1,6)                                 
+        END                                                                     
+   END                                                                          
+  SAY   ' CUST_NODE ' CUST_NODE                                                 
+  SAY   ' CONFIG_NODE ' CONFIG_NODE                                             
+  IF CUST_NODE <> "" THEN                                                       
+      DO                                                                        
+        IF  CONFIG_NODE <> "" THEN                                              
+          DO                                                                    
+           FILELIST = FILE_HLQ||.||FILE_REGYRCYC                                
+           FILELIST = FILELIST||.||CUST_NODE||.||CONFIG_NODE                    
+           FILELIST = FILELIST||.||APP_NODE||.||EXE                             
+          END                                                                   
+      END                                                                       
+  ELSE                                                                          
+       DO                                                                       
+         FILELIST = FILE_HLQ||.||APP_NODE||.||EXE                               
+       END                                                                      
+  SAY ' FILELIST ' FILELIST                                                     
+  X=OUTTRAP(LISTC.)                                                             
+  ADDRESS TSO "LISTC HISTORY ENTRIES ('"filelist"') "                           
+  X=OUTTRAP('OFF')                                                              
+  DO I = 1 TO LISTC.0                                                           
+     OUT_STRING = ''                                                            
+     IF POS(FILE_IND,LISTC.I) > 0  THEN DO                                      
+        DATASET_NAME = WORD(LISTC.I,3)                                          
+        FILE_CNT = FILE_CNT +1                                                  
+     END                                                                        
+     IF POS(DATE_IND,LISTC.I) > 0  THEN DO                                      
+        DATASET_DATE = RIGHT(WORD(LISTC.I,2),8)                                 
+        IF DATASET_NAME <> ''  &  DATASET_DATE >= DATE_IN  THEN DO              
+           OUT_STRING = DATASET_NAME                                            
+           SAY ' ' OUT_STRING" - "DATASET_DATE /* For testing only */           
+        END                                                                     
+     END                                                                        
+     IF OUT_STRING  <> '' THEN                                                  
+        OUT_STRING_ALL = OUT_STRING_ALL||OUT_STRING||" ; "                      
+  END  /* End of LISTC Do Loop */                                               
+  /* -------------------------------------------------------------- */          
+  /* THESE SAY STATEMENTS ARE FOR TESTING ONLY...                               
+     AFTER TESTING PLEASE COMMENT OUT THIS IF-THEN-ELSE BLOCK */                
+  SAY 'THE FILE LIST ==> ' OUT_STRING_ALL                                       
+  IF OUT_STRING_ALL = ''  THEN DO                                               
+     SAY '*********************************************************'            
+     SAY '* NO VALID DATASETS FOUND WITH THESE NODE NAMES   !!!   *'            
+     SAY '***   ' FILELIST '  ***'                                              
+     SAY '* AN EMPTY LIST WAS RETURNED FROM THE FILE NAME SEARCH  *'            
+     IF DATA_IN <> '' THEN                                                      
+     SAY '* AND/OR... THE INPUT DATE NOT MATCH (>) CREATION DATES *'            
+     SAY '*********************************************************'            
+  END                                                                           
+  ELSE  SAY 'THE FILE LIST ==> ' OUT_STRING_ALL                                 
+  /* END TESTING ONLY STATEMENTS */                                             
+  /* -------------------------------------------------------------- */          
+ RETURN                                                                         
+/*====================================================================*/        
+ EXIT_PGM:                                                                      
+  EXIT  OUT_STRING_ALL                                                          
+ RETURN                                                                         
+/*====================================================================*/        
+/**********************************************************************/        
+/*=============================== END ================================*/        

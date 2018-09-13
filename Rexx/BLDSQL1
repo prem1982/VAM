@@ -1,0 +1,95 @@
+/******************************* REXX *********************************/        
+/* REXX EXEC bldsort     v 1.0                                        */        
+/******************************* REXX *********************************/        
+                                                                                
+ARG .                /* no arguments */                                         
+                                                                                
+ trace o                                                                        
+ more         = 'Y'                                                             
+ timestamp    = ''                                                              
+                                                                                
+ i = 0                                                                          
+                                                                                
+                                                                                
+                                                                                
+"EXECIO * DISKR manlist (STEM manrec.)"                                         
+if RC ^= 0                                                                      
+then do                                                                         
+     say error reading manlist file                                             
+     exit 12                                                                    
+     end                                                                        
+                                                                                
+                                                                                
+i = 1                                                                           
+line_count = 0                                                                  
+lines. = ''                                                                     
+do while (more = 'Y')                                                           
+  man1 = ''                                                                     
+  man2 = ''                                                                     
+  man3 = ''                                                                     
+  man4 = ''                                                                     
+  line = ''                                                                     
+                                                                                
+  if i <= manrec.0                                                              
+  then do                                                                       
+       man1 = word(manrec.i,1)                                                  
+       i = i + 1                                                                
+       end                                                                      
+  if i <= manrec.0                                                              
+  then do                                                                       
+       man2 = word(manrec.i,1)                                                  
+       i = i + 1                                                                
+       end                                                                      
+                                                                                
+  if i <= manrec.0                                                              
+  then do                                                                       
+       man3 = word(manrec.i,1)                                                  
+       i = i + 1                                                                
+       end                                                                      
+                                                                                
+  if i <= manrec.0                                                              
+  then do                                                                       
+       man4 = word(manrec.i,1)                                                  
+       i = i + 1                                                                
+       end                                                                      
+                                                                                
+  if man1 ^= ''                                                                 
+  then do                                                                       
+       line="'"man1"',"                                                         
+       end                                                                      
+                                                                                
+  if man2 ^= ''                                                                 
+  then do                                                                       
+       line=line||"'"man2"',"                                                   
+       end                                                                      
+                                                                                
+  if man3 ^= ''                                                                 
+  then do                                                                       
+       line=line||"'"man3"',"                                                   
+       end                                                                      
+                                                                                
+  if man4 ^= ''                                                                 
+  then do                                                                       
+       line=line||"'"man4"',"                                                   
+       end                                                                      
+  else more = 'N'                                                               
+                                                                                
+  line_count = line_count + 1                                                   
+  lines.line_count = line                                                       
+                                                                                
+                                                                                
+end  /* do i */                                                                 
+                                                                                
+                                                                                
+                                                                                
+if line_count  > 0                                                              
+then do                                                                         
+     "MAKEBUF"                                                                  
+     "EXECIO * DISKW LINEF   (STEM lines. FINIS)"                               
+     "DROPBUF"                                                                  
+     end                                                                        
+                                                                                
+                                                                                
+return                                                                          
+                                                                                
+                                                                                

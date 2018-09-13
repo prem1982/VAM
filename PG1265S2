@@ -1,0 +1,10 @@
+ SELECT SC1.DESCRIPTION                                                         
+    FROM (                                                                      
+      SELECT IN1.TEXT_1 AS DESCRIPTION                                          
+        FROM BMGVZP.TEXT_FYI_T IN1                                              
+       WHERE IN1.RECORD_NBR = 72                                                
+         AND IN1.MAN = ?                                                        
+         AND IN1.MAN_BILL_DATE = ?                                              
+         AND IN1.ORIG_SYSTEM_ID = ?                                             
+    ) SC1                                                                       
+   WFILTER = ?                                                                  

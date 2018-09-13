@@ -1,0 +1,16 @@
+/*** LEADZERO: REXX TO ADD LEADING ZEROS UP TO GIVEN LENGTH****/                
+  ARG NBR NBR_LNG                                                               
+  IF NBR_LNG > 15 THEN NBR_LNG = 15                                             
+  WK_ZEROS = '000000000000000'                                                  
+  LNG = LENGTH(NBR)                                                             
+  IF LNG < NBR_LNG THEN                                                         
+     DO                                                                         
+         LNG = NBR_LNG - LNG                                                    
+         NEW_NBR = SUBSTR(WK_ZEROS,1,LNG)||NBR                                  
+     END                                                                        
+  ELSE                                                                          
+     DO                                                                         
+         BEG = LNG + 1 - NBR_LNG                                                
+         NEW_NBR = SUBSTR(NBR,BEG,NBR_LNG)                                      
+     END                                                                        
+  RETURN NEW_NBR                                                                

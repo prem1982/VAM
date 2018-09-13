@@ -1,0 +1,636 @@
+000100******************************************************************        
+000200 IDENTIFICATION DIVISION.                                                 
+000300******************************************************************        
+000400 PROGRAM-ID. BMGMRG12.                                                    
+000500******************************************************************        
+000600* THIS PROGRAM MERGES THE PREV AND CURR ETL FILES                         
+000700* WRITING A DELTA FILE IN THE SAME FORMAT.                                
+000800* R12FEB - Added update analysis counters. - AJF                          
+000900*    In order to determine what changed between prev and curr             
+001000*    records, we now use the VZWMTNFL layout for the PREV records         
+001100*    and the new VZWMTNFC layout for the CURR records.                    
+001200******************************************************************        
+001300 ENVIRONMENT DIVISION.                                                    
+001400******************************************************************        
+001500 CONFIGURATION SECTION.                                                   
+001600 SOURCE-COMPUTER.  IBM-370.                                               
+001700 OBJECT-COMPUTER.  IBM-370.                                               
+001800******************************************************************        
+001900 INPUT-OUTPUT SECTION.                                                    
+002000******************************************************************        
+002100 FILE-CONTROL.                                                            
+002200     SELECT PREV-FILE              ASSIGN TO UT-S-PREFILE.                
+002300     SELECT CURR-FILE              ASSIGN TO UT-S-CURFILE.                
+002400     SELECT DELTA-FILE             ASSIGN TO UT-S-DELTA.                  
+002500     SELECT CHANGED-FILE           ASSIGN TO UT-S-CHANGED.                
+002600     SELECT DROPS-FILE             ASSIGN TO UT-S-DROPS.                  
+002700     SELECT ADDS-FILE              ASSIGN TO UT-S-ADDS.                   
+002800                                                                          
+002900******************************************************************        
+003000 DATA DIVISION.                                                           
+003100******************************************************************        
+003200 FILE SECTION.                                                            
+003300                                                                          
+003400 FD  CURR-FILE                                                            
+003500     BLOCK CONTAINS 0 RECORDS                                             
+003600     LABEL RECORDS ARE STANDARD                                           
+003700     RECORDING MODE IS F.                                                 
+003800 01  FD-CURR-RECORD      PIC X(688).                                      
+003900                                                                          
+004000 FD  PREV-FILE                                                            
+004100     BLOCK CONTAINS 0 RECORDS                                             
+004200     LABEL RECORDS ARE STANDARD                                           
+004300     RECORDING MODE IS F.                                                 
+004400 01  FD-PREV-RECORD      PIC X(688).                                      
+004500                                                                          
+004600 FD  DELTA-FILE                                                           
+004700     BLOCK CONTAINS 0 RECORDS                                             
+004800     LABEL RECORDS ARE STANDARD                                           
+004900     RECORDING MODE IS F.                                                 
+005000 01  FD-DELTA-RECORD     PIC X(688).                                      
+005100                                                                          
+005200 FD  CHANGED-FILE                                                         
+005300     BLOCK CONTAINS 0 RECORDS                                             
+005400     LABEL RECORDS ARE STANDARD                                           
+005500     RECORDING MODE IS F.                                                 
+005600 01  FD-CHANGED-RECORD   PIC X(688).                                      
+005700                                                                          
+005800 FD  DROPS-FILE                                                           
+005900     BLOCK CONTAINS 0 RECORDS                                             
+006000     LABEL RECORDS ARE STANDARD                                           
+006100     RECORDING MODE IS F.                                                 
+006200 01  FD-DROPS-RECORD     PIC X(688).                                      
+006300                                                                          
+006400 FD  ADDS-FILE                                                            
+006500     BLOCK CONTAINS 0 RECORDS                                             
+006600     LABEL RECORDS ARE STANDARD                                           
+006700     RECORDING MODE IS F.                                                 
+006800 01  FD-ADDS-RECORD      PIC X(688).                                      
+006900                                                                          
+007000******************************************************************        
+007100 WORKING-STORAGE SECTION.                                                 
+007200******************************************************************        
+007300 01  PREV-READ-COUNT   PIC 9(9).                                          
+007400 01  CURR-READ-COUNT   PIC 9(9).                                          
+007500 01  DELTA-WRITE-COUNT PIC 9(9).                                          
+007600 01  CHANGED-WRITE-COUNT PIC 9(9).                                        
+007700 01  DROPS-WRITE-COUNT PIC 9(9).                                          
+007800 01  ADDS-WRITE-COUNT  PIC 9(9).                                          
+007900 01  PREV-EOF-SW       PIC X.                                             
+008000 01  CURR-EOF-SW       PIC X.                                             
+008100 01  WK-HLQ            PIC X(8) VALUE SPACES.                             
+008200                                                                          
+008300 01  MATCH-COUNT       PIC 9(9) VALUE ZERO.                               
+008400                                                                          
+008500 01  PREV-REC          PIC X(688).                                        
+008600 01  PREV-KEY.                                                            
+008700     05  PREV-MTN      PIC X(10).                                         
+008800     05  PREV-MAN      PIC X(10).                                         
+008900 01  CURR-REC          PIC X(688).                                        
+009000 01  CURR-KEY.                                                            
+009100     05  CURR-MTN      PIC X(10).                                         
+009200     05  CURR-MAN      PIC X(10).                                         
+009300                                                                          
+009400 COPY VZWMTNFL.                                                           
+009500 COPY VZWMTNFC.                                                           
+009600 COPY MRG12CNT.                                                           
+009700 COPY PARSLNKC.                                                           
+009800 COPY LNKABNDR.                                                           
+009900 COPY LNKXPRM.                                                            
+010000*************************************************************             
+010100 LINKAGE SECTION.                                                         
+010200*************************************************************             
+010300 01  LINKAGE-PARMS.                                                       
+010400     05 LK-LNG                   PIC S9(4) COMP.                          
+010500     05 LK-DATA                  PIC X(254).                              
+010600*************************************************************             
+010700 PROCEDURE DIVISION USING LINKAGE-PARMS.                                  
+010800*************************************************************             
+010900     DISPLAY 'BMGMRG12 SET UP PGM'.                                       
+011000     PERFORM A000-SET-UP-PGM                                              
+011100        THRU A000-SET-UP-PGM-X.                                           
+011200                                                                          
+011300     DISPLAY 'BMGMRG12 PROCESS'.                                          
+011400     PERFORM B000-PROCESS                                                 
+011500        THRU B000-PROCESS-X.                                              
+011600                                                                          
+011700     DISPLAY 'BMGMRG12 FINISH PGM'.                                       
+011800     PERFORM C000-FINISH-PGM                                              
+011900        THRU C000-FINISH-PGM-X.                                           
+012000                                                                          
+012100     GOBACK.                                                              
+012200                                                                          
+012300 A000-SET-UP-PGM.                                                         
+012400     OPEN INPUT  CURR-FILE                                                
+012500                 PREV-FILE                                                
+012600          OUTPUT DELTA-FILE                                               
+012700                 CHANGED-FILE                                             
+012800                 DROPS-FILE                                               
+012900                 ADDS-FILE.                                               
+013000                                                                          
+013100     MOVE '0'  TO PREV-EOF-SW                                             
+013200                  CURR-EOF-SW.                                            
+013300     MOVE ZERO TO PREV-READ-COUNT                                         
+013400                  CURR-READ-COUNT                                         
+013500                  DELTA-WRITE-COUNT                                       
+013600                  CHANGED-WRITE-COUNT                                     
+013700                  DROPS-WRITE-COUNT                                       
+013800                  ADDS-WRITE-COUNT                                        
+013900                  MATCH-COUNT                                             
+014000                  MRG12CNT-COUNTERS.                                      
+014100                                                                          
+014200     PERFORM A010-PARSE-LINKAGE                                           
+014300        THRU A010-PARSE-LINKAGE-X.                                        
+014400                                                                          
+014500 A000-SET-UP-PGM-X.                                                       
+014600     EXIT.                                                                
+014700                                                                          
+014800 A010-PARSE-LINKAGE.                                                      
+014900     MOVE LK-LNG        TO PARSLNKG-LNG.                                  
+015000     MOVE LK-DATA       TO PARSLNKG-DATA.                                 
+015100     CALL PARSLNKG-PGM USING PARSLNKG-PARMS.                              
+015200     MOVE PARSLNKG-LK-PARM (1) TO WK-HLQ.                                 
+015300                                                                          
+015400 A010-PARSE-LINKAGE-X.                                                    
+015500     EXIT.                                                                
+015600                                                                          
+015700 A100-READ-PREV.                                                          
+015800     READ PREV-FILE INTO PREV-REC                                         
+015900          AT END                                                          
+016000             MOVE '1' TO PREV-EOF-SW                                      
+016100          NOT AT END                                                      
+016200             ADD 1 TO PREV-READ-COUNT                                     
+016300*POPULATE THE ACCOUNT KEY FOR PREVIOUS REC                                
+016400             MOVE PREV-REC     TO VZWMTNFL-REC                            
+016500             MOVE VZWMTNFL-MTN TO PREV-MTN                                
+016600             MOVE VZWMTNFL-MAN TO PREV-MAN                                
+016700     END-READ.                                                            
+016800 A100-READ-PREV-X.                                                        
+016900     EXIT.                                                                
+017000                                                                          
+017100 A200-READ-CURR.                                                          
+017200     READ CURR-FILE INTO CURR-REC                                         
+017300          AT END                                                          
+017400             MOVE '1' TO CURR-EOF-SW                                      
+017500          NOT AT END                                                      
+017600             ADD 1 TO CURR-READ-COUNT                                     
+017700*POPULATE THE ACCOUNT KEY FOR CURRENT REC                                 
+017800*R12FEB VZWMTNFC-REC is added for update analysis ability:                
+017900             MOVE CURR-REC     TO VZWMTNFC-REC                            
+018000             MOVE VZWMTNFC-MTN TO CURR-MTN                                
+018100             MOVE VZWMTNFC-MAN TO CURR-MAN                                
+018200     END-READ.                                                            
+018300 A200-READ-CURR-X.                                                        
+018400     EXIT.                                                                
+018500                                                                          
+018600 B000-PROCESS.                                                            
+018700     PERFORM A100-READ-PREV                                               
+018800        THRU A100-READ-PREV-X.                                            
+018900     PERFORM A200-READ-CURR                                               
+019000        THRU A200-READ-CURR-X.                                            
+019100                                                                          
+019200     PERFORM UNTIL PREV-EOF-SW = '1' AND                                  
+019300                   CURR-EOF-SW = '1'                                      
+019400       IF PREV-EOF-SW = '1' OR CURR-EOF-SW = '1'                          
+019500          PERFORM B010-FINISH-ONE-FILE                                    
+019600             THRU B010-FINISH-ONE-FILE-X                                  
+019700       ELSE                                                               
+019800          EVALUATE TRUE                                                   
+019900            WHEN PREV-KEY = CURR-KEY                                      
+020000               ADD 1 TO MATCH-COUNT                                       
+020010               MOVE CURR-REC(183:9)                                       
+020020                 TO PREV-REC(183:9)                                       
+020030                                                                          
+020100*SAME ACCOUNT ON PREV/CURR, CHECK FOR OTHER DATA CHANGES                  
+020200               IF PREV-REC NOT = CURR-REC                                 
+020300*R12FEB Update analysis processing added:                                 
+020400                  PERFORM U200-UPDATE-ANALYSIS                            
+020500                     THRU U200-UPDATE-ANALYSIS-X                          
+020600                  PERFORM B300C-WRITE-CHANGED                             
+020700                     THRU B300C-WRITE-CHANGED-X                           
+020800                  MOVE CURR-REC TO FD-DELTA-RECORD                        
+020900                  PERFORM B300-WRITE-DELTA                                
+021000                     THRU B300-WRITE-DELTA-X                              
+021100               END-IF                                                     
+021200               PERFORM A100-READ-PREV                                     
+021300                  THRU A100-READ-PREV-X                                   
+021400               PERFORM A200-READ-CURR                                     
+021500                  THRU A200-READ-CURR-X                                   
+021600            WHEN PREV-KEY < CURR-KEY                                      
+021700*ACCOUNT HAS DROPPED                                                      
+021800*R10MAY ADDED DROP EXCLUSION FOR MAN-ONLY RECS                            
+021900               IF VZWMTNFL-MTN > SPACES                                   
+022000                  PERFORM B020-FORMAT-DROPS                               
+022100                     THRU B020-FORMAT-DROPS-X                             
+022200                  PERFORM B300A-WRITE-DROPS                               
+022300                     THRU B300A-WRITE-DROPS-X                             
+022400                  MOVE PREV-REC TO FD-DELTA-RECORD                        
+022500                  PERFORM B300-WRITE-DELTA                                
+022600                     THRU B300-WRITE-DELTA-X                              
+022700               END-IF                                                     
+022800               PERFORM A100-READ-PREV                                     
+022900                  THRU A100-READ-PREV-X                                   
+023000            WHEN PREV-KEY > CURR-KEY                                      
+023100*NEW ACCOUNT IS ADDED                                                     
+023200               PERFORM B300B-WRITE-ADDS                                   
+023300                  THRU B300B-WRITE-ADDS-X                                 
+023400               MOVE CURR-REC TO FD-DELTA-RECORD                           
+023500               PERFORM B300-WRITE-DELTA                                   
+023600                  THRU B300-WRITE-DELTA-X                                 
+023700               PERFORM A200-READ-CURR                                     
+023800                  THRU A200-READ-CURR-X                                   
+023900          END-EVALUATE                                                    
+024000       END-IF                                                             
+024100     END-PERFORM.                                                         
+024200                                                                          
+024300 B000-PROCESS-X.                                                          
+024400     EXIT.                                                                
+024500                                                                          
+024600 B010-FINISH-ONE-FILE.                                                    
+024700     IF PREV-EOF-SW = '1'                                                 
+024800        PERFORM B200-FINISH-CURR                                          
+024900           THRU B200-FINISH-CURR-X                                        
+025000     ELSE                                                                 
+025100        IF CURR-EOF-SW = '1'                                              
+025200           PERFORM B400-FINISH-PREV                                       
+025300              THRU B400-FINISH-PREV-X                                     
+025400        END-IF                                                            
+025500     END-IF.                                                              
+025600 B010-FINISH-ONE-FILE-X.                                                  
+025700     EXIT.                                                                
+025800                                                                          
+025900 B020-FORMAT-DROPS.                                                       
+026000     IF VZWMTNFL-MTN = SPACES                                             
+026100        IF VZWMTNFL-BILL-ACCT-STATUS-CD = 'I'                             
+026200        OR VZWMTNFL-BILL-ACCT-STATUS-CD = 'IW'                            
+026300           CONTINUE                                                       
+026400        ELSE                                                              
+026500           MOVE 'I' TO VZWMTNFL-BILL-ACCT-STATUS-CD                       
+026600        END-IF                                                            
+026700     ELSE                                                                 
+026800        MOVE 'D' TO VZWMTNFL-MTN-STATUS                                   
+026900     END-IF.                                                              
+027000*R10JUN MARK DROPPED RECS FOR LATER IDENTIFICATION IN ECPTXNF             
+027100     MOVE 'VAM-DROPPED-REC' TO VZWMTNFL-MAC-CD.                           
+027200     MOVE VZWMTNFL-REC      TO PREV-REC.                                  
+027300                                                                          
+027400 B020-FORMAT-DROPS-X.                                                     
+027500     EXIT.                                                                
+027600                                                                          
+027700 B200-FINISH-CURR.                                                        
+027800     PERFORM UNTIL CURR-EOF-SW = '1'                                      
+027900        PERFORM B300B-WRITE-ADDS                                          
+028000           THRU B300B-WRITE-ADDS-X                                        
+028100        MOVE CURR-REC TO FD-DELTA-RECORD                                  
+028200        PERFORM B300-WRITE-DELTA                                          
+028300           THRU B300-WRITE-DELTA-X                                        
+028400        PERFORM A200-READ-CURR                                            
+028500           THRU A200-READ-CURR-X                                          
+028600     END-PERFORM.                                                         
+028700                                                                          
+028800 B200-FINISH-CURR-X.                                                      
+028900     EXIT.                                                                
+029000                                                                          
+029100 B400-FINISH-PREV.                                                        
+029200     PERFORM UNTIL PREV-EOF-SW = '1'                                      
+029300        PERFORM B020-FORMAT-DROPS                                         
+029400           THRU B020-FORMAT-DROPS-X                                       
+029500        PERFORM B300A-WRITE-DROPS                                         
+029600           THRU B300A-WRITE-DROPS-X                                       
+029700        MOVE PREV-REC TO FD-DELTA-RECORD                                  
+029800        PERFORM B300-WRITE-DELTA                                          
+029900           THRU B300-WRITE-DELTA-X                                        
+030000        PERFORM A100-READ-PREV                                            
+030100           THRU A100-READ-PREV-X                                          
+030200     END-PERFORM.                                                         
+030300                                                                          
+030400 B400-FINISH-PREV-X.                                                      
+030500     EXIT.                                                                
+030600                                                                          
+030700 B300-WRITE-DELTA.                                                        
+030800      WRITE FD-DELTA-RECORD.                                              
+030900      ADD 1 TO DELTA-WRITE-COUNT.                                         
+031000 B300-WRITE-DELTA-X.                                                      
+031100     EXIT.                                                                
+031200                                                                          
+031300 B300A-WRITE-DROPS.                                                       
+031400      WRITE FD-DROPS-RECORD FROM PREV-REC.                                
+031500      ADD 1 TO DROPS-WRITE-COUNT.                                         
+031600 B300A-WRITE-DROPS-X.                                                     
+031700     EXIT.                                                                
+031800                                                                          
+031900 B300B-WRITE-ADDS.                                                        
+032000      WRITE FD-ADDS-RECORD FROM CURR-REC.                                 
+032100      ADD 1 TO ADDS-WRITE-COUNT.                                          
+032200 B300B-WRITE-ADDS-X.                                                      
+032300     EXIT.                                                                
+032400                                                                          
+032500 B300C-WRITE-CHANGED.                                                     
+032600      WRITE FD-CHANGED-RECORD FROM CURR-REC.                              
+032700      ADD 1 TO CHANGED-WRITE-COUNT.                                       
+032800 B300C-WRITE-CHANGED-X.                                                   
+032900     EXIT.                                                                
+033000                                                                          
+033100 C000-FINISH-PGM.                                                         
+033200     DISPLAY 'PREV RECS READ      : ' PREV-READ-COUNT.                    
+033300     DISPLAY 'CURR RECS READ      : ' CURR-READ-COUNT.                    
+033400     DISPLAY 'MATCHED RECS        : ' MATCH-COUNT.                        
+033500     DISPLAY 'CHANGED RECS        : ' CHANGED-WRITE-COUNT.                
+033600     DISPLAY 'DROPPED RECS WRITTEN: ' DROPS-WRITE-COUNT.                  
+033700     DISPLAY 'ADDED   RECS WRITTEN: ' ADDS-WRITE-COUNT.                   
+033800     DISPLAY 'COMBINED CHANGE DROP ADD: ' DELTA-WRITE-COUNT.              
+033900*R12FEB Update analysis counters display added:                           
+034000     DISPLAY ' '.                                                         
+034100     DISPLAY 'Update Counts by Data Field:'.                              
+034200     DISPLAY 'REC-TYPE              ' MRG12CNT-REC-TYPE                   
+034300     DISPLAY 'LOCATION              ' MRG12CNT-LOCATION                   
+034400     DISPLAY 'CUST-ID               ' MRG12CNT-CUST-ID                    
+034500     DISPLAY 'ACCT-NO               ' MRG12CNT-ACCT-NO                    
+034600     DISPLAY 'MTN                   ' MRG12CNT-MTN                        
+034700     DISPLAY 'MTN-STATUS            ' MRG12CNT-MTN-STATUS                 
+034800     DISPLAY 'GIVEN-NAME            ' MRG12CNT-GIVEN-NAME                 
+034900     DISPLAY 'FAMILY-NAME           ' MRG12CNT-FAMILY-NAME                
+035000     DISPLAY 'ADDR-1                ' MRG12CNT-ADDR-1                     
+035100     DISPLAY 'ADDR-2                ' MRG12CNT-ADDR-2                     
+035200     DISPLAY 'CITY                  ' MRG12CNT-CITY                       
+035300     DISPLAY 'STATE                 ' MRG12CNT-STATE                      
+035400     DISPLAY 'ZIP-CD-9              ' MRG12CNT-ZIP-CD-9                   
+035500     DISPLAY 'ACTIVE-MTNS-QTY       ' MRG12CNT-ACTIVE-MTNS-QTY            
+035600     DISPLAY 'ALP-PPLAN-IND         ' MRG12CNT-ALP-PPLAN-IND              
+035700     DISPLAY 'IBP-ENROLL-CD         ' MRG12CNT-IBP-ENROLL-CD              
+035800     DISPLAY 'ACCT-CONN-IND         ' MRG12CNT-ACCT-CONN-IND              
+035900     DISPLAY 'GRP-ACCT-IND          ' MRG12CNT-GRP-ACCT-IND               
+036000     DISPLAY 'INTNL-DIAL-IND        ' MRG12CNT-INTNL-DIAL-IND             
+036100     DISPLAY 'ESN-MIN               ' MRG12CNT-ESN-MIN                    
+036200     DISPLAY 'EMAIL-ADDR            ' MRG12CNT-EMAIL-ADDR                 
+036300     DISPLAY 'HOME-PHONE            ' MRG12CNT-HOME-PHONE                 
+036400     DISPLAY 'WORK-PHONE            ' MRG12CNT-WORK-PHONE                 
+036500     DISPLAY 'ONSTAR-MTN-IND        ' MRG12CNT-ONSTAR-MTN-IND             
+036600     DISPLAY 'UIM-COST-CTR-CD       ' MRG12CNT-UIM-COST-CTR-CD            
+036700     DISPLAY 'SUSPN-DEACTV-DSC      ' MRG12CNT-SUSPN-DEACTV-DSC           
+036800     DISPLAY 'SUSPN-DEACTV-DT       ' MRG12CNT-SUSPN-DEACTV-DT            
+036900     DISPLAY 'MANUFACTURER-NM       ' MRG12CNT-MANUFACTURER-NM            
+037000     DISPLAY 'MODEL                 ' MRG12CNT-MODEL                      
+037100     DISPLAY 'ELIG-UPGRADE-DT       ' MRG12CNT-ELIG-UPGRADE-DT            
+037200     DISPLAY 'NE2-ELIG-REDEMP-DT    ' MRG12CNT-NE2-ELIG-REDEMP-DT         
+037300     DISPLAY 'BILL-CYC-NO           ' MRG12CNT-BILL-CYC-NO                
+037400     DISPLAY 'USER-NAME             ' MRG12CNT-USER-NAME                  
+037500     DISPLAY 'ECPD-ID               ' MRG12CNT-ECPD-ID                    
+037600     DISPLAY 'MAN                   ' MRG12CNT-MAN                        
+037700     DISPLAY 'CUST-TYPE-CD          ' MRG12CNT-CUST-TYPE-CD               
+037800     DISPLAY 'BILL-ACCT-STATUS-CD   ' MRG12CNT-BILL-ACCT-STATUS-CD        
+037900     DISPLAY 'MAC-CD                ' MRG12CNT-MAC-CD                     
+038000     DISPLAY 'MTN-STATUS-EFF-DATE   ' MRG12CNT-MTN-STATUS-EFF-DATE        
+038100     DISPLAY 'USER-ID               ' MRG12CNT-USER-ID                    
+038200     DISPLAY 'TRIBE-IND             ' MRG12CNT-TRIBE-IND                  
+038300     DISPLAY 'PUSH-TO-TALK-IND      ' MRG12CNT-PUSH-TO-TALK-IND           
+038400     DISPLAY 'SUSPEND-CD            ' MRG12CNT-SUSPEND-CD                 
+038500     DISPLAY 'DEVICE-ID             ' MRG12CNT-DEVICE-ID                  
+038600     DISPLAY 'DEVICE-ID-TYPE        ' MRG12CNT-DEVICE-ID-TYPE             
+038700     DISPLAY 'IMEI                  ' MRG12CNT-IMEI                       
+038800     DISPLAY 'IP-POOL-NAME          ' MRG12CNT-IP-POOL-NAME               
+038900     DISPLAY 'FEAT-TYPE-DESC        ' MRG12CNT-FEAT-TYPE-DESC             
+039000     DISPLAY 'IP-ADDR-TYPE          ' MRG12CNT-IP-ADDR-TYPE.              
+039010     DISPLAY 'SPLAN-ID-NO           ' MRG12CNT-SPLAN-ID-NO.               
+039020     DISPLAY 'SPLAN-COMP-TYP        ' MRG12CNT-SPLAN-COMP-TYP.            
+039100                                                                          
+039200     CLOSE PREV-FILE                                                      
+039300           CURR-FILE                                                      
+039400           DELTA-FILE                                                     
+039500           CHANGED-FILE                                                   
+039600           DROPS-FILE                                                     
+039700           ADDS-FILE.                                                     
+039800                                                                          
+039900 C000-FINISH-PGM-X.                                                       
+040000     EXIT.                                                                
+040100                                                                          
+040200 U200-UPDATE-ANALYSIS.                                                    
+040300*R12FEB Update analysis added:                                            
+040400     IF VZWMTNFL-REC-TYPE NOT = VZWMTNFC-REC-TYPE                         
+040500        ADD 1 TO MRG12CNT-REC-TYPE                                        
+040600     END-IF.                                                              
+040700                                                                          
+040800     IF VZWMTNFL-LOCATION NOT = VZWMTNFC-LOCATION                         
+040900        ADD 1 TO MRG12CNT-LOCATION                                        
+041000     END-IF.                                                              
+041100                                                                          
+041200     IF VZWMTNFL-CUST-ID NOT = VZWMTNFC-CUST-ID                           
+041300        ADD 1 TO MRG12CNT-CUST-ID                                         
+041400     END-IF.                                                              
+041500                                                                          
+041600     IF VZWMTNFL-ACCT-NO NOT = VZWMTNFC-ACCT-NO                           
+041700        ADD 1 TO MRG12CNT-ACCT-NO                                         
+041800     END-IF.                                                              
+041900                                                                          
+042000     IF VZWMTNFL-MTN NOT = VZWMTNFC-MTN                                   
+042100        ADD 1 TO MRG12CNT-MTN                                             
+042200     END-IF.                                                              
+042300                                                                          
+042400     IF VZWMTNFL-MTN-STATUS NOT = VZWMTNFC-MTN-STATUS                     
+042500        ADD 1 TO MRG12CNT-MTN-STATUS                                      
+042600     END-IF.                                                              
+042700                                                                          
+042800     IF VZWMTNFL-GIVEN-NAME NOT = VZWMTNFC-GIVEN-NAME                     
+042900        ADD 1 TO MRG12CNT-GIVEN-NAME                                      
+043000     END-IF.                                                              
+043100                                                                          
+043200     IF VZWMTNFL-FAMILY-NAME NOT = VZWMTNFC-FAMILY-NAME                   
+043300        ADD 1 TO MRG12CNT-FAMILY-NAME                                     
+043400     END-IF.                                                              
+043500                                                                          
+043600     IF VZWMTNFL-ADDR-1 NOT = VZWMTNFC-ADDR-1                             
+043700        ADD 1 TO MRG12CNT-ADDR-1                                          
+043800     END-IF.                                                              
+043900                                                                          
+044000     IF VZWMTNFL-ADDR-2 NOT = VZWMTNFC-ADDR-2                             
+044100        ADD 1 TO MRG12CNT-ADDR-2                                          
+044200     END-IF.                                                              
+044300                                                                          
+044400     IF VZWMTNFL-CITY NOT = VZWMTNFC-CITY                                 
+044500        ADD 1 TO MRG12CNT-CITY                                            
+044600     END-IF.                                                              
+044700                                                                          
+044800     IF VZWMTNFL-STATE NOT = VZWMTNFC-STATE                               
+044900        ADD 1 TO MRG12CNT-STATE                                           
+045000     END-IF.                                                              
+045100                                                                          
+045200     IF VZWMTNFL-ZIP-CD-9 NOT = VZWMTNFC-ZIP-CD-9                         
+045300        ADD 1 TO MRG12CNT-ZIP-CD-9                                        
+045400     END-IF.                                                              
+045500                                                                          
+045600     IF VZWMTNFL-ACTIVE-MTNS-QTY NOT = VZWMTNFC-ACTIVE-MTNS-QTY           
+045700        ADD 1 TO MRG12CNT-ACTIVE-MTNS-QTY                                 
+045800     END-IF.                                                              
+045900                                                                          
+046000     IF VZWMTNFL-ALP-PPLAN-IND NOT = VZWMTNFC-ALP-PPLAN-IND               
+046100        ADD 1 TO MRG12CNT-ALP-PPLAN-IND                                   
+046200     END-IF.                                                              
+046300                                                                          
+046400     IF VZWMTNFL-IBP-ENROLL-CD NOT = VZWMTNFC-IBP-ENROLL-CD               
+046500        ADD 1 TO MRG12CNT-IBP-ENROLL-CD                                   
+046600     END-IF.                                                              
+046700                                                                          
+046800     IF VZWMTNFL-ACCT-CONN-IND NOT = VZWMTNFC-ACCT-CONN-IND               
+046900        ADD 1 TO MRG12CNT-ACCT-CONN-IND                                   
+047000     END-IF.                                                              
+047100                                                                          
+047200     IF VZWMTNFL-GRP-ACCT-IND NOT = VZWMTNFC-GRP-ACCT-IND                 
+047300        ADD 1 TO MRG12CNT-GRP-ACCT-IND                                    
+047400     END-IF.                                                              
+047500                                                                          
+047600     IF VZWMTNFL-INTNL-DIAL-IND NOT = VZWMTNFC-INTNL-DIAL-IND             
+047700        ADD 1 TO MRG12CNT-INTNL-DIAL-IND                                  
+047800     END-IF.                                                              
+047900                                                                          
+048000     IF VZWMTNFL-ESN-MIN NOT = VZWMTNFC-ESN-MIN                           
+048100        ADD 1 TO MRG12CNT-ESN-MIN                                         
+048200     END-IF.                                                              
+048300                                                                          
+048400     IF VZWMTNFL-EMAIL-ADDR NOT = VZWMTNFC-EMAIL-ADDR                     
+048500        ADD 1 TO MRG12CNT-EMAIL-ADDR                                      
+048600     END-IF.                                                              
+048700                                                                          
+048800     IF VZWMTNFL-HOME-PHONE NOT = VZWMTNFC-HOME-PHONE                     
+048900        ADD 1 TO MRG12CNT-HOME-PHONE                                      
+049000     END-IF.                                                              
+049100                                                                          
+049200     IF VZWMTNFL-WORK-PHONE NOT = VZWMTNFC-WORK-PHONE                     
+049300        ADD 1 TO MRG12CNT-WORK-PHONE                                      
+049400     END-IF.                                                              
+049500                                                                          
+049600     IF VZWMTNFL-ONSTAR-MTN-IND NOT = VZWMTNFC-ONSTAR-MTN-IND             
+049700        ADD 1 TO MRG12CNT-ONSTAR-MTN-IND                                  
+049800     END-IF.                                                              
+049900                                                                          
+050000     IF VZWMTNFL-UIM-COST-CTR-CD NOT = VZWMTNFC-UIM-COST-CTR-CD           
+050100        ADD 1 TO MRG12CNT-UIM-COST-CTR-CD                                 
+050200     END-IF.                                                              
+050300                                                                          
+050400     IF VZWMTNFL-SUSPN-DEACTV-DSC NOT = VZWMTNFC-SUSPN-DEACTV-DSC         
+050500        ADD 1 TO MRG12CNT-SUSPN-DEACTV-DSC                                
+050600     END-IF.                                                              
+050700                                                                          
+050800     IF VZWMTNFL-SUSPN-DEACTV-DT NOT = VZWMTNFC-SUSPN-DEACTV-DT           
+050900        ADD 1 TO MRG12CNT-SUSPN-DEACTV-DT                                 
+051000     END-IF.                                                              
+051100                                                                          
+051200     IF VZWMTNFL-MANUFACTURER-NM NOT = VZWMTNFC-MANUFACTURER-NM           
+051300        ADD 1 TO MRG12CNT-MANUFACTURER-NM                                 
+051400     END-IF.                                                              
+051500                                                                          
+051600     IF VZWMTNFL-MODEL NOT = VZWMTNFC-MODEL                               
+051700        ADD 1 TO MRG12CNT-MODEL                                           
+051800     END-IF.                                                              
+051900                                                                          
+052000     IF VZWMTNFL-ELIG-UPGRADE-DT NOT = VZWMTNFC-ELIG-UPGRADE-DT           
+052100        ADD 1 TO MRG12CNT-ELIG-UPGRADE-DT                                 
+052200     END-IF.                                                              
+052300                                                                          
+052400     IF VZWMTNFL-NE2-ELIG-REDEMP-DT NOT =                                 
+052500        VZWMTNFC-NE2-ELIG-REDEMP-DT                                       
+052600        ADD 1 TO MRG12CNT-NE2-ELIG-REDEMP-DT                              
+052700     END-IF.                                                              
+052800                                                                          
+052900     IF VZWMTNFL-BILL-CYC-NO NOT =                                        
+053000        VZWMTNFC-BILL-CYC-NO                                              
+053100        ADD 1 TO MRG12CNT-BILL-CYC-NO                                     
+053200     END-IF.                                                              
+053300                                                                          
+053400     IF VZWMTNFL-USER-NAME NOT =                                          
+053500        VZWMTNFC-USER-NAME                                                
+053600        ADD 1 TO MRG12CNT-USER-NAME                                       
+053700     END-IF.                                                              
+053800                                                                          
+053900     IF VZWMTNFL-ECPD-ID NOT =                                            
+054000        VZWMTNFC-ECPD-ID                                                  
+054100        ADD 1 TO MRG12CNT-ECPD-ID                                         
+054200     END-IF.                                                              
+054300                                                                          
+054400     IF VZWMTNFL-MAN NOT =                                                
+054500        VZWMTNFC-MAN                                                      
+054600        ADD 1 TO MRG12CNT-MAN                                             
+054700     END-IF.                                                              
+054800                                                                          
+054900     IF VZWMTNFL-CUST-TYPE-CD NOT =                                       
+055000        VZWMTNFC-CUST-TYPE-CD                                             
+055100        ADD 1 TO MRG12CNT-CUST-TYPE-CD                                    
+055200     END-IF.                                                              
+055300                                                                          
+055400     IF VZWMTNFL-BILL-ACCT-STATUS-CD NOT =                                
+055500        VZWMTNFC-BILL-ACCT-STATUS-CD                                      
+055600        ADD 1 TO MRG12CNT-BILL-ACCT-STATUS-CD                             
+055700     END-IF.                                                              
+055800                                                                          
+055900     IF VZWMTNFL-MAC-CD NOT =                                             
+056000        VZWMTNFC-MAC-CD                                                   
+056100        ADD 1 TO MRG12CNT-MAC-CD                                          
+056200     END-IF.                                                              
+056300                                                                          
+056400     IF VZWMTNFL-MTN-STATUS-EFF-DATE NOT =                                
+056500        VZWMTNFC-MTN-STATUS-EFF-DATE                                      
+056600        ADD 1 TO MRG12CNT-MTN-STATUS-EFF-DATE                             
+056700     END-IF.                                                              
+056800                                                                          
+056900     IF VZWMTNFL-USER-ID NOT =                                            
+057000        VZWMTNFC-USER-ID                                                  
+057100        ADD 1 TO MRG12CNT-USER-ID                                         
+057200     END-IF.                                                              
+057300                                                                          
+057400     IF VZWMTNFL-TRIBE-IND NOT =                                          
+057500        VZWMTNFC-TRIBE-IND                                                
+057600        ADD 1 TO MRG12CNT-TRIBE-IND                                       
+057700     END-IF.                                                              
+057800                                                                          
+057900     IF VZWMTNFL-PUSH-TO-TALK-IND NOT =                                   
+058000        VZWMTNFC-PUSH-TO-TALK-IND                                         
+058100        ADD 1 TO MRG12CNT-PUSH-TO-TALK-IND                                
+058200     END-IF.                                                              
+058300                                                                          
+058400     IF VZWMTNFL-SUSPEND-CD NOT =                                         
+058500        VZWMTNFC-SUSPEND-CD                                               
+058600        ADD 1 TO MRG12CNT-SUSPEND-CD                                      
+058700     END-IF.                                                              
+058800                                                                          
+058900     IF VZWMTNFL-DEVICE-ID NOT =                                          
+059000        VZWMTNFC-DEVICE-ID                                                
+059100        ADD 1 TO MRG12CNT-DEVICE-ID                                       
+059200     END-IF.                                                              
+059300                                                                          
+059400     IF VZWMTNFL-DEVICE-ID-TYPE NOT =                                     
+059500        VZWMTNFC-DEVICE-ID-TYPE                                           
+059600        ADD 1 TO MRG12CNT-DEVICE-ID-TYPE                                  
+059700     END-IF.                                                              
+059800                                                                          
+059900     IF VZWMTNFL-IMEI NOT =                                               
+060000        VZWMTNFC-IMEI                                                     
+060100        ADD 1 TO MRG12CNT-IMEI                                            
+060200     END-IF.                                                              
+060300                                                                          
+060400     IF VZWMTNFL-IP-POOL-NAME NOT =                                       
+060500        VZWMTNFC-IP-POOL-NAME                                             
+060600        ADD 1 TO MRG12CNT-IP-POOL-NAME                                    
+060700     END-IF.                                                              
+060800                                                                          
+060900     IF VZWMTNFL-FEAT-TYPE-DESC NOT =                                     
+061000        VZWMTNFC-FEAT-TYPE-DESC                                           
+061100        ADD 1 TO MRG12CNT-FEAT-TYPE-DESC                                  
+061200     END-IF.                                                              
+061300                                                                          
+061400     IF VZWMTNFL-IP-ADDR-TYPE NOT =                                       
+061500        VZWMTNFC-IP-ADDR-TYPE                                             
+061600        ADD 1 TO MRG12CNT-IP-ADDR-TYPE                                    
+061700     END-IF.                                                              
+061800                                                                          
+061810     IF VZWMTNFL-SPLAN-ID-NO NOT =                                        
+061820        VZWMTNFC-SPLAN-ID-NO                                              
+061830        ADD 1 TO MRG12CNT-SPLAN-ID-NO                                     
+061840     END-IF.                                                              
+061850                                                                          
+061860     IF VZWMTNFL-SPLAN-COMP-TYP NOT =                                     
+061870        VZWMTNFC-SPLAN-COMP-TYP                                           
+061880        ADD 1 TO MRG12CNT-SPLAN-COMP-TYP                                  
+061890     END-IF.                                                              
+061891                                                                          
+061900 U200-UPDATE-ANALYSIS-X.                                                  
+062000     EXIT.                                                                
+062100                                                                          

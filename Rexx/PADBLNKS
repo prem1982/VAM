@@ -1,0 +1,18 @@
+/*** PADBLNKS: REXX TO TRIM OR PAD BLANKS UP TO GIVEN LENGTH****/               
+  ARG STRNG STRNG_LNG                                                           
+  LNG = LENGTH(STRNG)                                                           
+  SAY 'LNG = ' LNG                                                              
+  SAY 'STRNG_LNG = ' STRNG_LNG                                                  
+  IF LNG > STRNG_LNG THEN                                                       
+     DO                                                                         
+        SAY 'LNG LONGER'                                                        
+        NEW_STRNG = SUBSTR(STRNG,1,STRNG_LNG)                                   
+        RETURN NEW_STRNG                                                        
+     END                                                                        
+                                                                                
+  NEW_STRNG = STRNG                                                             
+  DO WHILE LNG < STRNG_LNG                                                      
+     NEW_STRNG = NEW_STRNG' '                                                   
+     LNG = LENGTH(NEW_STRNG)                                                    
+  END                                                                           
+  RETURN NEW_STRNG                                                              

@@ -1,0 +1,75 @@
+/* REXX */                                                                      
+/***********************************************************************        
+* THIS ROUTINE IS USED TO COMPARE OLD AND NEW VERSIONS OF THE SPLIT             
+* VZ450 FILES SO THAT WE CAN ENSURE THAT PROGRAM CHANGES RESULT IN              
+* OUTPUT FILE CHANGES ISOLATED TO THOSE THAT WE WANT - AND NO                   
+* UNINTENTIONAL CHANGES ELSEWHERE                                               
+***********************************************************************/        
+ARG  OFILEID NFILEID OJULCYC NJULCYC HLQ                                        
+/*                                                                              
+   TRACE R                                                                      
+*/                                                                              
+ MSGS=MSG(ON)                                                                   
+/* FOR DEBUGGING                                                                
+SAY  "OFILEID " OFILEID                                                         
+SAY  "NFILEID " NFILEID                                                         
+SAY  "OJULCYC " OJULCYC                                                         
+SAY  "NJULCYC " NJULCYC                                                         
+SAY  "HLQ     " HLQ                                                             
+   END DEBUGGING  */                                                            
+I = 0                                                                           
+NUMBERDELTAS = 0                                                                
+RTNRC = 0                                                                       
+MAXRC = 0                                                                       
+/* MAKE SURE THE OUTPUT DD IS FREED */                                          
+"FREE   FI(OUTDD) "                                                             
+/* READ THE COMPFILE TO CREATE THE COMPLETE NEW AND OLD FILE NAMES */           
+"EXECIO * DISKR "COMPFILE" (STEM REC. FINIS"                                    
+"FREE FI(COMPFILE) "                                                            
+SAY 'NUMBER OF FILES TO COMPARE = ' REC.0                                       
+DO IX = 1 TO REC.0                                                              
+    COMPNAME = WORD(REC.IX,1)                                                   
+/*    SAY 'COMPARING ' COMPNAME */                                              
+      CALL COMPARE                                                              
+END                                                                             
+SAY 'NUMBER OF FILES COMPARED = ' I                                             
+SAY 'NUMBER OF DELTAS         = ' NUMBERDELTAS                                  
+RETURN MAXRC                                                                    
+/*---------------------------------------------------------------------         
+* CREATE DSNAMES AND MAKE SURE FILES EXIST                                      
+*--------------------------------------------------------------------*/         
+COMPARE:                                                                        
+NEWDD = HLQ"."NFILEID"."NJULCYC"."COMPNAME                                      
+OLDDD = HLQ"."OFILEID"."OJULCYC"."COMPNAME                                      
+OUTDD = HLQ"."OFILEID"."NFILEID"."COMPNAME                                      
+                                                                                
+/* DELETE ANY EXISTING OUTDD FILE */                                            
+"ALLOC DATASET('"OUTDD"') DDN(OUTDD) MOD,DELETE"                                
+                                                                                
+IF SYSDSN("'"NEWDD"'") = "OK" & ,                                               
+   SYSDSN("'"OLDDD"'") = "OK" THEN DO                                           
+      "ALLOC DATASET('"OLDDD"') DDN(OLDDD) SHR"                                 
+      "ALLOC DATASET('"NEWDD"') DDN(NEWDD) SHR"                                 
+      "ALLOC DATASET('"OUTDD"') DDN(OUTDD) NEW"                                 
+      I = I + 1                                                                 
+/*---------------------------------------------------------------------         
+* INVOKE SUPERC ROUTINE                                                         
+*--------------------------------------------------------------------*/         
+  "CALL 'SYS1.SISPLPA(ISRSUPC)' 'LINECMP,CHNGL'"                                
+   RTNRC = RC                                                                   
+   IF RTNRC = 1 THEN DO                                                         
+      IF RTNRC > MAXRC  THEN DO                                                 
+           MAXRC = RTNRC                                                        
+      END                                                                       
+      NUMBERDELTAS = NUMBERDELTAS + 1                                           
+      SAY COMPNAME  ' FILES DIFFERENT'                                          
+   END                                                                          
+   IF RTNRC > 1 THEN DO                                                         
+      IF RTNRC > MAXRC  THEN DO                                                 
+           MAXRC = RTNRC                                                        
+      END                                                                       
+      SAY 'ERROR WHEN COMPARING ' COMPNAME                                      
+   END                                                                          
+  "FREE   FI(NEWDD,OLDDD) "                                                     
+END                                                                             
+RETURN                                                                          

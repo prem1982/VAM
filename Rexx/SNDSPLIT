@@ -1,0 +1,14 @@
+/*REXX SNDSPLIT: REXX TO CREATE NDM PROCESS OVERRIDES*/                         
+ARG TESTID PHILVL SHILVL FILEID JULCYCL PROCESS                                 
+PROCCRDS = TESTID".SNDSPLIT."PROCESS                                            
+/****************************************************/                          
+"FREE FI(PROCCRDS)"                                                             
+"DELETE '"PROCCRDS"'"                                                           
+"ALLOC FI(PROCCRDS) DA('"PROCCRDS"') NEW"                                       
+QUEUE "   SUB PROC="PROCESS" -"                                                 
+QUEUE "   &BMGVZ0CN="PHILVL" -"                                                 
+QUEUE "   &BMGNY0PN="SHILVL" -"                                                 
+QUEUE "   &JULCYCL="JULCYCL" -"                                                 
+QUEUE "   &FILEID="FILEID" -"                                                   
+"EXECIO * DISKW PROCCRDS (FINIS"                                                
+"FREE FI(PROCCRDS)"                                                             

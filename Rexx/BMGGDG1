@@ -1,0 +1,9 @@
+/*REXX BMGGDG1: REXX TO DEFINE PRELOAD GDG STEMS*/                      00010000
+ARG BMGVZ0CN DB2SYS TBLSPACE                                            00020000
+LIMIT = 45                                                              00030000
+OWNER = "BMGVZ0CN"                                                      00040000
+RETDAYS = 45                                                            00050000
+CALL DEFGDG BMGVZ0CN"."DB2SYS"."TBLSPACE".SYSPRT "OWNER LIMIT RETDAYS   00060000
+CALL DEFGDG BMGVZ0CN"."DB2SYS"."TBLSPACE".SYSDSC "OWNER LIMIT RETDAYS   00070000
+CALL DEFGDG BMGVZ0CN"."DB2SYS"."TBLSPACE".SYSERR "OWNER LIMIT RETDAYS   00080000
+CALL DEFGDG BMGVZ0CN"."TBLSPACE OWNER LIMIT RETDAYS                     00140000

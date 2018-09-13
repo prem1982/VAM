@@ -1,0 +1,10 @@
+SELECT 'X'                                                                      
+FROM                                                                            
+(SELECT *                                                                       
+FROM                                                                            
+BMGVZP.USER_PROFILE TB1                                                         
+INNER JOIN                                                                      
+BMGVZP.USER_PERMISSION_MAP TB2                                                  
+ON TB1.USER_OID = TB2.USER_OID                                                  
+WHERE TB1.LOGIN_ID = 'UATAUSER100'                                              
+  AND TB2.PERMISSION_OID = 2506) SC1                                            

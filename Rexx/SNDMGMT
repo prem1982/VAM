@@ -1,0 +1,11 @@
+/*REXX SNDMGMT: REXX TO CREATE NDM PROCESS OVERRIDES*/                          
+ARG TESTID MGMTCLAS                                                             
+PROCCRDS = TESTID".SNDREMOT.DATASET.MGMTCLAS"                                   
+NOTIFYID = SYSVAR(SYSUID)                                                       
+/****************************************************/                          
+"FREE FI(PROCCRDX)"                                                             
+"DELETE '"PROCCRDS"'"                                                           
+"ALLOC FI(PROCCRDX) DA('"PROCCRDS"') NEW"                                       
+QUEUE "       &MGMTCLAS="MGMTCLAS" -"                                           
+"EXECIO * DISKW PROCCRDX (FINIS"                                                
+"FREE FI(PROCCRDX)"                                                             

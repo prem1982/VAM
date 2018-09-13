@@ -1,0 +1,46 @@
+/**REXX************************************************************/            
+ PARSE UPPER ARG FILE_HLQ TODAY_DATE                                            
+/************************************************************/                  
+/* THIS REXX ROUTINE WILL MAINTAIN A RUNNING LIST OF FILES  */                  
+/* BY SCANNING THE CATALOG BASED ON A SET OF HIGH LEVEL     */                  
+/* QUALIFIERS.  IT WILL SCAN FOR ALL FILES IN THE CATALOG   */                  
+/* AND WRITE THE FULLY QUALIFIFED FILE NAMES TO THE OUTPUT. */                  
+/* FILE_HLQ   = BMGVZ0PN.BANKRUPT                           */                  
+/* TODAY_DATE = YYMMDD                                      */                  
+/************************************************************/                  
+                                                                                
+  /* NEW_HLQ IS THE HIGH LEVEL QUALIFIER TO BE SCANNED */                       
+  NEW_HLQ = FILE_HLQ || '.WIMS'                                                 
+  /* TODAYFILE IS THE OUTPUT FILE NAME. */                                      
+  TODAYFILE = FILE_HLQ || '.TODAYFIL.D' || TODAY_DATE                           
+  SAY TODAYFILE                                                                 
+                                                                                
+  /* NOW PERFORM A LISTCAT COMMAND ON EACH OF THE HIGH LEVEL */                 
+  /* QUALIFIERS IN THE NOWREC ARRAY.  USE OUTTRAP TO GET THE */                 
+  /* RESULTS.                                                */                 
+                                                                                
+  FILE_IND = 'NONVSAM -----'                                                    
+  LIST1 =  "LISTC LVL('"STRIP(NEW_HLQ)"')"                                      
+  X=OUTTRAP(LISTC.)                                                             
+  ADDRESS TSO LIST1                                                             
+  X=OUTTRAP('OFF')                                                              
+  DO I = 1 TO LISTC.0                                                           
+     IF POS(FILE_IND,LISTC.I) > 0  THEN DO                                      
+        DATASET_NAME = WORD(LISTC.I,3)                                          
+        QUEUE DATASET_NAME                                                      
+     END                                                                        
+  END                                                                           
+                                                                                
+  /* OPEN THE TODAYFILE, AND DUMP THE DSN LIST INTO IT */                       
+  "DELETE '"TODAYFILE"'"                                                        
+  "ALLOC FI(NOWFILE) DA('"TODAYFILE"') NEW CATALOG DATACLAS(PSFB80)",           
+   " LRECL(80)"                                                                 
+  "EXECIO * DISKW NOWFILE (FINIS"                                               
+  "FREE FI(NOWFILE)"                                                            
+                                                                                
+  /* ALWAYS SUCCEED */                                                          
+  RETURN 0                                                                      
+  /**/                                                                          
+                                                                                
+/*=============================== END ================================*/        
+/**********************************************************************/        

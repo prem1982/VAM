@@ -1,0 +1,27 @@
+/*REXX LDCARDSR: REXX TO CREATE DB2 LOAD CARDS */                       00010000
+ARG TESTID TBLHILVL TBLNAME DB2SYS TSTLABEL REPLACE                     00020002
+CALL GETNAMEL TBLNAME                                                   00021000
+LONGNAME = RESULT                                                       00022000
+/****************************************************/                  00023000
+/****       CREATE LOAD TABLE CARDS             *****/                  00024000
+/****************************************************/                  00025000
+LOADCDS = TESTID"."DB2SYS"."TBLNAME".LDCD."TSTLABEL                     00026001
+"FREE FI(LOADCDS)"                                                      00027000
+"DELETE '"LOADCDS"'"                                                    00028000
+"ALLOC FI(LOADCDS) DA('"LOADCDS"') NEW"                                 00029000
+IF REPLACE = 'Y' THEN                                                   00030002
+   DO                                                                   00031002
+QUEUE "  LOAD DATA INDDN SYSREC00 LOG(NO) REPLACE STATISTICS TABLE "    00040001
+QUEUE "    INDEX(ALL) NOCOPYPEND INTO TABLE "TBLHILVL"."LONGNAME""      00070002
+   END                                                                  00070202
+ELSE                                                                    00070302
+   DO                                                                   00070402
+QUEUE "  LOAD DATA INDDN SYSREC00 LOG(NO) RESUME YES NOCOPYPEND"        00070502
+QUEUE "       INTO TABLE "TBLHILVL"."LONGNAME""                         00070602
+   END                                                                  00070702
+"EXECIO * DISKR LOADCDSX (FINIS STEM LOADX."                            00070802
+DO I = 3 TO LOADX.0                                                     00070902
+   QUEUE LOADX.I                                                        00071002
+END                                                                     00072002
+"EXECIO * DISKW LOADCDS (FINIS"                                         00080000
+"FREE FI(LOADCDS)"                                                      00090000

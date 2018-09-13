@@ -1,0 +1,13 @@
+/*REXX STORPROC: REXX TO CREATE DB2 STORED PROCEDURE */                         
+ARG TESTID DB2SYS DB2RUNLB                                                      
+DSNCDS = TESTID".DSNTIAD."DB2SYS                                                
+/****************************************************/                          
+"FREE FI(DSNCDS)"                                                               
+"DELETE '"DSNCDS"'"                                                             
+"ALLOC FI(DSNCDS) DA('"DSNCDS"') NEW"                                           
+QUEUE "  DSN SYSTEM ("DB2SYS")"                                                 
+QUEUE "    RUN PROGRAM(DSNTIAD) PLAN(DSNTIAD) -"                                
+QUEUE "            LIB('"DB2RUNLB"')"                                           
+QUEUE "  END"                                                                   
+"EXECIO * DISKW DSNCDS (FINIS"                                                  
+"FREE FI(DSNCDS)"                                                               

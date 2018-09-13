@@ -1,0 +1,38 @@
+/*REXX FTPpaper:CREATE FTPCARDS FOR BATCH PORTAL REPORTS*/              00010002
+ARG LISTIDS HIGHLVL MMMYEAR cycle                                       00020003
+/*                                                                      00030000
+X = OUTTRAP(DSN.)                                                       00040000
+*/                                                                      00050000
+FTPID = 'PAPERM'                                                        00051003
+"ALLOC FI(LISTIDS) DA('"LISTIDS"')"                                     00060000
+"EXECIO * DISKR LISTIDS (STEM LISTREC. FINIS"                           00070000
+"FREE FI(LISTIDS)"                                                      00080000
+"FREE FI(LISTOUT)"                                                      00090000
+LISTOUT = HIGHLVL"."FTPID".FTPCARDS"                                    00100000
+"DELETE '"LISTOUT"'"                                                    00110000
+QUEUE "  166.68.137.218"                                                00120000
+QUEUE "  gdfops        "                                                00130000
+QUEUE "  gdfops1       "                                                00140000
+QUEUE "  CWD /VZ/opt/data/downloadrequests/ops/stage/ "                 00150000
+DO TX = 1 TO LISTREC.0                                                  00160000
+  VZID = SUBSTR(LISTREC.TX,1,7)                                         00170000
+  SAY ' BUILD 'FTPID' FTP CARDS FOR ID='VZID                            00180000
+  SELECT                                                                00190000
+     WHEN FTPID = 'PAPERM' THEN                                         00200000
+          DO                                                            00210000
+             CALL PAPERMET VZID HIGHLVL MMMYEAR cycle                   00220001
+          END                                                           00230000
+     OTHERWISE                                                          00610000
+          DO                                                            00620000
+             CALL DFLTCRDS VZID HIGHLVL FTPID'.'MMMYEAR                 00630000
+          END                                                           00640000
+  END                                                                   00650000
+END                                                                     00660000
+QUEUE "  quit "                                                         00670000
+QUEUE                                                                   00680000
+"ALLOC FI(LISTOUT) DA('"LISTOUT"')",                                    00690000
+ " NEW CATALOG DATACLAS(PSFB80)",                                       00700000
+ " LRECL(80)"                                                           00710000
+"EXECIO * DISKW LISTOUT (FINIS"                                         00720000
+"FREE FI(LISTOUT)"                                                      00730000
+EXIT                                                                    00740000

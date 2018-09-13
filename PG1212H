@@ -1,0 +1,8 @@
+      SELECT HDR.POS_DESC                                                       
+      FROM                                                                      
+      (SELECT (LVL_0_NAME || LVL_1_NAME || LVL_2_NAME) AS POS_DESC              
+               FROM STRUCTURES_T X                                              
+              WHERE X.REPORT_ID_TS = STRUCTURE_TS%                              
+                AND X.ELEMENT_TYPE = POSITION_TYPE%                             
+                AND X.ELEMENT_OID =  POSITION_OID%                              
+       ) HDR                                                                    

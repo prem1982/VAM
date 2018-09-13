@@ -1,0 +1,263 @@
+/******************************* REXX *********************************/        
+/* REXX EXEC INSopco                                                  */        
+/*                                                                    */        
+/******************************* REXX *********************************/        
+                                                                                
+ARG DB2SYS .                                                                    
+                                                                                
+ TRACE o                                                                        
+                                                                                
+ DB2SYS = STRIP(DB2SYS)                                                         
+                                                                                
+ numeric digits 10                                                              
+                                                                                
+ SELECT                                                                         
+   WHEN DB2SYS  = 'D001'   THEN                                                 
+        TABPREF = 'BMGVZT'                                                      
+   WHEN DB2SYS  = 'D009'   THEN                                                 
+        TABPREF = 'BMGVZP'                                                      
+   WHEN DB2SYS  = 'D38X'   THEN                                                 
+        TABPREF = 'BMGVZS'                                                      
+   WHEN DB2SYS  = 'D72X'   THEN                                                 
+        TABPREF = 'BMGVZT'                                                      
+   WHEN DB2SYS  = 'D71X'   THEN                                                 
+        TABPREF = 'BMGVZP'                                                      
+   OTHERWISE                                                                    
+        TABPREF = 'BMGVZP'                                                      
+ END                                                                            
+                                                                                
+ SIGNAL OFF ERROR /* TURN ERROR-TRAPPING OFF */                                 
+ "SUBCOM DSNREXX"                                                               
+ IF RC THEN                                                                     
+    S_RC = RXSUBCOM('ADD','DSNREXX','DSNREXX')                                  
+ ADDRESS DSNREXX "CONNECT "DB2SYS                                               
+ IF SQLCODE ^= 0                                                                
+ THEN DO                                                                        
+      SAY ' ERROR CONNECTING TO ' DB2SYS                                        
+      CALL SQLCA                                                                
+      SAY '  END EXECUTION'                                                     
+      EXIT 12                                                                   
+      END                                                                       
+                                                                                
+ /* READ THE DATASET */                                                         
+ "EXECIO * DISKR SQLIN (STEM SQLIN.)"                                           
+ IF RC ^= 0                                                                     
+ THEN DO                                                                        
+      SAY ERROR READING SQLIN FILE                                              
+      EXIT 12                                                                   
+      END                                                                       
+                                                                                
+ ADDRESS TSO "FREE FI(SQLIN)"                                                   
+                                                                                
+                                                                                
+ SAY 'THERE ARE ' SQLIN.0 ' RECORDS'                                            
+                                                                                
+ do i = 1 to sqlin.0                                                            
+                                                                                
+    OPCO  = strip(sqlin.i)                                                      
+                                                                                
+    call insert_sql                                                             
+ end                                                                            
+                                                                                
+                                                                                
+ ADDRESS DSNREXX "EXECSQL COMMIT"                                               
+ IF SQLCODE ^= 0                                                                
+ THEN DO                                                                        
+      SAY 'ERROR WHILE COMMITING'                                               
+      CALL SQLCA                                                                
+      SAY '  END EXECUTION'                                                     
+      EXIT 12                                                                   
+      END                                                                       
+                                                                                
+                                                                                
+ ADDRESS DSNREXX "DISCONNECT"                                                   
+ IF SQLCODE ^= 0                                                                
+ THEN DO                                                                        
+      SAY 'ERROR WHILE DISCONNECTING'                                           
+      CALL SQLCA                                                                
+      SAY '  END EXECUTION'                                                     
+      EXIT 12                                                                   
+      END                                                                       
+                                                                                
+RETURN                                                                          
+/*********************************************************************/         
+/* NAME:     insert_sql                                              */         
+/*                                                                   */         
+/*********************************************************************/         
+insert_sql:                                                                     
+                                                                                
+ INS_SQL = "INSERT INTO "TABPREF".GCP_OPCO_T  "||,                              
+           "(OPCO)  "||,                                                        
+           "VALUES ('"opco"' ) "                                                
+                                                                                
+                                                                                
+ ADDRESS DSNREXX "EXECSQL "INS_SQL                                              
+                                                                                
+ IF SQLCODE ^= 0                                                                
+ then do                                                                        
+      SAY 'ERROR DURING INSERT'                                                 
+      CALL SQLCA                                                                
+      SAY '  END EXECUTION'                                                     
+      EXIT 12                                                                   
+      END                                                                       
+                                                                                
+ RETURN                                                                         
+ /************* SQL ERROR ROUTINE *************/                                
+ SQLCA:                                                                         
+   SAY "SQLSTATE =" SQLSTATE                                                    
+   SAY "SQLWARN =" SQLWARN.1",",                                                
+               || SQLWARN.1",",                                                 
+               || SQLWARN.2",",                                                 
+               || SQLWARN.3",",                                                 
+               || SQLWARN.4",",                                                 
+               || SQLWARN.5",",                                                 
+               || SQLWARN.6",",                                                 
+               || SQLWARN.7",",                                                 
+               || SQLWARN.8",",                                                 
+               || SQLWARN.9""                                                   
+   SAY "SQLERRD =" SQLERRD.1",",                                                
+               || SQLERRD.2",",                                                 
+               || SQLERRD.3",",                                                 
+               || SQLERRD.4",",                                                 
+               || SQLERRD.5",",                                                 
+               || SQLERRD.6                                                     
+   SAY "SQLERRP  =" SQLERRP                                                     
+   SAY "SQLERRMC =" SQLERRMC                                                    
+   SAY "SQLERRM  =" SQLERRM                                                     
+   SAY "SQLCODE  =" SQLCODE                                                     
+   RETURN                                                                       
+                                                                                
+ /************* SQL ERROR ROUTINE *************/                                
+ NEWSQLCA:                                                                      
+ if right(sqlerrmc,1) <> 'FF'x then sqlerrmc = sqlerrmc || 'FF'x                
+ if sqlwarna          <> 'W'   then sqlwarna = ' '                              
+ SQLCA = 'SQLCA   '||,                                                          
+         x2c(d2x(136,8))||,                                                     
+         X2C(D2X(SQLCODE,8))||,                                                 
+         x2c(d2x(length(sqlerrmc),4))||,                                        
+         left(sqlerrmc,70)||,                                                   
+         left(SQLERRP,8)||,                                                     
+         x2c(d2x(sqlerrd.1,8))||,                                               
+         x2c(d2x(sqlerrd.2,8))||,                                               
+         x2c(d2x(sqlerrd.3,8))||,                                               
+         x2c(d2x(sqlerrd.4,8))||,                                               
+         x2c(d2x(sqlerrd.5,8))||,                                               
+         x2c(d2x(sqlerrd.6,8))||,                                               
+         left(SQLWARN.1,1)||,                                                   
+         left(SQLWARN.2,1)||,                                                   
+         left(SQLWARN.3,1)||,                                                   
+         left(SQLWARN.4,1)||,                                                   
+         left(SQLWARN.5,1)||,                                                   
+         left(SQLWARN.6,1)||,                                                   
+         left(SQLWARN.7,1)||,                                                   
+         left(SQLWARN.8,1)||,                                                   
+         left(SQLWARN.9,1)||,                                                   
+         left(SQLWARN.10,1)||,                                                  
+         left(SQLWARNA,1)||,                                                    
+         left(SQLSTATE,5)                                                       
+                                                                                
+  message_llen  = 79                                                            
+  message_lines = 12                                                            
+  message_area  = x2c(d2x(message_llen*message_lines,4))||,                     
+                  copies(' ',message_llen*message_lines)                        
+  message_lrecl = x2c(d2x(message_llen,8))                                      
+  address linkpgm "DSNTIAR sqlca message_area message_lrecl"                    
+  message_line_start = 3                                                        
+  do messagei = 1 to message_lines                                              
+    message_line = substr(message_area,message_line_start,message_llen)         
+    message_line_start = message_line_start + message_llen                      
+    if message_line = '' then ITERATE                                           
+    msgtext=strip(message_line)                                                 
+    rc= say_msg(0)                                                              
+  end                                                                           
+                                                                                
+  msgtext='SQLSTATE='SQLSTATE                                                   
+  rc= say_msg(0)                                                                
+  msgtext='SQLWARN ='SQLWARN.0",",                                              
+              || SQLWARN.1",",                                                  
+              || SQLWARN.2",",                                                  
+              || SQLWARN.3",",                                                  
+              || SQLWARN.4",",                                                  
+              || SQLWARN.5",",                                                  
+              || SQLWARN.6",",                                                  
+              || SQLWARN.7",",                                                  
+              || SQLWARN.8",",                                                  
+              || SQLWARN.9",",                                                  
+              || SQLWARN.10                                                     
+  rc= say_msg(0)                                                                
+                                                                                
+  msgtext='SQLERRD ='SQLERRD.1",",                                              
+              || SQLERRD.2",",                                                  
+              || SQLERRD.3",",                                                  
+              || SQLERRD.4",",                                                  
+              || SQLERRD.5",",                                                  
+              || SQLERRD.6                                                      
+rc= say_msg(0)                                                                  
+msgtext='SQLERRP  ='SQLERRP                                                     
+rc= say_msg(0)                                                                  
+msgtext='SQLERRMC ='SQLERRMC                                                    
+rc= say_msg(0)                                                                  
+msgtext='SQLCODE  ='SQLCODE                                                     
+rc= say_msg(0)                                                                  
+                                                                                
+if sqlstmt <> '' & sqlerrd.5 > 0 then                                           
+  do                                                                            
+    do i_text_pos = 1 to length(sqlstmt) by 72                                  
+      msgtext=substr(sqlstmt,i_text_pos,72)                                     
+      rc= say_msg(0)                                                            
+      if (sqlerrd.5 >= i_text_pos) &,                                           
+         (sqlerrd.5 <= i_text_pos+71) then                                      
+        do                                                                      
+          i_syn_pos = sqlerrd.5 - i_text_pos + 1                                
+          select                                                                
+            when i_syn_pos = 1 then                                             
+              syn_err_message = '|<- ThereØs a syntax error here *****'         
+            when i_syn_pos < 5 then                                             
+              syn_err_message = copies('*',i_syn_pos-1)||,                      
+                                '|<- ThereØs a syntax error here *****'         
+            when i_syn_pos < 34 then                                            
+              syn_err_message = '****'copies(' ',i_syn_pos-5)||,                
+                                '|<- ThereØs a syntax error here *****'         
+            otherwise                                                           
+              syn_err_message = '****'copies(' ',i_syn_pos-30)||,               
+                                'ThereØs a syntax error here ->| *****'         
+          end                                                                   
+          msgtext=syn_err_message                                               
+          rc= say_msg(0)                                                        
+      end                                                                       
+    end                                                                         
+  end                                                                           
+return                                                                          
+                                                                                
+SAY_MSG:                                                                        
+arg bl                                                                          
+if datatype(msgtext.0) = 'NUM' then ,                                           
+   do m=1 to msgtext.0                                                          
+      m=right(m,2,0)                                                            
+      say msgtext.m                                                             
+   end                                                                          
+else ,                                                                          
+   do                                                                           
+      say msgtext                                                               
+   end                                                                          
+do bl                                                                           
+   say ' '                                                                      
+end                                                                             
+drop msgtext.                                                                   
+RETURN 1                                                                        
+                                                                                
+                                                                                
+/*************  SYNTAX ERROR HANDLER **********/                                
+CRAPCODE:                                                                       
+SAY 'YOU HAVE CRAP CODE AT LINE' SIGL                                           
+SAY SOURCELINE(SIGL)                                                            
+SAY 'REXX GAVE A RETURN CODE OF' RC ', WHICH MEANS :'                           
+SAY ERRORTEXT(RC)                                                               
+EXIT                                                                            
+                                                                                
+/************* EXTERNAL ERROR HANDLER **********/                               
+BADDIES:                                                                        
+SAY 'YOU HAVE BEEN LET DOWN BY FACTORS BEYOND YOUR CONTROL AT LINE' SIGL        
+SAY SOURCELINE(SIGL)                                                            
+SAY 'RC =' RC                                                                   
+EXIT                                                                            

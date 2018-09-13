@@ -1,0 +1,42 @@
+/*REXX RUNDWNLD:CREATE SQL TO RUN VAMDWNLD BASED ON REQ ID*/            00010000
+ARG THE_ID FILENM                                                       00020000
+QUEUE " SELECT REQ.RPT_REQUEST_TS"                                      00030000
+QUEUE "   ,CHAR(' ',2)"                                                 00040000
+QUEUE "   ,REQ.RPT_REQUEST_TS"                                          00050000
+QUEUE "   ,CHAR(' ',26)"                                                00060000
+QUEUE "   ,DECIMAL(0,11,0)"                                             00070000
+QUEUE "   ,DECIMAL(REQ.PAGE_ID,11,0)"                                   00080000
+QUEUE "   ,CHAR(REQ.PAGE_SUBSET,10)"                                    00090000
+QUEUE "   ,CHAR(REQ.PORTAL_LOGIN_ID,30)"                                00100000
+QUEUE "   ,REQ.STRUCTURE_TYPE"                                          00110000
+QUEUE "   ,REQ.STRUCTURE_OID"                                           00120000
+QUEUE "   ,REQ.POSITION_TYPE"                                           00130000
+QUEUE "   ,REQ.POSITION_OID"                                            00140000
+QUEUE "   ,VARCHAR(REQ.RQST_LINK_PARAM,500)"                            00150000
+QUEUE "   ,CHAR('V481358.DLL.P' || LTRIM(RTRIM(CHAR(REQ.PAGE_ID)))"     00160000
+QUEUE "           ||'.DT' || SUBSTR(CHAR(REQ.RPT_REQUEST_TS),03,2)"     00170000
+QUEUE "              || SUBSTR(CHAR(REQ.RPT_REQUEST_TS),06,2)"          00180000
+QUEUE "              || SUBSTR(CHAR(REQ.RPT_REQUEST_TS),09,2)"          00190000
+QUEUE "           ||'.TM' || SUBSTR(CHAR(REQ.RPT_REQUEST_TS),12,2)"     00200000
+QUEUE "              || SUBSTR(CHAR(REQ.RPT_REQUEST_TS),15,2)"          00210000
+QUEUE "              || SUBSTR(CHAR(REQ.RPT_REQUEST_TS),18,2),44)"      00220000
+QUEUE "   ,CHAR(' ',60)"                                                00230000
+QUEUE "   ,CHAR(' ',160)"                                               00240000
+QUEUE "   ,VARCHAR(REQ.RQST_FILTER_PARAM,500)"                          00250000
+QUEUE "   ,VARCHAR(REQ.RQST_SORT_PARAM,500)"                            00260000
+QUEUE "   ,REQ.RPT_REQUEST_ID"                                          00270000
+QUEUE "   ,CHAR(' ',5)"                                                 00280000
+QUEUE " FROM BMGVZP.PL_RPT_CNTL_T CNT"                                  00290000
+QUEUE " INNER JOIN BMGVZP.PL_RPT_REQUEST_T REQ"                         00300000
+QUEUE "    ON CNT.RPT_ID  = REQ.RPT_ID"                                 00310000
+QUEUE " WHERE REQ.RPT_REQUEST_ID = "THE_ID" "                           00320000
+QUEUE "  WITH UR"                                                       00330000
+QUEUE                                                                   00331000
+"FREE FI(LSTOUT)"                                                       00332000
+"DELETE '"FILENM"'"                                                     00333000
+"ALLOC FI(LSTOUT) DA('"FILENM"')",                                      00334000
+ " NEW CATALOG DATACLAS(PSFB80)",                                       00335000
+ " LRECL(80)"                                                           00336000
+"EXECIO * DISKW LSTOUT (FINIS"                                          00337000
+"FREE FI(LSTOUT)"                                                       00340000
+EXIT                                                                    00350000

@@ -1,0 +1,151 @@
+/* rexx */                                                              00010000
+/*-------------------------------------------------------*/             00020000
+/*          begin variable definition                    */             00030000
+/*-------------------------------------------------------*/             00040000
+clrscrn                                                                 00050000
+db2_sysid = 'D001'                                                      00060000
+low_lk  = "'"             "'"                                           00070000
+high_lk = "'"4099999999999"'"                                           00080000
+start_pt = 1                                                            00090000
+end_pt = 2                                                              00100000
+sql_table = 'bmgvzt.BILL_VERIF_CKT_T'                                   00110000
+max_overflow_rows = 50000                                               00120000
+/*-------------------------------------------------------*/             00130000
+/*          print stats                                  */             00140000
+/*-------------------------------------------------------*/             00150000
+say 'DB2 Subsystem ' db2_sysid                                          00160000
+say 'Table         ' sql_table                                          00170000
+say 'Start Part ' start_pt ' Limit Key ' low_lk                         00180000
+say 'To    Part ' end_pt ' Limit Key ' high_lk                          00190000
+say 'Max Rows to overflow current part ' max_overflow_rows              00200000
+say                                                                     00210000
+/*-------------------------------------------------------*/             00220000
+/*          end variable definition                      */             00230000
+/*-------------------------------------------------------*/             00240000
+'SUBCOM DSNREXX'              /* HOST CMD ENV AVAILABLE? */             00250000
+if rc then                    /* IF NOT, MAKE IT AVAILABLE */           00260000
+  s_rc = RXSUBCOM('ADD','DSNREXX','DSNREXX')                            00270000
+                                                                        00280000
+address DSNREXX                                                         00290000
+connect db2_sysid                                                       00300000
+                                                                        00310000
+EXECSQL "SET CURRENT PACKAGESET='DSNREXCS'"                             00320000
+                                                                        00330000
+/*-------------------------------------------------------*/             00340000
+/*   Get number of rows in the partitions                */             00350000
+/*-------------------------------------------------------*/             00360000
+sqlstmt = 'Select count(*) from ',                                      00370000
+  sql_table,                                                            00380000
+  " where man > " low_lk,                                               00390000
+  " and   man <= " high_lk                                              00400000
+                                                                        00410000
+outsqlda.sqld = 1        /* SQLDA contains one variable */              00420000
+outsqlda.1.sqldata = 0   /* Value in variable is H      */              00430000
+                                                                        00440000
+EXECSQL 'DECLARE C1 CURSOR FOR S1'                                      00450000
+EXECSQL 'PREPARE S1 FROM :SQLSTMT'                                      00460000
+                                                                        00470000
+EXECSQL open c1                                                         00480000
+Do until(sqlcode ^= 0)                                                  00490000
+  EXECSQL 'FETCH C1 USING DESCRIPTOR :OUTSQLDA'                         00500000
+  if sqlcode = 0 then                                                   00510000
+    do                                                                  00520000
+      line = ''                                                         00530000
+      do i = 1 to outsqlda.sqld                                         00540000
+        line = line outsqlda.i.sqldata                                  00550000
+      end i                                                             00560000
+      say 'Total Rows in all partions ' line                            00570000
+    end                                                                 00580000
+end                                                                     00590000
+EXECSQL 'CLOSE C1'                                                      00600000
+                                                                        00610000
+/*-------------------------------------------------------*/             00620000
+/*   Get the limiting keys                               */             00630000
+/*-------------------------------------------------------*/             00640000
+rows_per_part = line / (end_pt - start_pt + 1)                          00650000
+say 'Optimum rows per partition ' rows_per_part                         00660000
+say                                                                     00670000
+                                                                        00680000
+sqlstmt = 'Select man, count(*) from ',                                 00690000
+  sql_table,                                                            00700000
+  " where man > " low_lk,                                               00710000
+  " and   man <= " high_lk,                                             00720000
+  " group by man "                                                      00730000
+                                                                        00740000
+outsqlda.sqld = 2        /* SQLDA contains one variable */              00750000
+outsqlda.1.sqldata = 0   /* Value in variable is H      */              00760000
+outsqlda.2.sqldata = 0   /* Value in variable is H      */              00770000
+curent_lk = ' '                                                         00780000
+new_lk = ' '                                                            00790000
+lk_ct = 0                                                               00800000
+pt_ct = start_pt                                                        00810000
+                                                                        00820000
+EXECSQL 'DECLARE C2 CURSOR FOR S2'                                      00830000
+EXECSQL 'PREPARE S2 FROM :SQLSTMT'                                      00840000
+                                                                        00850000
+EXECSQL open c2                                                         00860000
+Do until(sqlcode ^= 0)                                                  00870000
+  EXECSQL 'FETCH C2 USING DESCRIPTOR :OUTSQLDA'                         00880000
+  if sqlcode = 0 then                                                   00890000
+    do                                                                  00900000
+      if (lk_ct + outsqlda.2.sqldata) <= rows_per_part then             00910000
+        do                                                              00920000
+          current_lk = outsqlda.1.sqldata                               00930000
+          lk_ct = lk_ct + outsqlda.2.sqldata                            00940000
+        end                                                             00950000
+      else                                                              00960000
+        do                                                              00970000
+          select                                                        00980000
+            /*-----------------------------------*/                     00990000
+            /* first man row is very large and   */                     01000000
+            /* exceeds row_per_part.  print as   */                     01010000
+            /* only man in partition             */                     01020000
+            /*-----------------------------------*/                     01030000
+            when lk_ct = 0  then                                        01040000
+              do                                                        01050000
+                say 'Part ' pt_ct 'Limit Key ',                         01060000
+                  outsqlda.1.sqldata ' ',                               01070000
+                  outsqlda.2.sqldata                                    01080000
+                pt_ct = pt_ct + 1                                       01090000
+              end                                                       01100000
+            /*-----------------------------------*/                     01110000
+            /* rows usually exceed the calculated*/                     01120000
+            /* part rows.  If the count is within*/                     01130000
+            /* the rows_per_part + max_overflow_rows    */              01140000
+            /* put the man in the current pt.  If*/                     01150000
+            /* this sum exceeds put the man in   */                     01160000
+            /* the next part.                    */                     01170000
+            /*-----------------------------------*/                     01180000
+            when (lk_ct + outsqlda.2.sqldata <= rows_per_part +,        01190000
+              max_overflow_rows) then                                   01200000
+              do                                                        01210000
+                current_lk = outsqlda.1.sqldata                         01220000
+                lk_ct = lk_ct + outsqlda.2.sqldata                      01230000
+                last_lk_ct = lk_ct                                      01240000
+                say 'Part ' pt_ct ' Limit Key ' current_lk  lk_ct       01250000
+                current_lk = ' '                                        01260000
+                lk_ct = 0                                               01270000
+                pt_ct = pt_ct + 1                                       01280000
+              end                                                       01290000
+            when (lk_ct + outsqlda.2.sqldata > rows_per_part +,         01300000
+              max_overflow_rows) then                                   01310000
+              do                                                        01320000
+                say 'Part ' pt_ct ' Limit Key ' current_lk  lk_ct       01330000
+                current_lk = outsqlda.1.sqldata                         01340000
+                last_lk_ct = lk_ct                                      01350000
+                lk_ct = outsqlda.2.sqldata                              01360000
+                pt_ct = pt_ct + 1                                       01370000
+              end                                                       01380000
+            otherwise                                                   01390000
+          end                                                           01400000
+        end                                                             01410000
+    end                                                                 01420000
+end                                                                     01430000
+if pt_ct = end_pt then                                                  01440000
+  say 'Part ' pt_ct ' Limit Key '  current_lk  lk_ct                    01450000
+else                                                                    01460000
+  say 'Part ' (pt_ct - 1) ' Limit Key OVERRIDE'  current_lk ,           01470000
+    (last_lk_ct + lk_ct)                                                01480000
+EXECSQL 'CLOSE C2'                                                      01490000
+                                                                        01500000
+s_rc = RXSUBCOM('DELETE','DSNREXX','DSNREXX')                           01510000

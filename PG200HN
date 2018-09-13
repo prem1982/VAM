@@ -1,0 +1,261 @@
+    SELECT HDR200.ACCT_NBR                                                      
+          ,HDR200.ACCT_NBR ACCT_NBR20                                           
+          ,HDR200.ACCT_ALIAS                                                    
+          ,HDR200.ACCT_ALIAS ACCT_ALIAS20                                       
+          ,' ' GBR                                                              
+          ,HDR200.BILL_DATE                                                     
+          ,HDR200.INV_NBR                                                       
+          ,HDR200.BILL_CYCLE                                                    
+          ,HDR200.ACCT_NAME                                                     
+          ,HDR200.ADDRESS_2                                                     
+          ,HDR200.ADDRESS_3                                                     
+          ,HDR200.ADDRESS_4                                                     
+          ,' ' CITY_STATE                                                       
+          ,HDR200.COUNTRY_NAME                                                  
+          ,CHAR(HDR200.PREV_BILL_AMT) PREV_BILL_AMT                             
+          ,CHAR(HDR200.TOT_PAYS) TOT_PAYS                                       
+          ,CHAR(HDR200.TOT_PAYS2) TOT_PAYS2                                     
+          ,CHAR(HDR200.TOT_ADJS) TOT_ADJS                                       
+          ,CHAR(HDR200.NET_PAST_DUE) NET_PAST_DUE                               
+          ,CHAR(HDR200.NET_PAST_DUE2) NET_PAST_DUE2                             
+          ,CHAR(HDR200.NET_PAST_DUE3) NET_PAST_DUE3                             
+          ,CHAR(HDR200.ACCT_LVL_CHGS) ACCT_LVL_CHGS                             
+          ,CHAR(HDR200.MO_ACCESS) MO_ACCESS                                     
+          ,HDR200.USAGE_LIT                                                     
+          ,CHAR(HDR200.TOTAL_USAGE) TOTAL_USAGE                                 
+          ,CHAR(HDR200.VOICE_USAGE) VOICE_USAGE                                 
+          ,CHAR(HDR200.OTHER_USAGE) OTHER_USAGE                                 
+          ,CHAR(HDR200.DATA_USAGE) DATA_USAGE                                   
+          ,CHAR(HDR200.ROAMING_CHGS) ROAMING_CHGS                               
+          ,CHAR(HDR200.EQUIPMENT) EQUIPMENT                                     
+          ,CHAR(HDR200.SPLIT_BILL) SPLIT_BILL                                   
+          ,CHAR(HDR200.TAXES_SURCHGS) TAXES_SURCHGS                             
+          ,CHAR(HDR200.TAXES_FEES) TAXES_FEES                                   
+          ,HDR200.MISC_STRING1 AS MISC_STRING                                   
+          ,CHAR(HDR200.TOT_CURR_CHGS) TOT_CURR_CHGS                             
+          ,CHAR(HDR200.TOT_CURR_CHGS) TOT_CURR_CHGS2                            
+          ,HDR200.MISC_STRING2 AS MISC_STRING                                   
+          ,CHAR(HDR200.TOT_BILL_AMT) TOT_BILL_AMT                               
+       FROM (                                                                   
+       SELECT IN1.ACCT_NBR                                                      
+             ,IN1.ACCT_ALIAS                                                    
+             ,IN1.BILL_DATE                                                     
+             ,IN1.INV_NBR                                                       
+             ,COALESCE(IN1.BILL_CYCLE,' ') AS BILL_CYCLE                        
+             ,IN1.ACCT_NAME                                                     
+             ,IN1.ADDRESS_2                                                     
+             ,IN1.ADDRESS_3                                                     
+             ,IN1.ADDRESS_4                                                     
+             ,IN1.CITY_STATE                                                    
+             ,IN1.COUNTRY_NAME                                                  
+             ,IN1.ACCT_BAL_LIT                                                  
+             ,IN1.PREV_BILL_AMT                                                 
+             ,IN1.TOT_PAYS                                                      
+             ,IN1.TOT_PAYS2                                                     
+             ,IN1.TOT_ADJS                                                      
+             ,IN1.NET_PAST_DUE                                                  
+             ,IN1.NET_PAST_DUE2                                                 
+             ,IN1.NET_PAST_DUE3                                                 
+             ,IN1.CURR_CHGS_LIT                                                 
+             ,SUM(CASE WHEN IN1.CHG_CD = '1930' THEN IN1.CHG_AMT                
+                  ELSE 0 END) AS ACCT_LVL_CHGS                                  
+             ,SUM(CASE WHEN IN1.CHG_CD = '1931' THEN IN1.CHG_AMT                
+                       WHEN IN1.CHG_CD = '1932' THEN IN1.CHG_AMT                
+                       WHEN IN1.CHG_CD = '1933' THEN IN1.CHG_AMT                
+                       WHEN IN1.CHG_CD = '1934' THEN IN1.CHG_AMT                
+                  ELSE 0 END) AS MO_ACCESS                                      
+             ,IN1.USAGE_LIT                                                     
+             ,SUM(CASE WHEN IN1.CHG_CD = '1935' THEN IN1.CHG_AMT                
+                       WHEN IN1.CHG_CD = '1931' THEN IN1.CHG_AMT                
+                       WHEN IN1.CHG_CD = '1932' THEN IN1.CHG_AMT                
+                       WHEN IN1.CHG_CD = '1933' THEN IN1.CHG_AMT                
+                       WHEN IN1.CHG_CD = '1934' THEN IN1.CHG_AMT                
+                       WHEN IN1.CHG_CD = '1935' THEN IN1.CHG_AMT                
+                       WHEN IN1.CHG_CD = '1936' THEN IN1.CHG_AMT                
+                       WHEN IN1.CHG_CD = '1940' THEN IN1.CHG_AMT                
+                       WHEN IN1.CHG_CD = '1941' THEN IN1.CHG_AMT                
+                       WHEN IN1.CHG_CD = '1942' THEN IN1.CHG_AMT                
+                       WHEN IN1.CHG_CD = '1943' THEN IN1.CHG_AMT                
+                  ELSE 0 END) AS USAGE_CHGS                                     
+             ,SUM(CASE WHEN IN1.CHG_CD = '1935' THEN IN1.CHG_AMT                
+                  ELSE 0 END) AS VOICE_USAGE                                    
+             ,SUM(CASE WHEN IN1.CHG_CD = '1944' THEN IN1.CHG_AMT                
+                  ELSE 0 END) AS OTHER_USAGE                                    
+             ,SUM(CASE WHEN IN1.CHG_CD = '1936' THEN IN1.CHG_AMT                
+                  ELSE 0 END) AS DATA_USAGE                                     
+             ,SUM(CASE WHEN IN1.CHG_CD = '1942' THEN IN1.CHG_AMT                
+                  ELSE 0 END) AS ROAMING_CHGS                                   
+             ,SUM(CASE WHEN IN1.CHG_CD = '1935' THEN IN1.CHG_AMT                
+                       WHEN IN1.CHG_CD = '1936' THEN IN1.CHG_AMT                
+                       WHEN IN1.CHG_CD = '1942' THEN IN1.CHG_AMT                
+                       WHEN IN1.CHG_CD = '1944' THEN IN1.CHG_AMT                
+                  ELSE 0 END) AS TOTAL_USAGE                                    
+             ,SUM(CASE WHEN IN1.CHG_CD = '1940' THEN IN1.CHG_AMT                
+                       WHEN IN1.CHG_CD = '1941' THEN IN1.CHG_AMT                
+                  ELSE 0 END) AS EQUIPMENT                                      
+             ,SUM(CASE WHEN IN1.CHG_CD = '1943' THEN IN1.CHG_AMT                
+                  ELSE 0 END) AS SPLIT_BILL                                     
+             ,SUM(CASE WHEN IN1.CHG_CD = '1930' THEN IN1.CHG_AMT                
+                       WHEN IN1.CHG_CD = '1931' THEN IN1.CHG_AMT                
+                       WHEN IN1.CHG_CD = '1932' THEN IN1.CHG_AMT                
+                       WHEN IN1.CHG_CD = '1933' THEN IN1.CHG_AMT                
+                       WHEN IN1.CHG_CD = '1934' THEN IN1.CHG_AMT                
+                       WHEN IN1.CHG_CD = '1935' THEN IN1.CHG_AMT                
+                       WHEN IN1.CHG_CD = '1936' THEN IN1.CHG_AMT                
+                       WHEN IN1.CHG_CD = '1940' THEN IN1.CHG_AMT                
+                       WHEN IN1.CHG_CD = '1941' THEN IN1.CHG_AMT                
+                       WHEN IN1.CHG_CD = '1942' THEN IN1.CHG_AMT                
+                       WHEN IN1.CHG_CD = '1943' THEN IN1.CHG_AMT                
+                  ELSE 0 END) AS SUB_TOT_CURR_CHGS                              
+             ,IN1.TAXES_LIT                                                     
+             ,SUM(CASE WHEN IN1.CHG_CD = '1937' THEN IN1.CHG_AMT                
+                       WHEN IN1.CHG_CD = '1939' THEN IN1.CHG_AMT                
+                  ELSE 0 END) AS TAXES_SURCHGS                                  
+             ,SUM(CASE WHEN IN1.CHG_CD = '1938' THEN IN1.CHG_AMT                
+                  ELSE 0 END) AS TAXES_FEES                                     
+             ,SUM(CASE WHEN IN1.CHG_CD = '1937' THEN IN1.CHG_AMT                
+                       WHEN IN1.CHG_CD = '1938' THEN IN1.CHG_AMT                
+                       WHEN IN1.CHG_CD = '1939' THEN IN1.CHG_AMT                
+                  ELSE 0 END) AS TOTAL_TAXES                                    
+             ,IN1.TOT_CURR_CHGS                                                 
+             ,IN1.MISC_STRING1                                                  
+             ,IN1.TOT_BILL_AMT                                                  
+             ,IN1.MISC_STRING2                                                  
+          FROM (                                                                
+         SELECT TB1.WIRELESS_DAN ACCT_NBR                                       
+               ,TB1.BILL_DATE                                                   
+               ,CB.ACCT_ALIAS                                                   
+               ,TB1.INVOICE_NBR INV_NBR                                         
+               ,CASE SUBSTR(CHAR(TB3.FROM_DATE),6,2)                            
+                 WHEN '01' THEN 'Jan'                                           
+                 WHEN '02' THEN 'Feb'                                           
+                 WHEN '03' THEN 'Mar'                                           
+                 WHEN '04' THEN 'Apr'                                           
+                 WHEN '05' THEN 'May'                                           
+                 WHEN '06' THEN 'Jun'                                           
+                 WHEN '07' THEN 'Jul'                                           
+                 WHEN '08' THEN 'Aug'                                           
+                 WHEN '09' THEN 'Sep'                                           
+                 WHEN '10' THEN 'Oct'                                           
+                 WHEN '11' THEN 'Nov'                                           
+                 ELSE 'Dec' END                                                 
+               || ' ' || SUBSTR(CHAR(TB3.FROM_DATE),9,2) || ' - ' ||            
+                CASE SUBSTR(CHAR(TB3.THRU_DATE),6,2)                            
+                 WHEN '01' THEN 'Jan'                                           
+                 WHEN '02' THEN 'Feb'                                           
+                 WHEN '03' THEN 'Mar'                                           
+                 WHEN '04' THEN 'Apr'                                           
+                 WHEN '05' THEN 'May'                                           
+                 WHEN '06' THEN 'Jun'                                           
+                 WHEN '07' THEN 'Jul'                                           
+                 WHEN '08' THEN 'Aug'                                           
+                 WHEN '09' THEN 'Sep'                                           
+                 WHEN '10' THEN 'Oct'                                           
+                 WHEN '11' THEN 'Nov'                                           
+                 ELSE 'Dec' END                                                 
+               || ' ' || SUBSTR(CHAR(TB3.THRU_DATE),9,2)                        
+                  AS BILL_CYCLE                                                 
+               ,TB2.ACCT_NAME                                                   
+               ,TB2.ADDRESS_1                                                   
+               ,TB2.ADDRESS_2                                                   
+               ,TB2.ADDRESS_3                                                   
+               ,TB2.ADDRESS_4                                                   
+         ,CASE WHEN TB2.CITY = ' ' THEN ' '                                     
+               WHEN SUBSTR(TB2.POSTAL_CD,6,1) = ' ' THEN                        
+         RTRIM(TB2.CITY) || ' ' || TB2.STATE ||' ' || TB2.POSTAL_CD             
+          WHEN SUBSTR(TB2.POSTAL_CD,6,1) <> ' ' THEN                            
+         RTRIM(TB2.CITY) || ' ' || TB2.STATE ||' ' ||                           
+         SUBSTR(TB2.POSTAL_CD,1,5) || '-' || SUBSTR(TB2.POSTAL_CD,6,5)          
+                 ELSE ''                                                        
+                END AS CITY_STATE                                               
+               ,TB2.COUNTRY_NAME                                                
+               ,' ' CURR_CHGS_LIT                                               
+               ,' ' USAGE_LIT                                                   
+               ,' ' TAXES_LIT                                                   
+               ,' ' ACCT_BAL_LIT                                                
+               ,TB1.PREV_BILL_AMT                                               
+               ,TB1.TOT_PAYS                                                    
+               ,TB1.TOT_PAYS TOT_PAYS2                                          
+               ,TB1.TOT_ADJS                                                    
+               ,TB1.NET_PAST_DUE                                                
+               ,TB1.NET_PAST_DUE NET_PAST_DUE2                                  
+               ,TB1.NET_PAST_DUE NET_PAST_DUE3                                  
+               ,TB1.TOT_CURR_CHGS                                               
+               ,COALESCE(TB3.CHG_CD,' ') CHG_CD                                 
+               ,COALESCE(SUBSTR(RF1.DESCRIPTION,18,82),' ') CHARGE_DESC         
+               ,COALESCE(TB3.CHG_AMT,0) CHG_AMT                                 
+               ,TB1.TOT_BILL_AMT                                                
+    ,CASE WHEN TB1.TOT_CURR_CHGS <= 0 THEN                                      
+     'Total Current Charges'                                                    
+    ELSE                                                                        
+     'Total Current Charges Due by ' ||                                         
+    CASE WHEN SUBSTR(CHAR(TB1.PAY_BY_DATE),6,2) = '01' THEN 'January'           
+         WHEN SUBSTR(CHAR(TB1.PAY_BY_DATE),6,2) = '02' THEN 'February'          
+         WHEN SUBSTR(CHAR(TB1.PAY_BY_DATE),6,2) = '03' THEN 'March'             
+         WHEN SUBSTR(CHAR(TB1.PAY_BY_DATE),6,2) = '04' THEN 'April'             
+         WHEN SUBSTR(CHAR(TB1.PAY_BY_DATE),6,2) = '05' THEN 'May'               
+         WHEN SUBSTR(CHAR(TB1.PAY_BY_DATE),6,2) = '06' THEN 'June'              
+         WHEN SUBSTR(CHAR(TB1.PAY_BY_DATE),6,2) = '07' THEN 'July'              
+         WHEN SUBSTR(CHAR(TB1.PAY_BY_DATE),6,2) = '08' THEN 'August'            
+         WHEN SUBSTR(CHAR(TB1.PAY_BY_DATE),6,2) = '09' THEN 'September'         
+         WHEN SUBSTR(CHAR(TB1.PAY_BY_DATE),6,2) = '10' THEN 'October'           
+         WHEN SUBSTR(CHAR(TB1.PAY_BY_DATE),6,2) = '11' THEN 'November'          
+         WHEN SUBSTR(CHAR(TB1.PAY_BY_DATE),6,2) = '12' THEN 'December'          
+         ELSE ' '                                                               
+      END || ' ' ||                                                             
+      SUBSTR(CHAR(TB1.PAY_BY_DATE),9,2) || ', ' ||                              
+      SUBSTR(CHAR(TB1.PAY_BY_DATE),1,4) END MISC_STRING1                        
+    ,CASE WHEN TB1.TOT_BILL_AMT <= 0 THEN                                       
+     'Total Amount' ELSE 'Total Amount Due' END MISC_STRING2                    
+      FROM ACCT_SUM_T TB1                                                       
+          LEFT OUTER JOIN INTL_NAME_ADDRESS TB2                                 
+            ON TB1.MAN = TB2.MAN                                                
+           AND TB1.MAN_BILL_DATE = TB2.MAN_BILL_DATE                            
+           AND TB1.ORIG_SYSTEM_ID = TB2.ORIG_SYSTEM_ID                          
+           AND TB1.ADDR_SEQ_NBR = TB2.VZ450_SEQ_NBR                             
+          LEFT OUTER JOIN CURR_CHAR_DAT_T TB3                                   
+            ON TB1.MAN = TB3.MAN                                                
+           AND TB1.MAN_BILL_DATE = TB3.MAN_BILL_DATE                            
+           AND TB1.ORIG_SYSTEM_ID = TB3.ORIG_SYSTEM_ID                          
+           AND TB1.BAN = TB3.BAN                                                
+           AND TB1.BILL_DATE = TB3.BILL_DATE                                    
+           AND TB1.ABAN = TB3.ABAN                                              
+          LEFT OUTER JOIN REF_CODES_95_T RF1                                    
+            ON TB3.CHG_CD_ID = RF1.CODE_DESC_KEY                                
+          INNER JOIN CURRENT_BAN_T CB                                           
+            ON TB1.BAN = CB.BAN                                                 
+           AND TB1.MAN = CB.MAN                                                 
+           AND TB1.ORIG_SYSTEM_ID = CB.ORIG_SYSTEM_ID                           
+          WHERE TB1.MAN = ?                                                     
+            AND TB1.MAN_BILL_DATE = ?                                           
+            AND TB1.ORIG_SYSTEM_ID = ?                                          
+            AND TB1.BAN = ?                                                     
+            AND TB1.BILL_DATE = ?                                               
+               ) IN1                                                            
+       GROUP BY IN1.ACCT_NBR                                                    
+             ,IN1.ACCT_ALIAS                                                    
+             ,IN1.BILL_DATE                                                     
+             ,IN1.INV_NBR                                                       
+             ,IN1.BILL_CYCLE                                                    
+             ,IN1.ACCT_NAME                                                     
+             ,IN1.ADDRESS_2                                                     
+             ,IN1.ADDRESS_3                                                     
+             ,IN1.ADDRESS_4                                                     
+             ,IN1.CITY_STATE                                                    
+             ,IN1.COUNTRY_NAME                                                  
+             ,IN1.ACCT_BAL_LIT                                                  
+             ,IN1.PREV_BILL_AMT                                                 
+             ,IN1.TOT_PAYS                                                      
+             ,IN1.TOT_PAYS2                                                     
+             ,IN1.TOT_ADJS                                                      
+             ,IN1.NET_PAST_DUE                                                  
+             ,IN1.NET_PAST_DUE2                                                 
+             ,IN1.NET_PAST_DUE3                                                 
+             ,IN1.CURR_CHGS_LIT                                                 
+             ,IN1.USAGE_LIT                                                     
+             ,IN1.TAXES_LIT                                                     
+             ,IN1.TOT_CURR_CHGS                                                 
+             ,IN1.MISC_STRING1                                                  
+             ,IN1.TOT_BILL_AMT                                                  
+             ,IN1.MISC_STRING2                                                  
+            ) HDR200                                                            

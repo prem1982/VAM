@@ -1,0 +1,32 @@
+/*DELETNDV:REXX*/                                                               
+ARG TESTID ENVIRON SYSTEM SUBSYSTEM PROJECT STAGE CCID                          
+QUOTE = '"'                                                                     
+/*************************************************************/                 
+CARDDSN = "'"TESTID"."STAGE"."PROJECT".DELETNDV.SCL'"                           
+/*************************************************************/                 
+"FREE FI(CARDDSN)"                                                              
+"DELETE "CARDDSN                                                                
+"ALLOC FI(CARDDSN) DA("CARDDSN") NEW"                                           
+"EXECIO * DISKR ELEMENTS (FINIS STEM ELEMREC."                                  
+DO I = 1 TO ELEMREC.0                                                           
+   COMBYTE = SUBSTR(ELEMREC.I,1,1)                                              
+   IF COMBYTE = '*' THEN                                                        
+     SAY 'COMMENT' ELEMREC.I                                                    
+   ELSE                                                                         
+     DO                                                                         
+        SAY 'DETAIL ' ELEMREC.I                                                 
+        MEMBER = WORD(ELEMREC.I,1)                                              
+        TYPE   = WORD(ELEMREC.I,2)                                              
+        QUEUE  "DELETE    ELEMENT     '"MEMBER"'"                               
+        QUEUE  "  FROM    ENVIRONMENT '"ENVIRON"'"                              
+        QUEUE  "          SYSTEM      '"SYSTEM"'"                               
+        QUEUE  "          SUBSYSTEM   '"SUBSYSTEM"'"                            
+        QUEUE  "          TYPE        '"TYPE"'"                                 
+        QUEUE  "          STAGE       '"STAGE"'"                                
+        QUEUE  "  OPTIONS CCID        '"SUBSYSTEM||PROJECT"'"                   
+        QUEUE  "          OVERRIDE SIGNOUT"                                     
+        QUEUE  " ."                                                             
+     END                                                                        
+END                                                                             
+"EXECIO * DISKW CARDDSN (FINIS"                                                 
+"FREE FI(CARDDSN)"                                                              

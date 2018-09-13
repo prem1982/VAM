@@ -1,0 +1,39 @@
+/* REXX */                                                                      
+/***********************************************************************        
+* THIS ROUTINE WILL CREATE A FILE OF SELECT STATEMENTS TO BE RUN IN             
+* SPUFI IN THE PRODUCTION CSR SYSTEM.                                           
+* IT'S INPUT IS A LIST OF BTN'S TO BE SEARCHED FOR.                             
+* THE OUTPUT FILE MUST ALREADY EXIST.                                           
+***********************************************************************/        
+ARG                                                                             
+                                                                                
+/* READ INPUT FILE TO GET LIST OF ACCOUNTS */                                   
+"EXECIO * DISKR INFILE (STEM REC. FINIS"                                        
+"FREE FI(INFILE) "                                                              
+SAY 'NUMBER OF RECORDS IN FILE = ' REC.0                                        
+SAY '---------------------------------------'                                   
+                                                                                
+DO IX = 1 TO REC.0                                                              
+      BTN = SUBSTR(REC.IX,1,13)                                                 
+      CALL MAKESQL                                                              
+END                                                                             
+                                                                                
+"EXECIO * DISKW OUTFILE (FINIS"                                                 
+                                                                                
+/* END OF MAIN ROUTINE */                                                       
+                                                                                
+/*---------------------------------------------------------------------         
+* CREATE DSNAMES AND MAKE SURE FILES EXIST                                      
+*--------------------------------------------------------------------*/         
+MAKESQL:                                                                        
+BTN_NPA  = SUBSTR(BTN,1,3)                                                      
+BTN_NXX  = SUBSTR(BTN,4,3)                                                      
+BTN_LINE = SUBSTR(BTN,7,4)                                                      
+BTN_CUST = SUBSTR(BTN,11,3)                                                     
+                                                                                
+QUEUE " SELECT * FROM CSRNYP.CSRX04_T WHERE BTN_NPA = '"BTN_NPA"'"              
+QUEUE " AND BTN_NXX = '"BTN_NXX"' AND BTN_LINE_NUMBER = '"BTN_LINE"'"           
+QUEUE " AND BTN_CUSTOMER_CODE = '"BTN_CUST"';"                                  
+                                                                                
+RETURN                                                                          
+                                                                                

@@ -1,0 +1,33 @@
+/*REXX FMTPACK: REXX TO CONVERT STRING TO PACKED NUMBER****/                    
+  ARG XSTR XLNG                                                                 
+  /*  FIRST REMOVE ANY DECIMALS OR COMMAS */                                    
+  SAY 'XSTR='XSTR',XLNG='XLNG                                                   
+  LNG = LENGTH(XSTR)                                                            
+  SAY 'LNG='LNG                                                                 
+  LST1 = 'C'                                                                    
+  VSTR = ''                                                                     
+  BEG = 1                                                                       
+  DO WHILE BEG <= LNG                                                           
+     XCH = SUBSTR(XSTR,BEG,1)                                                   
+     SELECT                                                                     
+       WHEN XCH = '0' THEN VSTR = VSTR || XCH                                   
+       WHEN XCH = '1' THEN VSTR = VSTR || XCH                                   
+       WHEN XCH = '2' THEN VSTR = VSTR || XCH                                   
+       WHEN XCH = '3' THEN VSTR = VSTR || XCH                                   
+       WHEN XCH = '4' THEN VSTR = VSTR || XCH                                   
+       WHEN XCH = '5' THEN VSTR = VSTR || XCH                                   
+       WHEN XCH = '6' THEN VSTR = VSTR || XCH                                   
+       WHEN XCH = '7' THEN VSTR = VSTR || XCH                                   
+       WHEN XCH = '8' THEN VSTR = VSTR || XCH                                   
+       WHEN XCH = '9' THEN VSTR = VSTR || XCH                                   
+       WHEN XCH = '-' THEN LST1 = 'D'                                           
+       OTHERWISE VSTR = VSTR                                                    
+     END                                                                        
+     BEG = BEG + 1                                                              
+  END                                                                           
+  VLNG = XLNG - 1                                                               
+  CALL LEADZERO VSTR VLNG                                                       
+  XNBR = RESULT                                                                 
+  ZNBR = XNBR || LST1                                                           
+  RNBR = X2C(ZNBR)                                                              
+  RETURN RNBR                                                                   

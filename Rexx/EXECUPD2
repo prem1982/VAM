@@ -1,0 +1,87 @@
+/*REXX EXECUPD2:REXX TO APPEND ORIG SYST TO EXTRCNTL LIST */                    
+ARG UNLOAD                                                                      
+"FREE FI(LISTIN)"                                                               
+SIGNAL ON ERROR NAME BADDIES /* ROUTINE FOR EXTERNAL ERRORS */                  
+SIGNAL ON SYNTAX NAME CRAPCODE /* ROUTINE FOR CODE ERRORS */                    
+MSGS = MSG(ON) /* TSO/E MESSAGE SWITCH  - C.F. CONTROL MSG IN CLIST */          
+PROC_CT = 0                                                                     
+/****** READ THE LISTDSN DD INTO MEMORY USING STEM DMPREC ******/               
+ADDRESS TSO                                                                     
+"ALLOC FI(LISTIN) DA('"UNLOAD"')"                                               
+"EXECIO * DISKR LISTIN (STEM LISTREC. FINIS"                                    
+"FREE FI(LISTIN)"                                                               
+/****** ESTABLISH THE DB2 CONNECTION ******/                                    
+SIGNAL OFF ERROR /* TURN ERROR-TRAPPING OFF */                                  
+"SUBCOM DSNREXX"                                                                
+SIGNAL ON ERROR NAME BADDIES /* ROUTINE FOR EXTERNAL ERRORS */                  
+IF RC THEN                                                                      
+   S_RC = RXSUBCOM('ADD','DSNREXX','DSNREXX')                                   
+                                                                                
+ADDRESS DSNREXX "CONNECT D009"                                                  
+IF SQLCODE ^= 0 THEN CALL SQLCA                                                 
+                                                                                
+SIGNAL OFF ERROR                                                                
+UPDTCT = 0                                                                      
+ERRORCT = 0                                                                     
+DO TX = 1 TO LISTREC.0                                                          
+   LNGZ = LENGTH(LISTREC.TX)                                                    
+   XSTR = SUBSTR(LISTREC.TX,1,LNGZ)                                             
+   CALL CURRUPD2 XSTR                                                           
+   SQLX = RESULT                                                                
+   ADDRESS DSNREXX "EXECSQL "SQLX                                               
+   SELECT                                                                       
+      WHEN SQLCODE = 0 THEN UPDTCT = UPDTCT + 1                                 
+      WHEN SQLCODE = 100 THEN ERRORCT = ERRORCT + 1                             
+      OTHERWISE                                                                 
+         DO                                                                     
+            SAY 'ERROR EXECUTING 'SQLX ' - SQLCODE=' SQLCODE                    
+            CALL SQLCA                                                          
+         END                                                                    
+   END                                                                          
+END                                                                             
+ADDRESS DSNREXX "EXECSQL COMMIT"                                                
+SAY 'UPDATED COUNT=' UPDTCT                                                     
+SAY 'ERRORED COUNT=' ERRORCT                                                    
+ADDRESS DSNREXX "DISCONNECT"                                                    
+IF SQLCODE ^= 0 THEN CALL SQLCA                                                 
+EXIT                                                                            
+                                                                                
+/************* SQL ERROR ROUTINE *************/                                 
+SQLCA:                                                                          
+  SAY "SQLSTATE =" SQLSTATE                                                     
+  SAY "SQLWARN =" SQLWARN.0",",                                                 
+              || SQLWARN.1",",                                                  
+              || SQLWARN.2",",                                                  
+              || SQLWARN.3",",                                                  
+              || SQLWARN.4",",                                                  
+              || SQLWARN.5",",                                                  
+              || SQLWARN.6",",                                                  
+              || SQLWARN.7",",                                                  
+              || SQLWARN.8",",                                                  
+              || SQLWARN.9",",                                                  
+              || SQLWARN.10""                                                   
+  SAY "SQLERRD =" SQLERRD.1",",                                                 
+              || SQLERRD.2",",                                                  
+              || SQLERRD.3",",                                                  
+              || SQLERRD.4",",                                                  
+              || SQLERRD.5",",                                                  
+              || SQLERRD.6                                                      
+  SAY "SQLERRP  =" SQLERRP                                                      
+  SAY "SQLERRMC =" SQLERRMC                                                     
+  SAY "SQLCODE  =" SQLCODE                                                      
+  EXIT 20                                                                       
+                                                                                
+/************* SYNTAX ERROR HANDLER **********/                                 
+CRAPCODE:                                                                       
+SAY 'YOU HAVE CRAP CODE AT LINE' SIGL                                           
+SAY SOURCELINE(SIGL)                                                            
+SAY 'REXX GAVE A RETURN CODE OF' RC ', WHICH MEANS :'                           
+SAY ERRORTEXT(RC)                                                               
+EXIT                                                                            
+                                                                                
+/************* EXTERNAL ERROR HANDLER **********/                               
+BADDIES:                                                                        
+SAY 'YOU HAVE BEEN LET DOWN BY FACTORS BEYOND YOUR CONTROL AT LINE' SIGL        
+SAY SOURCELINE(SIGL)                                                            
+SAY 'RC =' RC                                                                   
+EXIT                                                                            

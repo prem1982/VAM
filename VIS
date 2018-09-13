@@ -1,0 +1,5 @@
+SELECT 'X' FROM                                                                 
+(SELECT COLUMN_5                                                                
+from BMGVZP.VZ450_VMT50204_T                                                    
+WHERE MAN = 'AA2ROYRRA') SC1                                                    
+WHERE SC1.COLUMN_5  <> ' '                                                      

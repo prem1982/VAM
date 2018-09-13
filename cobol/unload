@@ -1,0 +1,30 @@
+//ULTBLSQL JOB (T,JZDD,JKSD0033),'UNLOAD',                              JOB05120
+// REGION=0K,CLASS=U,MSGCLASS=Z,NOTIFY=&SYSUID                                  
+/*JOBPARM S=200A                                                                
+//***************************************************************               
+//********************************************************************  00170000
+//UNLDTAB1 EXEC PGM=IKJEFT01,REGION=0K                                  00250001
+//STEPLIB  DD DSN=DSND009.SDSNLOAD,DISP=SHR                             00090005
+//         DD DSN=DSND009.SDSNEXIT,DISP=SHR                             00090005
+//SYSTSPRT DD SYSOUT=*                                                  00280000
+//SYSPRINT DD SYSOUT=*                                                  00290000
+//SYSUDUMP DD DUMMY                                                     00300000
+//SYSOUT   DD SYSOUT=*                                                  00310000
+//SYSTSIN  DD *                                                         00021006
+   DSN SYSTEM (D009)                                                            
+     RUN PROGRAM(DSNTIAUL) PARMS('SQL') -                                       
+             PLAN(DSNTIAUL) -                                                   
+             LIB('DSND009.RUNLIB.LOAD')                                         
+   END                                                                          
+/*                                                                              
+//SYSPUNCH DD SYSOUT=*                                                  00021006
+//SYSIN    DD *                                                                 
+  SELECT * FROM                                                                 
+  BMGVZP.VZW_UNBILLED_USG_T                                                     
+  WHERE MAN = 'VZWMTNUN';                                                       
+/*                                                                              
+//SYSREC00 DD DSN=BMGVZ0CN.IBRSSQL,                                     00330006
+//         DISP=(NEW,CATLG,DELETE),MGMTCLAS=LUSE180,                    00330006
+//         UNIT=3390,SPACE=(CYL,(600,100),RLSE),                        00340006
+//         DATACLAS=COMPRESS                                            00341006
+//********************************************************************  00170000

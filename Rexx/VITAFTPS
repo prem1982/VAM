@@ -1,0 +1,67 @@
+/*REXX VITAFTPS:UPDATE VITAFTPS FTP CARDS WITH GIVEN MONTH*/            00020001
+ARG HIGHLVL MMMYEAR                                                     00030002
+/*                                                                              
+X = OUTTRAP(DSN.)                                                               
+*/                                                                              
+MMM = SUBSTR(MMMYEAR,1,3)                                                       
+YYYY = SUBSTR(MMMYEAR,4,4)                                                      
+SELECT                                                                          
+  WHEN MMM = 'JAN' THEN MM = '01'                                               
+  WHEN MMM = 'FEB' THEN MM = '02'                                               
+  WHEN MMM = 'MAR' THEN MM = '03'                                               
+  WHEN MMM = 'APR' THEN MM = '04'                                               
+  WHEN MMM = 'MAY' THEN MM = '05'                                               
+  WHEN MMM = 'JUN' THEN MM = '06'                                               
+  WHEN MMM = 'JUL' THEN MM = '07'                                               
+  WHEN MMM = 'AUG' THEN MM = '08'                                               
+  WHEN MMM = 'SEP' THEN MM = '09'                                               
+  WHEN MMM = 'OCT' THEN MM = '10'                                               
+  WHEN MMM = 'NOV' THEN MM = '11'                                               
+  WHEN MMM = 'DEC' THEN MM = '12'                                               
+  OTHERWISE MM = 'XX'                                                           
+END                                                                             
+SELECT                                                                          
+  WHEN MMM = 'JAN' THEN MM2 = '02'                                              
+  WHEN MMM = 'FEB' THEN MM2 = '03'                                              
+  WHEN MMM = 'MAR' THEN MM2 = '04'                                              
+  WHEN MMM = 'APR' THEN MM2 = '05'                                              
+  WHEN MMM = 'MAY' THEN MM2 = '06'                                              
+  WHEN MMM = 'JUN' THEN MM2 = '07'                                              
+  WHEN MMM = 'JUL' THEN MM2 = '08'                                              
+  WHEN MMM = 'AUG' THEN MM2 = '09'                                              
+  WHEN MMM = 'SEP' THEN MM2 = '10'                                              
+  WHEN MMM = 'OCT' THEN MM2 = '11'                                              
+  WHEN MMM = 'NOV' THEN MM2 = '12'                                              
+  WHEN MMM = 'DEC' THEN MM2 = '01'                                              
+  OTHERWISE MM2 = 'XX'                                                          
+END                                                                             
+YYYY2 = YYYY                                                                    
+IF MMM = 'DEC' THEN YYYY2 = YYYY + 1                                            
+LODATE = YYYY"-"MM"-01"                                                         
+HIDATE = YYYY2"-"MM2"-01"                                                       
+                                                                                
+XDATE = DATE('S')                                                               
+XTIME = TIME(LONG)                                                              
+DTIME = SUBSTR(XTIME,1,2) || SUBSTR(XTIME,4,2) || SUBSTR(XTIME,7,2)             
+YTIME = SUBSTR(XTIME,10,6)                                                      
+TSTAMP = XDATE || DTIME || YTIME                                                
+                                                                                
+"FREE FI(LISTOUT)"                                                              
+LISTOUT = HIGHLVL".VITAFTPS.FTPCARDS"                                           
+"DELETE '"LISTOUT"'"                                                            
+QUEUE "  166.68.137.218"                                                        
+QUEUE "  gdfops        "                                                        
+QUEUE "  gdfops1       "                                                        
+QUEUE "  CWD /VZ/opt/data/downloadrequests/ops/stage/ "                         
+QUEUE "  PUT '"HIGHLVL".VITA.REPORT1."MMMYEAR"' + "                             
+QUEUE "  2003747306.V481358."TSTAMP"."MMMYEAR"_RPT1.BILRPT.csv "                
+QUEUE "  PUT '"HIGHLVL".VITA.REPORT2."MMMYEAR"' + "                             
+QUEUE "  2003747306.V481358."TSTAMP"."MMMYEAR"_RPT2.BILRPT.csv "                
+QUEUE "  quit "                                                                 
+QUEUE                                                                           
+"ALLOC FI(LISTOUT) DA('"LISTOUT"')",                                            
+ " NEW CATALOG DATACLAS(PSFB80)",                                               
+ " LRECL(80)"                                                                   
+"EXECIO * DISKW LISTOUT (FINIS"                                                 
+"FREE FI(LISTOUT)"                                                              
+EXIT                                                                    00668001

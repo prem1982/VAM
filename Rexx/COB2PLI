@@ -1,0 +1,484 @@
+/* REXX EXEC cob2pli     v 1.0                                      */  00010000
+/* converts cobol record layout to pl1                              */  00011000
+                                                                        00012000
+arg     /* no arguments */                                              00013014
+                                                                        00014000
+trace i                                                                 00015012
+                                                                        00016000
+/* read in the cobol copylib member */                                  00017000
+"EXECIO * DISKR COBLIB (STEM cobl. FINIS)"                              00018000
+if rc^= 0                                                               00019000
+then do                                                                 00020000
+     say error reading COBLIB file                                      00030000
+     exit                                                               00040000
+     end                                                                00050000
+                                                                        00060000
+say "read in " cobl.0 " COBOL copylib statements"                       00070000
+                                                                        00080000
+pli_cnt         = 0                                                     00090000
+outpli.         = ""                                                    00100000
+                                                                        00110000
+discard_cnt     = 0                                                     00120000
+discard.        = ""                                                    00130000
+                                                                        00140000
+work_line       = ""                                                    00150000
+line_complete   = "y"                                                   00160000
+throw_away_line = "n"                                                   00160100
+first_line      = "y"                                                   00160200
+redefine_group  = "n"                                                   00160300
+current_level   = 0                                                     00160400
+this_level      = ""                                                    00160500
+num_of_levels   = 0                                                     00160600
+cobol_level.    = ""                                                    00160700
+pli_level.      = ""                                                    00160800
+                                                                        00160900
+filler_num      = 0                                                     00161000
+                                                                        00161100
+  /* main loop, process each record in the COBOL array */               00161200
+                                                                        00161300
+do i = 1 to cobl.0                                                      00161400
+                                                                        00161500
+  /*this_line = strip(substr(cobl.i,1,72))*/                            00161601
+  this_line = strip(substr(cobl.i,7,65))                                00161703
+                                                                        00161901
+  if (index(this_line,"*") = 0) & (index(this_line,"SKIP1") = 0)        00162006
+  then do                                                               00162101
+       if index(this_line,'.') > 0                                      00162201
+       then line_complete = "y"                                         00162301
+       else line_complete = "n"                                         00162401
+                                                                        00162501
+       work_line = work_line || " " || this_line                        00162601
+                                                                        00162701
+       if line_complete = "y"                                           00162801
+       then do                                                          00162901
+            /* get rid of the dot at the end */                         00163001
+            work_line = substr(work_line,1,(index(work_line,".")-1))    00163101
+                                                                        00163201
+            /* get rid of VALUE XXXXX at end */                         00163301
+            num_of_words        = words(work_line)                      00163401
+            second_to_last_word = word(work_line,num_of_words -1)       00163501
+            if strip(second_to_last_word) = 'VALUE'                     00163601
+            then do                                                     00163701
+                 value_pos = index(work_line,'VALUE')                   00163801
+                 work_line = strip(delstr(work_line,value_pos))         00163901
+                 end                                                    00164001
+                                                                        00164101
+                                                                        00164201
+            parse var work_line this_level cobol_name .                 00165000
+            this_level     = strip(this_level)                          00165100
+            cobol_name     = strip(cobol_name)                          00165200
+                                                                        00165300
+            select                                                      00165400
+            when index(work_line,"REDEFINE") > 0                        00165500
+            then do                                                     00165600
+                 redefine_group = "y"                                   00165700
+                 redefine_level = this_level                            00165800
+                 discard_cnt = discard_cnt + 1                          00165900
+                 discard.discard_cnt = work_line                        00166000
+                 end                                                    00166100
+                                                                        00166200
+            when this_level  = '88'                                     00166300
+            then do     /* throw away level 88 */                       00166400
+                 discard_cnt = discard_cnt + 1                          00166500
+                 discard.discard_cnt = work_line                        00166600
+                 end                                                    00166700
+                                                                        00166800
+            otherwise                                                   00166900
+                 do                                                     00167000
+                 call set_level                                         00167100
+                                                                        00167200
+                 if redefine_group = "y" & this_level > redefine_level  00167300
+                 then do                                                00167400
+                      discard_cnt = discard_cnt + 1                     00167500
+                      discard.discard_cnt = work_line                   00167600
+                      end                                               00167700
+                 else do                                                00167800
+                      call build_line                                   00167900
+                      redefine_group = "n"                              00168000
+                      end                                               00168100
+                 end                                                    00168200
+            end /* select */                                            00168300
+            work_line = ""                                              00168400
+            end  /* if line complete */                                 00168500
+                                                                        00168600
+       end   /* if not a comment */                                     00168700
+  else do                                                               00168800
+       discard_cnt = discard_cnt + 1                                    00168900
+       discard.discard_cnt = work_line                                  00169000
+       end                                                              00169100
+                                                                        00169200
+                                                                        00169300
+end  /* do i */                                                         00169400
+                                                                        00169500
+                                                                        00169600
+if pli_cnt > 0                                                          00169700
+then do                                                                 00169800
+     "MAKEBUF"                                                          00169900
+     "EXECIO * DISKW PLIOUT (STEM outpli. FINIS)"                       00170000
+     "DROPBUF"                                                          00170100
+     end                                                                00170200
+                                                                        00170300
+if discard_cnt > 0                                                      00170400
+then do                                                                 00170500
+     "MAKEBUF"                                                          00170600
+     "EXECIO * DISKW DISCARD (STEM discard. FINIS)"                     00170700
+     "DROPBUF"                                                          00170800
+     end                                                                00170900
+                                                                        00171000
+                                                                        00171100
+                                                                        00171200
+return                                                                  00171300
+                                                                        00171400
+/**********************************************************************/00171500
+/* set_level:                                                         */00171600
+/*                                                                    */00171700
+/**********************************************************************/00171800
+                                                                        00171900
+set_level:                                                              00172000
+                                                                        00173000
+                                                                        00174000
+ if current_level = 0                                                   00175000
+ then do  /* set the intitial level */                                  00176000
+      current_level = 1                                                 00177000
+      num_of_levels = num_of_levels + 1                                 00178000
+      if this_level = "01"                                              00179000
+      then do                                                           00180000
+           cobol_level.current_level = this_level                       00190000
+           pli_level.current_level   = this_level                       00191000
+           end                                                          00192000
+      else do                                                           00193000
+           cobol_level.current_level = this_level                       00194000
+           pli_level.current_level   = "03"                             00194100
+           end                                                          00194200
+      end                                                               00194300
+ else do                                                                00194400
+      select                                                            00194500
+                                                                        00194600
+      when this_level > cobol_level.current_level                       00194700
+      then do                                                           00194800
+           if current_level = num_of_levels                             00194900
+           then do    /* at deepest level, add another */               00195000
+                num_of_levels = num_of_levels + 1                       00196000
+                prev_level    = current_level                           00196100
+                current_level = num_of_levels                           00196200
+                cobol_level.current_level = this_level                  00196300
+                select                                                  00196400
+                when pli_level.prev_level = "01"                        00196500
+                 then pli_level.current_level = "03"                    00196600
+                when pli_level.prev_level = "03"                        00196700
+                 then pli_level.current_level = "05"                    00196800
+                when pli_level.prev_level = "05"                        00196900
+                 then pli_level.current_level = "07"                    00197000
+                when pli_level.prev_level = "07"                        00197100
+                 then pli_level.current_level = "09"                    00197200
+                when pli_level.prev_level = "09"                        00197300
+                 then pli_level.current_level = "11"                    00197400
+                when pli_level.prev_level = "11"                        00197500
+                 then pli_level.current_level = "13"                    00197600
+                when pli_level.prev_level = "13"                        00197700
+                 then pli_level.current_level = "15"                    00197800
+                when pli_level.prev_level = "15"                        00197900
+                 then pli_level.current_level = "17"                    00198000
+                when pli_level.prev_level = "17"                        00198100
+                 then pli_level.current_level = "19"                    00198200
+                otherwise                                               00198300
+                end  /* of otherwise */                                 00198400
+                end                                                     00198500
+           else do                                                      00198600
+                 do j = 1 to num_of_levels                              00198700
+                   if this_level = cobol_level.j                        00198800
+                   then                                                 00198900
+                        current_level = j                               00199000
+                 end                                                    00199100
+                end                                                     00199200
+           end                                                          00199300
+                                                                        00199400
+      when this_level < cobol_level.current_level                       00199500
+      then do                                                           00199600
+            do j = 1 to num_of_levels                                   00199700
+              if this_level = cobol_level.j                             00199800
+              then                                                      00199900
+                   current_level = j                                    00200000
+            end                                                         00200100
+           end                                                          00200200
+                                                                        00200300
+      otherwise                                                         00200400
+      end /* of select */                                               00200500
+                                                                        00200600
+      end                                                               00200700
+                                                                        00200800
+return                                                                  00200900
+                                                                        00201000
+/**********************************************************************/00202000
+/* build_line                                                         */00203000
+/*                                                                    */00204000
+/**********************************************************************/00205000
+                                                                        00206000
+build_line:                                                             00207000
+                                                                        00208000
+                                                                        00209000
+ num_words    = words(work_line)                                        00210000
+                                                                        00211000
+ if index(work_line," OCCURS ") = 0                                     00212009
+ then occurs_text = "n"                                                 00213000
+ else do                                                                00214000
+      occurs_text = "y"                                                 00215000
+      end                                                               00216000
+                                                                        00217000
+                                                                        00218000
+ token.       = ""                                                      00218100
+ total_tokens = 0                                                       00218200
+                                                                        00218300
+ do j = 3 to num_words                                                  00218400
+   total_tokens       = total_tokens + 1                                00218500
+   token.total_tokens = strip(word(work_line,j))                        00218600
+ end                                                                    00218700
+                                                                        00218800
+                                                                        00218900
+ if cobol_name = "FILLER"                                               00219000
+ then do                                                                00220000
+      filler_num = filler_num + 1                                       00220100
+      cobol_name = cobol_name || "_" || filler_num                      00220200
+      end                                                               00220300
+                                                                        00220400
+ if occurs_text = "y"                                                   00220500
+ then do                                                                00220600
+       do j = 1 to total_tokens                                         00220700
+         if token.j = "OCCURS"                                          00220800
+         then do                                                        00220900
+              k = j + 1                                                 00221000
+              occurs_times = token.k                                    00221100
+              end                                                       00221200
+       end                                                              00221300
+      total_tokens = total_tokens - 3                                   00221400
+      cobol_name = cobol_name || "(" || occurs_times || ")"             00221500
+      end                                                               00221600
+                                                                        00221700
+                                                                        00221800
+ /* change "-" in cobol_name to "_" for pli */                          00221900
+ pli_name = translate(cobol_name,'_','-')                               00222000
+                                                                        00222100
+                                                                        00222200
+ first_half     = strip(pli_level.current_level || " " || pli_name)     00222300
+                                                                        00222400
+                                                                        00222500
+ /* total_tokens should have a value of 0, 2 or 3             */        00222600
+ pli_data_format = ""                                                   00222700
+                                                                        00222800
+ if total_tokens > 0                                                    00222900
+ then call convert_data_type                                            00223000
+                                                                        00223100
+                                                                        00223200
+ call set_indent                                                        00223300
+                                                                        00223400
+ call build_padding                                                     00223500
+                                                                        00223600
+                                                                        00223700
+ pli_data_format = padding || pli_data_format                           00223800
+                                                                        00223900
+ new_pli_line   = indent || strip(first_half || pli_data_format) || "," 00224000
+                                                                        00225000
+                                                                        00225100
+                                                                        00225200
+ pli_cnt        = pli_cnt + 1                                           00225300
+ outpli.pli_cnt = new_pli_line                                          00225400
+                                                                        00225500
+                                                                        00225600
+                                                                        00225700
+return                                                                  00225800
+                                                                        00225900
+/**********************************************************************/00226000
+/* set_indent                                                         */00227000
+/*                                                                    */00228000
+/**********************************************************************/00229000
+                                                                        00230000
+set_indent:                                                             00240000
+                                                                        00250000
+                                                                        00260000
+ if pli_level.current_level = '01'                                      00270000
+ then indent = " DCL"                                                   00280000
+ else indent = "    "                                                   00290000
+                                                                        00300000
+                                                                        00310000
+ do n = 1 to current_level                                              00311000
+   indent = indent || "  "                                              00312000
+ end                                                                    00313000
+                                                                        00314000
+                                                                        00315000
+return                                                                  00316000
+                                                                        00317000
+/**********************************************************************/00318000
+/* build_padding                                                      */00319000
+/*                                                                    */00320000
+/**********************************************************************/00321000
+                                                                        00322000
+build_padding:                                                          00323000
+                                                                        00324000
+ len_1          = length(first_half) + length(indent)                   00325000
+ padding        = left(' ',49 - len_1)                                  00326000
+                                                                        00327000
+                                                                        00328000
+return                                                                  00329000
+                                                                        00330000
+/**********************************************************************/00340000
+/* convert_data_type                                                  */00350000
+/*                                                                    */00360000
+/**********************************************************************/00370000
+                                                                        00380000
+convert_data_type:                                                      00390000
+                                                                        00400000
+                                                                        00410000
+ if token.1 = 'PIC'                                                     00420000
+ then nop                                                               00430000
+ else do                                                                00440000
+      say "token.1 is not PIC - error"                                  00450000
+      say token.1                                                       00460000
+      say work_line                                                     00461000
+      exit(12)                                                          00461100
+      end                                                               00461200
+                                                                        00461300
+                                                                        00461400
+ select                                                                 00461500
+ when index(token.2,'X') > 0                                            00461600
+ then do                                                                00461700
+      /* process PIC X                       */                         00461800
+      /*         PIC X(n)                    */                         00461900
+      if length(token.2) = 1                                            00462000
+      then pli_data_format = "CHAR(1)"                                  00462100
+      else do                                                           00462200
+           parse var token.2 '(' len_1 ')' .                            00462300
+           pli_data_format = "CHAR" || "(" || len_1 || ")"              00462400
+           end                                                          00462500
+      end                                                               00462600
+                                                                        00462700
+                                                                        00462800
+ when total_tokens = 2 & index(token.2,'V') = 0                         00462900
+ then do                                                                00463000
+      /* process PIC 9(n)                    */                         00464000
+      /*         PIC S9(n)                   */                         00465000
+      if length(token.2) = 1                                            00466000
+      then pli_data_format = "PIC'9'"                                   00467000
+      else do                                                           00467100
+           parse var token.2 '(' len_1 ')' .                            00467200
+           if index(token.2,'S') > 0                                    00467300
+           then do                                                      00467400
+                nines = ""                                              00467500
+                do m = 1 to (len_1 - 1)                                 00467600
+                  nines = nines || "9"                                  00467700
+                end                                                     00467800
+                nines = nines || "T"                                    00467900
+                pli_data_format = "PIC'" || nines || "'"                00468000
+                end                                                     00468100
+           else pli_data_format = "PIC'(" || len_1 || ")9'"             00468200
+           end                                                          00468300
+                                                                        00468400
+      end                                                               00468500
+                                                                        00468600
+ when total_tokens = 2   /* and token.2 contains a "V" */               00468700
+ then do                                                                00468800
+      /*         PIC 9(n)V9(m)               */                         00468900
+      /* gl      PIC S9V9(n)                 */                         00469005
+      /*         PIC S9(n)V9(m)              */                         00469105
+      /* ds 10/3 PIC S9(n)V999nn             */                         00469205
+                                                                        00469305
+      if index(token.2,'S9V9') ^= 0                                     00469407
+      then do   /* it is s9V9(m) */                                     00469505
+           parse var token.2 '(' len_1 ')'.                             00469605
+           p_len_1 = len_1                                              00469705
+           pli_data_format = "PIC'S9V(" || p_len_1 || ")9'"             00470105
+           end                                                          00471700
+      else if index(token.2,'V99') = 0                                  00471805
+      then do   /* it is s9(n)V9(m) */                                  00471905
+           parse var token.2 '9(' len_1 ')V9(' len_2 ')' .              00472005
+           p_len_1 = len_1                                              00472105
+           if index(token.2,'S') > 0                                    00472205
+           then do                                                      00472305
+                p_len_2 = len_2 - 1                                     00472405
+                pli_data_format = "PIC'(" || p_len_1 || ")9V(",         00472505
+                        || p_len_2 || ")9T'"                            00472605
+                end                                                     00472705
+           else do                                                      00472805
+                p_len_2 = len_2                                         00472905
+                pli_data_format = "PIC'(" || p_len_1 || ")9V(",         00473005
+                          || p_len_2  || ")9'"                          00473105
+                end                                                     00473205
+           end                                                          00473305
+      else do  /* it is S9(n)V99nn */                                   00473405
+           parse var token.2 '9(' len_1 ')V' nines                      00473505
+           p_len_1 = len_1                                              00473605
+           if index(token.2,'S') > 0                                    00473705
+           then do                                                      00473805
+                p_len_2 = length(strip(nines)) - 1                      00473905
+                pli_data_format = "PIC'(" || p_len_1 || ")9V(",         00474005
+                        || p_len_2 || ")9T'"                            00474105
+                end                                                     00474205
+           else do                                                      00474305
+                p_len_2 = length(strip(nines))                          00474405
+                pli_data_format = "PIC'(" || p_len_1 || ")9V(",         00474505
+                          || p_len_2  || ")9'"                          00474605
+                end                                                     00474705
+           end                                                          00474805
+      end                                                               00474905
+                                                                        00475005
+ when total_tokens = 3 & token.3 = 'COMP-3'                             00475105
+ then do                                                                00475205
+      /* process PIC S9(n)      COMP-3       */                         00475305
+      /*         PIC S9(n)V9(m) COMP-3       */                         00475405
+      /*         PIC SV9(m)     COMP-3       */                         00475505
+      /* ds 10/3 PIC S9(n)V9999 COMP-3       */                         00475605
+      if index(token.2,'V') = 0                                         00475705
+      then do  /* it's a S9(n)  */                                      00475805
+           parse var token.2 '(' len_1 ')' .                            00475905
+           p_len_1 = len_1                                              00476005
+           p_len_2 = 0                                                  00476105
+           end                                                          00476205
+      else do                                                           00476305
+           if index(token.2,')V') > 0                                   00476405
+           then do                                                      00476505
+                if index(token.2,'V99') = 0                             00476605
+                then do                                                 00476705
+                     /* it's a S9(n)V9(m)  */                           00476805
+                     parse var token.2 'S9(' len_1 ')V9(' len_2 ')' .   00476905
+                     p_len_1 = len_1 + len_2                            00477005
+                     p_len_2 = len_2                                    00477105
+                     end                                                00477205
+                else do                                                 00477305
+                     /* it is a S9(n)V99nn */                           00477405
+                     nines_cnt = 0                                      00477505
+                     parse var token.2 'S9(' len_1 ')V' nines           00477605
+                     len_2 = strip(length(nines))                       00477705
+                     p_len_1 = len_1 + len_2                            00477805
+                     p_len_2 = len_2                                    00477905
+                     end                                                00478005
+                end                                                     00478105
+           else do                                                      00478205
+                /* it's a SV9(m)      */                                00478305
+                parse var token.2 '(' len_2 ')' .                       00478405
+                p_len_1 = len_2                                         00478505
+                p_len_2 = len_2                                         00478605
+                end                                                     00478705
+           end                                                          00478805
+      pli_data_format = "FIXED DEC(" || p_len_1 || ",",                 00478905
+                                                  || p_len_2 || ")"     00479005
+      end                                                               00479105
+                                                                        00479205
+ when total_tokens = 3 & token.3 = 'COMP'                               00479305
+ then do                                                                00479405
+      parse var token.2 '(' len_1 ')' .                                 00479505
+      if len_1 > '4'                                                    00479605
+      then pli_data_format = 'FIXED BIN(31)'                            00479705
+      else pli_data_format = 'FIXED BIN(15)'                            00479805
+      end                                                               00479905
+                                                                        00480005
+ otherwise                                                              00480105
+      do                                                                00480205
+      say "can not decode the following" || token.1 || " " || token.2,  00480305
+            || " " || token.3                                           00480405
+      pli_data_format = token.1 || " " || token.2 || " " || token.3     00480505
+      end                                                               00480605
+ end /* of select */                                                    00480705
+                                                                        00480805
+                                                                        00480905
+                                                                        00481005
+                                                                        00482005
+return                                                                  00490005

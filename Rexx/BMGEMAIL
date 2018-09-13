@@ -1,0 +1,249 @@
+/******************************* REXX *********************************/        
+/* REXX EXEC BMGEMAIL    v 1.0                                        */        
+/******************************* REXX *********************************/        
+                                                                                
+ARG .                /* no arguments */                                         
+                                                                                
+ trace o                                                                        
+ more         = 'Y'                                                             
+ timestamp    = ''                                                              
+                                                                                
+ ZBUSINe.     = ''                                                              
+ bytesize.    = ''                                                              
+ xmitcrd.     = ''                                                              
+ email.       = ''                                                              
+                                                                                
+ i = 0                                                                          
+                                                                                
+ xmitcrd_cnt           = 0                                                      
+ num_of_files          = 0                                                      
+ previous_contract_id  = ''                                                     
+                                                                                
+                                                                                
+ dataclass    = 'PSVB'                                                          
+ mgmtclass    = 'NOBK35'                                                        
+ end_ds       = '.D' || substr(date('S'),3) || '.T' || time('S')                
+ dataset      = 'V275365.ZBUS.REPORT' || end_ds                                 
+ addrlist     = 'V275365.ZBUS.ADDRLST' || end_ds                                
+ say 'datasets will begin: ' dataset                                            
+ say 'email addresses    : ' addrlist                                           
+                                                                                
+"EXECIO * DISKR EMAIL (STEM email.)"                                            
+if RC ^= 0                                                                      
+then do                                                                         
+     say error reading EMAIL file                                               
+     exit 12                                                                    
+     end                                                                        
+                                                                                
+do i = 1 to email.0                                                             
+  parse var email.i contct cont_type rest                                       
+  contract.i    = strip(contct)                                                 
+  addresses.i   = rest                                                          
+end                                                                             
+                                                                                
+                                                                                
+"EXECIO 1 DISKR ZBUSIN (STEM ZBUSINe.)"                                         
+if RC ^= 0                                                                      
+then do                                                                         
+     say error reading ZBUSIN file                                              
+     if rc = 2                                                                  
+     then do                                                                    
+          say rc                                                                
+          say Empty input file                                                  
+          exit 0                                                                
+          end                                                                   
+     exit 12                                                                    
+     end                                                                        
+                                                                                
+/* main loop, process each record in the ZBUSIN array */                        
+                                                                                
+do while (more = 'Y')                                                           
+                                                                                
+  /* looking for '*****CONTRACT in position 1 of the file */                    
+  /* this indicates the logical start of a file. */                             
+  /* Extract the contract name                   */                             
+                                                                                
+  if substr(ZBUSINe.1,1,14) = '*****CONTRACT:'                                  
+  then do                                                                       
+       /* see if the contract has changed */                                    
+       contract_name = substr(ZBUSINe.1,15,30)                                  
+       contract_name = strip(contract_name)                                     
+                                                                                
+       if pos(',',contract_name) > 0                                            
+       then do                                                                  
+       contract_id = substr(contract_name,1,pos(',',contract_name)-1)           
+            end                                                                 
+       else do                                                                  
+            contract_id = contract_name                                         
+            end                                                                 
+                                                                                
+       say "contract line found:" contract_name                                 
+       say "contract Id        :" contract_id                                   
+                                                                                
+       if num_of_files > 0 & previous_contract_id ^= contract_id                
+       then do                                                                  
+            /* close the previous file */                                       
+            "EXECIO 0 DISKW SPLIT (FINIS)"                                      
+            ADDRESS TSO "FREE F(SPLIT)"                                         
+            end                                                                 
+                                                                                
+       if previous_contract_id ^= contract_id                                   
+       then do                                                                  
+            say "allocating new file for contract:" contract_id                 
+            num_of_files = num_of_files + 1                                     
+            previous_contract_id = contract_id                                  
+                                                                                
+            dsname = dataset || '.' || contract_id                              
+            say 'this dataset name is ' dsname                                  
+            subject = 'ZBUS report for contract:' || contract_id                
+                                                                                
+            ADDRESS TSO "LISTCAT ENT('"dsname"')"                               
+            IF RC = 0                                                           
+            then do                                                             
+                 ADDRESS TSO "ALLOC F(SPLIT) DA('"dsname"') REUSE OLD"          
+                 END                                                            
+            ELSE DO                                                             
+                 ADDRESS TSO "ALLOC F(SPLIT) DA('"dsname"')",                   
+                 "mgmtclas(NOBK35) lrecl(132) dataclas(PSFB137)",               
+                 " CYLINDERS SPACE(1,1) NEW"                                    
+                 END;                                                           
+            call write_xmit_cards                                               
+            end                                                                 
+       end                                                                      
+                                                                                
+  if num_of_files > 0                                                           
+  then do                                                                       
+       "EXECIO 1 DISKW SPLIT (STEM ZBUSINe.)"                                   
+       end                                                                      
+                                                                                
+  "EXECIO 1 DISKR ZBUSIN (STEM ZBUSINe.)"                                       
+                                                                                
+  if rc ^= 0                                                                    
+  then more = 'N'                                                               
+                                                                                
+end  /* do i */                                                                 
+                                                                                
+if num_of_files > 0                                                             
+then do                                                                         
+   "EXECIO 0 DISKW SPLIT (FINIS)"                                               
+   ADDRESS TSO "FREE FI(SPLIT)"                                                 
+    end                                                                         
+                                                                                
+/* write the stacked up xmit cards */                                           
+                                                                                
+if xmitcrd_cnt > 0                                                              
+then do                                                                         
+     "MAKEBUF"                                                                  
+     "EXECIO * DISKW xmitcrd (STEM xmitcrd. FINIS)"                             
+     "DROPBUF"                                                                  
+     end                                                                        
+                                                                                
+                                                                                
+return                                                                          
+                                                                                
+                                                                                
+ /*********************************************************************/        
+ /* NAME:     write_xmit_cards                                        */        
+ /*                                                                   */        
+ /* FUNCTION: Stores the information necessary to XMIT each of the    */        
+ /*           split files to a buffer.                                */        
+ /*********************************************************************/        
+ write_xmit_cards:                                                              
+                                                                                
+   email_dsname = addrlist || '.' || contract_id                                
+   emailcrd.    = ''                                                            
+   emailcrd_cnt = 0                                                             
+   say 'this dataset name is ' dsname                                           
+   ADDRESS TSO "ALLOC F(ADDRF) DA('"email_dsname"')",                           
+       "mgmtclas(NOBK35) lrecl(80) dataclas(PSFB80)",                           
+       " TRACKS SPACE(1,1) NEW"                                                 
+   found = 'N'                                                                  
+   do i = 1 to email.0                                                          
+      if contract_id = contract.i                                               
+      then do                                                                   
+           say "found this contract " contract_id " in the array"               
+           found = 'Y'                                                          
+           do j = 1 to words(addresses.i)                                       
+             email_address = word(addresses.i,j)                                
+             say "Address " j " is " email_address                              
+             emailcrd_cnt = emailcrd_cnt + 1                                    
+             emailcrd.emailcrd_cnt = "TO "email_address                         
+           end                                                                  
+           end                                                                  
+   end                                                                          
+   if found = 'N'                                                               
+   then do                                                                      
+        say "did not find contract:" contract_id                                
+        email_address = 'derek.strachan@verizon.com'                            
+        emailcrd_cnt = emailcrd_cnt + 1                                         
+        emailcrd.emailcrd_cnt = "TO "email_address                              
+        end                                                                     
+                                                                                
+   if emailcrd_cnt > 0                                                          
+   then do                                                                      
+        "MAKEBUF"                                                               
+        "EXECIO * DISKW ADDRF (STEM emailcrd. FINIS)"                           
+        "DROPBUF"                                                               
+        end                                                                     
+                                                                                
+   ADDRESS TSO "FREE FI(ADDRF)"                                                 
+                                                                                
+                                                                                
+                                                                                
+     /* ALLOC           */                                                      
+     xmitcrd_cnt = xmitcrd_cnt + 1                                              
+     xmitcrd.xmitcrd_cnt = "ALLOC F(REPORT) DA('"dsname"') SHR"                 
+                                                                                
+     /* ALLOC           */                                                      
+     xmitcrd_cnt = xmitcrd_cnt + 1                                              
+     xmitcrd.xmitcrd_cnt = "ALLOC F(EMAILDD) DA('"email_dsname"') SHR"          
+                                                                                
+     /* REXX            */                                                      
+     xmitcrd_cnt = xmitcrd_cnt + 1                                              
+     xmitcrd.xmitcrd_cnt = "%XMITIP *  +"                                       
+                                                                                
+     /* subject         */                                                      
+     xmitcrd_cnt = xmitcrd_cnt + 1                                              
+     xmitcrd.xmitcrd_cnt = "AddressFileDD EMAILDD   +"                          
+                                                                                
+     /* subject         */                                                      
+     xmitcrd_cnt = xmitcrd_cnt + 1                                              
+     xmitcrd.xmitcrd_cnt = "SUBJECT '"subject"'     +"                          
+                                                                                
+     /* FROM            */                                                      
+     xmitcrd_cnt = xmitcrd_cnt + 1                                              
+     xmitcrd.xmitcrd_cnt = 'FROM "VAM" <DO.NOT.REPLY@VERIZON> +'                
+                                                                                
+     /* NOMSG           */                                                      
+     xmitcrd_cnt = xmitcrd_cnt + 1                                              
+     xmitcrd.xmitcrd_cnt = "NOMSG                  +"                           
+                                                                                
+     /* FILEDD          */                                                      
+     xmitcrd_cnt = xmitcrd_cnt + 1                                              
+     xmitcrd.xmitcrd_cnt = "FILEDD (REPORT)          +"                         
+                                                                                
+     rqts = contract_id || date('S') || time('S')                               
+                                                                                
+     /* FILENAME        */                                                      
+     xmitcrd_cnt = xmitcrd_cnt + 1                                              
+     xmitcrd.xmitcrd_cnt = "FILENAME "rqts".TXT      +"                         
+                                                                                
+     /* format          */                                                      
+     xmitcrd_cnt = xmitcrd_cnt + 1                                              
+     xmitcrd.xmitcrd_cnt = "FORMAT TXT/TXT           +"                         
+                                                                                
+     /* margin          */                                                      
+     xmitcrd_cnt = xmitcrd_cnt + 1                                              
+     xmitcrd.xmitcrd_cnt = "MARGIN 0.50/0.25/0.50/0.50"                         
+                                                                                
+     /* free            */                                                      
+     xmitcrd_cnt = xmitcrd_cnt + 1                                              
+     xmitcrd.xmitcrd_cnt = "FREE F(REPORT)"                                     
+                                                                                
+     /* free            */                                                      
+     xmitcrd_cnt = xmitcrd_cnt + 1                                              
+     xmitcrd.xmitcrd_cnt = "FREE F(EMAILDD)"                                    
+                                                                                
+                                                                                
+ return                                                                         
+                                                                                

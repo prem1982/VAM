@@ -1,0 +1,17 @@
+/*SCRSPLIT: REXX */                                                             
+ARG BMGNS0PN CYCINFO CUSTNO CONFIGNO                                            
+"DELETE (",                                                                     
+        "'"BMGNS0PN"."CYCINFO"."CUSTNO"."CONFIGNO".CMT1'",                      
+        "'"BMGNS0PN"."CYCINFO"."CUSTNO"."CONFIGNO".CMT2'",                      
+        "'"BMGNS0PN"."CYCINFO"."CUSTNO"."CONFIGNO".CMT3'",                      
+        "'"BMGNS0PN"."CYCINFO"."CUSTNO"."CONFIGNO".CMT4'",                      
+        "'"BMGNS0PN"."CYCINFO"."CUSTNO"."CONFIGNO".CMT5'",                      
+        "'"BMGNS0PN"."CYCINFO"."CUSTNO"."CONFIGNO".CMT6'",                      
+        "'"BMGNS0PN"."CYCINFO"."CUSTNO"."CONFIGNO".TEXT450'",                   
+        "'"BMGNS0PN"."CYCINFO"."CUSTNO"."CONFIGNO".MTOTHERS'",                  
+        "'"BMGNS0PN"."CYCINFO"."CUSTNO"."CONFIGNO".MT65RECS'",                  
+        "'"BMGNS0PN"."CYCINFO"."CUSTNO"."CONFIGNO".MT65RECS.X'",                
+        "'"BMGNS0PN"."CYCINFO"."CUSTNO"."CONFIGNO".MT70RECS'",                  
+        "'"BMGNS0PN"."CYCINFO"."CUSTNO"."CONFIGNO".MT70RECS.X'",                
+        "'"BMGNS0PN"."CYCINFO"."CUSTNO"."CONFIGNO".MAINFILE'",                  
+        ")"                                                                     

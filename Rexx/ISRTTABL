@@ -1,0 +1,169 @@
+/*REXX ISRTTABL:REXX TO LOAD MASTER_ACCT_TEMP_T TABLE*/                 00010000
+ARG TBLSPACE                                                            00020001
+CALL GETNAMEL TBLSPACE                                                  00030001
+TBLNAME = RESULT                                                        00040001
+SIGNAL ON ERROR NAME BADDIES /* ROUTINE FOR EXTERNAL ERRORS */          00050000
+SIGNAL ON SYNTAX NAME CRAPCODE /* ROUTINE FOR CODE ERRORS */            00060000
+MSGS = MSG(ON) /* TSO/E MESSAGE SWITCH  - C.F. CONTROL MSG IN CLIST */  00070000
+SSID = 'D001'                                                           00080000
+TBL_PREFIX = 'BMGVZT'                                                   00090000
+/****** READ THE DMPLIST DD INTO MEMORY USING STEM DMPREC ******/       00100000
+ADDRESS TSO                                                             00110000
+"EXECIO * DISKR LOADFILE (STEM DMPREC. FINIS"                           00120001
+"EXECIO * DISKR ISRTDEFN (STEM ISRTDF. FINIS"                           00130001
+PROC_CT = 0                                                             00140000
+/****** ESTABLISH THE DB2 CONNECTION ******/                            00150000
+SIGNAL OFF ERROR /* TURN ERROR-TRAPPING OFF */                          00160000
+"SUBCOM DSNREXX"                                                        00170000
+SIGNAL ON ERROR NAME BADDIES /* ROUTINE FOR EXTERNAL ERRORS */          00180000
+IF RC THEN                                                              00190000
+   S_RC = RXSUBCOM('ADD','DSNREXX','DSNREXX')                           00200000
+                                                                        00210000
+ADDRESS DSNREXX "CONNECT D001"                                          00220002
+IF SQLCODE ^= 0 THEN CALL SQLCA                                         00230000
+                                                                        00240000
+/****** INSERT EACH DUMP RECORD INTO TABLE ******/                      00250000
+SIGNAL OFF ERROR                                                        00260000
+DO TX = 1 TO DMPREC.0                                                   00270000
+   SQLSTR = 'INSERT INTO 'TBL_PREFIX'.'TBLNAME' ('                      00280001
+   VALSTR = 'VALUES ('                                                  00290001
+   DO CLX = 1 TO ISRTDF.0                                               00300001
+      COLNAME = SUBSTR(ISRTDF.CLX,1,18)                                 00310001
+      FROMFMT = SUBSTR(ISRTDF.CLX,19,18)                                00320005
+      TOFMT   = SUBSTR(ISRTDF.CLX,37,8)                                 00330001
+      POS     = SUBSTR(ISRTDF.CLX,45,4)                                 00340001
+      LNG     = SUBSTR(ISRTDF.CLX,49,4)                                 00350001
+      SCALE   = SUBSTR(ISRTDF.CLX,53,4)                                 00360001
+      IF CLX > 1 THEN                                                   00370001
+         DO                                                             00380001
+           SQLSTR = SQLSTR','                                           00390001
+           VALSTR = VALSTR','                                           00400001
+         END                                                            00410001
+      SQLSTR = SQLSTR||COLNAME                                          00420001
+      WK_VAL = SUBSTR(DMPREC.TX,POS,LNG)                                00421001
+      IF FROMFMT = 'CHAR' THEN                                          00422010
+           DO                                                           00422110
+              WKCHAR = ''                                               00422210
+              DO BYT = 1 TO LENGTH(WK_VAL)                              00422310
+                 IF SUBSTR(WK_VAL,BYT,1) = X2C(7D) THEN                 00422511
+                    DO                                                  00422610
+                       WKCHAR = WKCHAR'*'                               00422710
+                    END                                                 00422810
+                 ELSE                                                   00422910
+                    DO                                                  00423010
+                       WKCHAR = WKCHAR||SUBSTR(WK_VAL,BYT,1)            00423110
+                    END                                                 00423210
+              END                                                       00423310
+              IF WK_VAL ^= WKCHAR THEN                                  00423410
+                 DO                                                     00423510
+                    SAY 'CHANGING 'WK_VAL' TO 'WKCHAR                   00423610
+                 END                                                    00423710
+              WK_VAL = WKCHAR                                           00423810
+           END                                                          00423910
+      IF FROMFMT = 'INTEGER' THEN WK_VAL = C2D(WK_VAL)                  00424010
+      IF FROMFMT = 'SMALLINT' THEN WK_VAL = C2D(WK_VAL)                 00424110
+      IF FROMFMT = 'DECIMAL'  THEN                                      00424210
+           DO                                                           00424310
+              PACKNUM = C2X(WK_VAL)                                     00424410
+              LNGX = LENGTH(PACKNUM)                                    00424510
+              WKSGN  = SUBSTR(PACKNUM,LNGX,1)                           00424610
+              LNGX = LNGX - 1                                           00424710
+              WK_VAL = SUBSTR(PACKNUM,1,LNGX)                           00424810
+              IF WKSGN = 'D' THEN WK_VAL = '-'||WK_VAL                  00424910
+           END                                                          00425010
+      IF FROMFMT = 'DECIMAL ZONED'  THEN                                00425110
+           DO                                                           00425210
+              WKSGN = ''                                                00425301
+              LNGX = LENGTH(WK_VAL)                                     00425401
+              PACKCHK = C2X(SUBSTR(WK_VAL,LNGX,1))                      00425501
+              IF SUBSTR(PACKCHK,1,1) = 'D' THEN WKSGN = '-'             00425601
+              IF SUBSTR(PACKCHK,1,1) = 'C' THEN WKSGN = '+'             00425701
+              IF WKSGN ^= '' THEN                                       00425801
+                 DO                                                     00425901
+                    LNGX = LNGX - 1                                     00426001
+                    WK_VAL = SUBSTR(WK_VAL,1,LNGX)                      00426101
+                    WK_VAL = WKSGN||WK_VAL||SUBSTR(PACKCHK,2,1)         00426207
+                 END                                                    00426301
+           END                                                          00426401
+      IF SCALE ^= 0 THEN                                                00426501
+           DO                                                           00426601
+              BEGX = LENGTH(WK_VAL) + 1 - SCALE                         00426701
+              LNGX = BEGX - 1                                           00426801
+              WKWHL = SUBSTR(WK_VAL,1,LNGX)                             00426901
+              WKDEC  = SUBSTR(WK_VAL,BEGX,SCALE)                        00427001
+              WK_VAL = WKWHL'.'WKDEC                                    00427101
+           END                                                          00427201
+      SELECT                                                            00427301
+         WHEN TOFMT = 'SMALLINT' THEN SQLVAL = WK_VAL                   00427401
+         WHEN TOFMT = 'INTEGER'  THEN SQLVAL = WK_VAL                   00427501
+         WHEN TOFMT = 'DECIMAL'  THEN SQLVAL = WK_VAL                   00427601
+         OTHERWISE                                                      00427701
+              SQLVAL = X2C(7D)||WK_VAL||X2C(7D)                         00427803
+      END                                                               00427901
+      VALSTR = VALSTR||SQLVAL                                           00428001
+   END                                                                  00430001
+   SQLSTR = SQLSTR')'                                                   00440001
+   VALSTR = VALSTR')'                                                   00450001
+   CALL ISRT1ROW SQLSTR' 'VALSTR                                        00460001
+   PROC_CT = PROC_CT + 1                                                00470001
+END                                                                     00500000
+                                                                        00510000
+SAY 'TOTAL ROWS INSERTED=' PROC_CT                                      00520000
+                                                                        00530000
+ADDRESS DSNREXX "DISCONNECT"                                            00540000
+IF SQLCODE ^= 0 THEN CALL SQLCA                                         00550000
+EXIT                                                                    00560000
+                                                                        00570000
+/************* INSERT 1 ROW PROCEDURE ********/                         00580000
+ISRT1ROW: PROCEDURE                                                     00590000
+ARG SQLSTRING                                                           00600001
+ADDRESS DSNREXX "EXECSQL "SQLSTRING                                     00610009
+IF SQLCODE ^= 0 THEN                                                    00740009
+   DO                                                                   00740112
+      IF SQLCODE ^= -803 THEN                                           00740212
+         DO                                                             00740312
+            SAY 'ERROR ON SQL STATEMENT='SQLSTRING                      00740412
+            CALL SQLCA                                                  00741012
+         END                                                            00742012
+   END                                                                  00743012
+ADDRESS DSNREXX "EXECSQL COMMIT"                                        00750000
+RETURN 0                                                                00760000
+/************* SQL ERROR ROUTINE *************/                         00770000
+SQLCA:                                                                  00780000
+  SAY "SQLSTATE =" SQLSTATE                                             00790000
+  SAY "SQLWARN =" SQLWARN.0",",                                         00800000
+              || SQLWARN.1",",                                          00810000
+              || SQLWARN.2",",                                          00820000
+              || SQLWARN.3",",                                          00830000
+              || SQLWARN.4",",                                          00840000
+              || SQLWARN.5",",                                          00850000
+              || SQLWARN.6",",                                          00860000
+              || SQLWARN.7",",                                          00870000
+              || SQLWARN.8",",                                          00880000
+              || SQLWARN.9",",                                          00890000
+              || SQLWARN.10""                                           00900000
+  SAY "SQLERRD =" SQLERRD.1",",                                         00910000
+              || SQLERRD.2",",                                          00920000
+              || SQLERRD.3",",                                          00930000
+              || SQLERRD.4",",                                          00940000
+              || SQLERRD.5",",                                          00950000
+              || SQLERRD.6                                              00960000
+  SAY "SQLERRP  =" SQLERRP                                              00970000
+  SAY "SQLERRMC =" SQLERRMC                                             00980000
+  SAY "SQLCODE  =" SQLCODE                                              00990000
+  EXIT 20                                                               01000000
+                                                                        01010000
+/************* SYNTAX ERROR HANDLER **********/                         01020000
+CRAPCODE:                                                               01030000
+SAY 'YOU HAVE CRAP CODE AT LINE' SIGL                                   01040000
+SAY SOURCELINE(SIGL)                                                    01050000
+SAY 'REXX GAVE A RETURN CODE OF' RC ', WHICH MEANS :'                   01060000
+SAY ERRORTEXT(RC)                                                       01070000
+EXIT                                                                    01080000
+                                                                        01090000
+/************* EXTERNAL ERROR HANDLER **********/                       01100000
+BADDIES:                                                                01110000
+SAY 'YOU HAVE BEEN LET DOWN BY FACTORS BEYOND YOUR CONTROL AT LINE' SIGL01120000
+SAY SOURCELINE(SIGL)                                                    01130000
+SAY 'RC =' RC                                                           01140000
+EXIT                                                                    01150000

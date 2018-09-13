@@ -1,0 +1,132 @@
+/* rexx */                                                              00010000
+/*===================================================================== 00020000
+This program ("exec") creates DCLGEN cards; originally developed for    00030000
+BMG LoB Detail Staging tables.                                          00040000
+                                                                        00050000
+THINGS TO DO                                                            00060000
+-Debug parameter.                                                       00070000
+=====================================================================*/ 00080000
+/*trace r                                                               00081000
+*/                                                                      00082000
+signal on error name baddies /* Routine for external errors */          00083000
+signal on syntax name crapcode /* Routine for code errors */            00084000
+                                                                        00085000
+msgs = msg(on) /* TSO/E message switch  - c.f. CONTROL MSG in CLIST */  00086000
+                                                                        00087000
+/*--------------------------------------------------------------------- 00088000
+Initialise                                                              00089000
+---------------------------------------------------------------------*/ 00090000
+/* Input member-to-table-name cross-reference listing */                00091000
+/*memlist_dsn = "DCLGENB1.UM011002.DATA"                                00092000
+*/                                                                      00093000
+memlist_dsn = "DCLGENB1.V3R2.DATA"                                      00094000
+                                                                        00095000
+/* Output DCLGEN library */                                             00096000
+/*                                                                      00097000
+dclgen_dsn = "DA8MWVD.DCLGENR1.COPYCOB"                                 00098000
+                                                                        00099000
+dclgen_dsn = "DA8MWVD.DCLGENB1.COPYCOB"                                 00100000
+*/                                                                      00110000
+dclgen_dsn = "BMGVZ0CN.UNIT.COPYCOB"                                    00120000
+                                                                        00130000
+/* Output DCLGEN card forms */                                          00140000
+dclgen_card.1 = "DCLGEN TABLE("                                         00150000
+dclgen_card.2 = "" /* Table name */                                     00160000
+dclgen_card.3 = ") "                                                    00170000
+dclgen_card.4 = "LIBRARY('"                                             00180000
+/* Output library name (fully qualified, unquoted) */                   00190000
+dclgen_card.5 = dclgen_dsn                                              00200000
+dclgen_card.6 = "("                                                     00210000
+dclgen_card.7 = "" /* Output member name */                             00220000
+dclgen_card.8 = ")') "                                                  00230000
+dclgen_card.9 = "ACTION(REPLACE) "                                      00240000
+dclgen_card.10 = "LANGUAGE(COBOL) "                                     00250000
+dclgen_card.11 = "NAMES("                                               00260000
+dclgen_card.12 = "" /* Column name prefix (= member name) */            00270000
+dclgen_card.13 = "-)"                                                   00280000
+dclgen_card.14 = "APOST "                                               00290000
+dclgen_card.15 = "LABEL(NO) "                                           00300000
+dclgen_card.16 = "COLSUFFIX(YES)"                                       00310000
+dclgen_card.0 = 16                                                      00320000
+                                                                        00330000
+/*--------------------------------------------------------------------- 00340000
+Read the cross-reference records                                        00350000
+---------------------------------------------------------------------*/ 00360000
+address tso                                                             00370000
+                                                                        00380000
+"alloc f(memlist) da("memlist_dsn") shr reu"                            00390000
+                                                                        00400000
+"execio * diskr memlist (stem member. finis"                            00410000
+                                                                        00420000
+"free f(memlist)"                                                       00430000
+                                                                        00440000
+/* Last statement on stack first */                                     00450000
+push "END"                                                              00460000
+                                                                        00470000
+proc_ct = 0                                                             00480000
+                                                                        00490000
+/* Process each DDL member to build DLCGEN cards */                     00500000
+do mx = member.0 to 1 by -1                                             00510000
+   /* Call member processing sub-routine */                             00520000
+   call process1                                                        00530000
+   say dclgen_card.7 ':' result                                         00540000
+end /* do mx = 1 to member.0*/                                          00550000
+                                                                        00560000
+say 'Total members processed : ' proc_ct                                00570000
+                                                                        00580000
+/* Invoke DB2 to process the DCLGEN cards */                            00590000
+"DSN SYSTEM(D001)"                                                      00600000
+                                                                        00610000
+/*--------------------------------------------------------------------- 00620000
+End of main program                                                     00630000
+---------------------------------------------------------------------*/ 00640000
+exit                                                                    00650000
+                                                                        00660000
+/*--------------------------------------------------------------------- 00670000
+DDL member processing                                                   00680000
+---------------------------------------------------------------------*/ 00690000
+process1: PROCEDURE expose mx member. dclgen_card. proc_ct              00700000
+/* Receive arguments "No we don't!" "Oh yes we do!" "Oh no we don't!"*/ 00710000
+                                                                        00720000
+address tso                                                             00730000
+                                                                        00740000
+/*--------------------------------------------------------------------- 00750000
+Read member name and cross-referenced table name from each record       00760000
+---------------------------------------------------------------------*/ 00770000
+dclgen_card.2 = word(member.mx,2)                                       00780000
+dclgen_card.7 = word(member.mx,1)                                       00790000
+dclgen_card.12 = dclgen_card.7                                          00800000
+                                                                        00810000
+SELECT                                                                  00820000
+WHEN (dclgen_card.7 = 'CITEMCLT') then                                  00830000
+   /* Skip cos' Cons. Item. Calls is Eric's baby... */                  00840000
+   return 4                                                             00850000
+OTHERWISE                                                               00860000
+   proc_ct = proc_ct + 1                                                00870000
+END                                                                     00880000
+                                                                        00890000
+/* Build the DCLGEN statement from the control card fragments */        00900000
+dclgen_rec = ""                                                         00910000
+                                                                        00920000
+do ix = 1 to dclgen_card.0                                              00930000
+   dclgen_rec = dclgen_rec || dclgen_card.ix                            00940000
+end                                                                     00950000
+                                                                        00960000
+push dclgen_rec                                                         00970000
+/*--------------------------------------------------------------------- 00980000
+End of PROCESS1 sub-routine                                             00990000
+---------------------------------------------------------------------*/ 01000000
+return 0                                                                01010000
+                                                                        01020000
+crapcode: /* Syntax error-handling routine */                           01030000
+say 'You have crap code at line' sigl                                   01040000
+say sourceline(sigl)                                                    01050000
+say 'REXX gave a return code of' rc ', which means :'                   01060000
+say errortext(rc)                                                       01070000
+EXIT /* End of syntax error-handling routine */                         01080000
+                                                                        01090000
+baddies: /* External error. "Not my fault, guv, honest!" */             01100000
+say 'You have been let down by factors beyond your control at line' sigl01110000
+say sourceline(sigl)                                                    01120000
+say 'RC =' rc                                                           01130000
+EXIT /* End of code error-handling routine */                           01140000

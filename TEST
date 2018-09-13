@@ -1,0 +1,32 @@
+       SELECT 25 AS RECORD_NBR                                                  
+             ,TB1.ABAN                                                          
+             ,TB2A.TEXT_STRING                                                  
+             ,COALESCE(TB2B.TEXT_STRING,' ') AS TEXT_STRING2                    
+         FROM BMGVZP.CURR_CHAR_T TB1                                            
+         INNER JOIN BMGVZP.REF_TEXT_T TB2A                                      
+               ON TB1.TEXT1_SEQ_NBR = TB2A.TEXT_SEQ_NBR                         
+         LEFT OUTER JOIN BMGVZP.REF_TEXT_T TB2B                                 
+               ON TB1.TEXT2_SEQ_NBR = TB2B.TEXT_SEQ_NBR                         
+        WHERE TB1.MAN = 'H1NH7L'                                                
+          AND TB1.MAN_BILL_DATE = '2012-08-01'                                  
+          AND TB1.ORIG_SYSTEM_ID = 'VW'                                         
+--        AND TB1.ABAN = 'MJ04246561'                                           
+       UNION ALL                                                                
+       SELECT 25 AS RECORD_NBR                                                  
+             ,TB1.ABAN                                                          
+             ,TB2A.TEXT_STRING                                                  
+             ,COALESCE(TB2B.TEXT_STRING,' ') AS TEXT_STRING2                    
+         FROM BMGVZP.CURR_CHAR_T TB1                                            
+         INNER JOIN BMGVZP.ADDL_TEXT_T TB2                                      
+         ON TB1.MAN = TB2.MAN                                                   
+         AND TB1.MAN_BILL_DATE = TB2.MAN_BILL_DATE                              
+         AND TB1.ORIG_SYSTEM_ID = TB2.ORIG_SYSTEM_ID                            
+         AND TB1.VZ450_SEQ_NBR = TB2.BASE_SEQ_NBR                               
+         INNER JOIN BMGVZP.REF_TEXT_T TB2A                                      
+               ON TB2.TEXT1_SEQ_NBR = TB2A.TEXT_SEQ_NBR                         
+         LEFT OUTER JOIN BMGVZP.REF_TEXT_T TB2B                                 
+               ON TB2.TEXT2_SEQ_NBR = TB2B.TEXT_SEQ_NBR                         
+        WHERE TB1.MAN = 'H1NH7L'                                                
+          AND TB1.MAN_BILL_DATE = '2012-08-01'                                  
+          AND TB1.ORIG_SYSTEM_ID = 'VW'                                         
+--        AND TB1.ABAN = 'MJ04246561'                                           

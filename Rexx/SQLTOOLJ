@@ -1,0 +1,35 @@
+//SQLTOOLJ JOB (T,JZDD,JKSD0033),'SQL TOOL JCL',                        00001009
+//  REGION=0K,CLASS=Q,MSGCLASS=Z,NOTIFY=&SYSUID                         00001100
+/*JOBPARM SYSAFF=200E                                                   00001200
+//****************************************************************      00001300
+//MYPROCS  JCLLIB ORDER=(BMGVZ0CN.UNIT.PROCLIB)                         00001400
+//**********************************************************            00001500
+//REXX     EXEC PGM=IKJEFT01,REGION=1500K                               00001600
+//*        PARM=('&REXXNAME &PARMS')                                    00001700
+//STEPLIB  DD DSN=DSND001.SDSNLOAD,DISP=SHR                             00001800
+//         DD DSN=DSND001.SDSNEXIT,DISP=SHR                             00001900
+//SYSPROC  DD DSN=V657305.REXX.EXEC,DISP=SHR                            00002300
+//** CHANGE ONLY THE WHERE CLAUSE AS PER YOUR NEEDS                     00002409
+//IBRSFILE DD *                                                         00002500
+  SELECT PAGE_ID , RESULTSET_ID , SQL_TYPE , REF_NAME ,                 00002600
+  SQL_TEXT FROM BMGVZT.IBRS_SQL                                         00002709
+  WHERE PAGE_ID > 1                                                     00002809
+//** CHANGE ONLY THE WHERE CLAUSE AS PER YOUR NEEDS                     00002909
+//RPTFILE  DD *                                                         00003006
+  SELECT SQL_NO , SQL_TEXT                                              00003107
+  FROM BMGVZT.REPORT_SQL                                                00003207
+//** CHANGE ONLY THE WHERE CLAUSE AS PER YOUR NEEDS                     00003309
+//ADJFILE  DD *                                                         00003406
+  SELECT PAGE_ID , SQL_ID ,                                             00003507
+  SQL_TEXT FROM BMGVZT.IBRS_ADJ_SQL                                     00003608
+//** 1ST PARM - PROGRAM NAME - DO NOT CHANGE IT                         00003709
+//** 2ND PARM - DB2 SYS ID                                              00003809
+//** 3RD PARM - EXISTING PDS NAME                                       00003909
+//SYSTSIN  DD *                                                         00004009
+ SQLTOOL                                                                00004109
+ D001                                                                   00004209
+ BMGVZ0CN.D001.ALLSQLS                                                  00004310
+//SYSPRINT DD SYSOUT=*                                                  00004409
+//SYSUDUMP DD SYSOUT=*                                                  00004509
+//SYSOUT   DD SYSOUT=*                                                  00004609
+//SYSTSPRT DD SYSOUT=*                                                  00005006

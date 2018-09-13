@@ -1,0 +1,133 @@
+SELECT                                                                          
+    'Total' USER_NAME                                                           
+   ,CHAR(SUM(SC1.PHONE_COUNT        ))  PHONE_COUNT                             
+   ,CHAR(SUM(SC1.PEAK_MINUTES       ))  PEAK_MINUTES                            
+   ,CHAR(SUM(SC1.OFF_PEAK_MINUTES   ))  OFF_PEAK_MINUTES                        
+   ,CHAR(SUM(SC1.OTHER_MINUTES      ))  OTHER_MINUTES                           
+   ,CHAR(SUM(SC1.ROAM_MINS          ))  ROAM_MINS                               
+   ,CHAR(SUM(SC1.TOT_MINUTES        )) TOT_MINUTES                              
+   ,CHAR(SUM(SC1.TAXES              ))  TAXES                                   
+   ,CHAR(SUM(SC1.TOLL               ))  TOLL                                    
+   ,CHAR(SUM(SC1.ROAMER             ))  ROAMER                                  
+   ,CHAR(SUM(SC1.ACCESS             ))  ACCESS                                  
+   ,CHAR(SUM(SC1.SERVICE_FEATURES   ))  SERVICE_FEATURES                        
+   ,CHAR(SUM(SC1.MSG_CHGS           ))  MSG_CHGS                                
+   ,CHAR(SUM(SC1.DATA_USAGE         ))  DATA_USAGE                              
+   ,CHAR(SUM(SC1.EQUIPMENT          ))  EQUIPMENT                               
+   ,CHAR(SUM(SC1.MISC               ))  MISC                                    
+   ,CHAR(SUM(SC1.TOTAL_CHGS         ))  TOTAL_CHGS                              
+   ,CHAR(SUM(SC1.PEAK_AIR_CHGS      ))  PEAK_AIR_CHGS                           
+   ,CHAR(SUM(SC1.OFF_PEAK_AIR_CHGS  ))  OFF_PEAK_AIR_CHGS                       
+   ,CHAR(SUM(SC1.OTHER_AIR_CHGS     ))  OTHER_AIR_CHGS                          
+   ,CHAR(SUM(SC1.AIR_CHGS           ))  AIR_CHGS                                
+   ,CHAR(SUM(SC1.TOTALS             ))  TOTALS                                  
+ FROM (                                                                         
+     SELECT                                                                     
+      INR.USER_NAME                                                             
+     ,SUM(INR.PHONE_COUNT         )  PHONE_COUNT                                
+     ,SUM(INR.PEAK_MINUTES        )  PEAK_MINUTES                               
+     ,SUM(INR.OFF_PEAK_MINUTES    )  OFF_PEAK_MINUTES                           
+     ,SUM(INR.OTHER_MINUTES       )  OTHER_MINUTES                              
+     ,SUM(INR.ROAM_MINS           )  ROAM_MINS                                  
+     ,SUM(INR.TOT_MINUTES         )  TOT_MINUTES                                
+     ,SUM(INR.TAXES               )  TAXES                                      
+     ,SUM(INR.TOLL                )  TOLL                                       
+     ,SUM(INR.ROAMER              )  ROAMER                                     
+     ,SUM(INR.ACCESS              )  ACCESS                                     
+     ,SUM(INR.SERVICE_FEATURES    )  SERVICE_FEATURES                           
+     ,SUM(INR.MSG_CHGS            )  MSG_CHGS                                   
+     ,SUM(INR.DATA_USAGE          )  DATA_USAGE                                 
+     ,SUM(INR.EQUIPMENT           )  EQUIPMENT                                  
+     ,SUM(INR.MISC                )  MISC                                       
+     ,SUM(INR.TOTAL_CHGS          )  TOTAL_CHGS                                 
+     ,SUM(INR.PEAK_AIR_CHGS       )  PEAK_AIR_CHGS                              
+     ,SUM(INR.OFF_PEAK_AIR_CHGS   )  OFF_PEAK_AIR_CHGS                          
+     ,SUM(INR.OTHER_AIR_CHGS      )  OTHER_AIR_CHGS                             
+     ,SUM(INR.AIR_CHGS            )  AIR_CHGS                                   
+     ,SUM(INR.TOTALS              )  TOTALS                                     
+ FROM (                                                                         
+    SELECT                                                                      
+       STG.WTN                     WTN                                          
+      ,STG.WIRELESS_DAN            ACCT_NBR                                     
+      ,STG.VCH_50_A                USER_NAME                                    
+      ,CASE WHEN SUBSTR(STG.CH_30_A,1,1) = 'A' THEN 'Active'                    
+            WHEN SUBSTR(STG.CH_30_A,2,1) = 'A' THEN 'Active'                    
+            ELSE 'Other' END STATUS                                             
+      ,STG.VCH_50_D || ' '         PLAN_DESC                                    
+      ,STG.INT_A                   TOT_ALLOWANCE                                
+      ,STG.AMT_11                  MSG_CHGS                                     
+      ,STG.INT_I/100               ROAM_MINS                                    
+      ,STG.MAN_BILL_DATE           BILL_DATE                                    
+      ,1                           PHONE_COUNT                                  
+      ,STG.PEAK_MIN/100            PEAK_MINUTES                                 
+      ,STG.OFFPEAK_MIN/100         OFF_PEAK_MINUTES                             
+      ,STG.OTHER_MIN/100           OTHER_MINUTES                                
+      ,STG.INT_F TOT_MINUTES                                                    
+   -- ,(STG.PEAK_MIN/100)                                                       
+   --     + (STG.OFFPEAK_MIN/100)                                               
+   --     + (STG.OTHER_MIN/100)                                                 
+   --     + (STG.INT_I/100) TOT_MINUTES                                         
+      ,DECIMAL(STG.DEC_15_6_C,11,2) TAXES                                       
+      ,CASE WHEN (STG.PEAK_CALLS                                                
+                       + STG.OFFPEAK_CALLS                                      
+                       + STG.OFFPEAK_CALLS) = 0 THEN 0.00                       
+            ELSE STG.AMT_3                                                      
+                   - (STG.PEAK_CHG + OFFPEAK_CHG + OTHER_CHG)                   
+         END TOLL                                                               
+      ,STG.AMT_5                   ROAMER                                       
+      ,STG.BILL_AMT                ACCESS                                       
+      ,STG.CHG_AMT                 SERVICE_FEATURES                             
+      ,STG.AMT_4                   DATA_USAGE                                   
+      ,STG.AMT_2                   EQUIPMENT                                    
+      ,DECIMAL(STG.DEC_15_6_B,11,2) + STG.ADJ_AMT + STG.AMT_13 MISC             
+      ,CASE WHEN (STG.PEAK_CALLS                                                
+                       + STG.OFFPEAK_CALLS                                      
+                       + STG.OFFPEAK_CALLS) = 0                                 
+            THEN (STG.AMT_7                                                     
+                   + STG.AMT_5                                                  
+                   + STG.BILL_AMT                                               
+                   + STG.CHG_AMT                                                
+                   + STG.AMT_4                                                  
+                   + STG.AMT_11                                                 
+                   + STG.AMT_2                                                  
+                   + STG.AMT_6                                                  
+                   + STG.ADJ_AMT)                                               
+            ELSE (STG.AMT_7                                                     
+                   + STG.AMT_5                                                  
+                   + STG.BILL_AMT                                               
+                   + STG.CHG_AMT                                                
+                   + STG.AMT_4                                                  
+                   + STG.AMT_11                                                 
+                   + STG.AMT_2                                                  
+                   + STG.AMT_6                                                  
+                   + STG.ADJ_AMT                                                
+                   + (STG.AMT_3                                                 
+                     - (STG.PEAK_CHG + OFFPEAK_CHG + OTHER_CHG)))               
+         END TOTAL_CHGS                                                         
+      ,STG.PEAK_CHG                PEAK_AIR_CHGS                                
+      ,STG.OFFPEAK_CHG             OFF_PEAK_AIR_CHGS                            
+      ,STG.OTHER_CHG               OTHER_AIR_CHGS                               
+      ,CASE WHEN (STG.PEAK_CALLS                                                
+                       + STG.OFFPEAK_CALLS                                      
+                       + STG.OFFPEAK_CALLS) = 0 THEN STG.AMT_3                  
+            ELSE (STG.PEAK_CHG + OFFPEAK_CHG + OTHER_CHG)                       
+         END AIR_CHGS                                                           
+      ,STG.AMT_7                                                                
+         + STG.AMT_3                                                            
+         + STG.AMT_5                                                            
+         + STG.BILL_AMT                                                         
+         + STG.CHG_AMT                                                          
+         + STG.AMT_4                                                            
+         + STG.AMT_2                                                            
+         + STG.ADJ_AMT                                                          
+         + STG.AMT_11                                                           
+         + STG.AMT_13                                                           
+         + STG.AMT_6                TOTALS                                      
+    FROM  STG_LOB_RPT_T  STG                                                    
+      WHERE                                                                     
+      REPORT_ID_TS = ?                                                          
+      AND LINE_NUM > 0                                                          
+    ) INR                                                                       
+      GROUP BY INR.USER_NAME                                                    
+  ) SC1                                                                         
+ WFILTER = ?                                                                    

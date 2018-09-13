@@ -1,0 +1,5 @@
+/*REXX*/                                                                        
+ARG DSNAME MEMBER                                                               
+/******** DELETE MEMBER ******/                                                 
+"DELETE '"DSNAME"("MEMBER")'"                                                   
+EXIT                                                                            

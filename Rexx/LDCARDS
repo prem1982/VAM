@@ -1,0 +1,18 @@
+/*REXX LDCARDS: REXX TO CREATE DB2 LOAD CARDS */                        00010002
+ARG TESTID TBLHILVL TBLNAME DB2SYS RESUME                               00020007
+CALL GETNAMEL TBLNAME                                                   00021006
+LONGNAME = RESULT                                                       00022005
+/****************************************************/                  00030002
+/****       CREATE LOAD TABLE CARDS             *****/                  00040002
+/****************************************************/                  00050002
+LOADCDS = TESTID".LOAD."TBLNAME"."DB2SYS                                00060002
+"FREE FI(LOADCDS)"                                                      00070002
+"DELETE '"LOADCDS"'"                                                    00080002
+"ALLOC FI(LOADCDS) DA('"LOADCDS"') NEW"                                 00090002
+IF RESUME = "YES" THEN                                                  00091008
+   QUEUE "   LOAD DATA INDDN SYSREC00 RESUME "RESUME" LOG(NO)"          00100008
+ELSE                                                                    00101008
+   QUEUE "   LOAD DATA INDDN SYSREC00 LOG(NO)"                          00102008
+QUEUE "        INTO TABLE "TBLHILVL"."LONGNAME""                        00110005
+"EXECIO * DISKW LOADCDS (FINIS"                                         00120002
+"FREE FI(LOADCDS)"                                                      00130002

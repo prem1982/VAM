@@ -1,0 +1,67 @@
+SELECT SC1.RECORD_TYPE                                                          
+      ,SC1.NUM                                                                  
+      ,SC1.DESC1                                                                
+      ,SC1.DESC2                                                                
+      ,SC1.DATE1                                                                
+,CHAR(SC1.USG_BILLABLE) USG_BILLABLE                                            
+,CHAR(SC1.USG_COST) USG_COST                                                    
+,SC1.VZ450_SEQ_NBR                                                              
+FROM                                                                            
+(SELECT '72' RECORD_TYPE                                                        
+       ,'1' NUM                                                                 
+       ,TB3.SUMMARY_DESC AS DESC1                                               
+       ,' '                 DESC2                                               
+       ,' '                 DATE1                                               
+,CHAR(INT(TB3.USG_BILLABLE)) AS USG_BILLABLE                                    
+,TB3.USG_COST AS USG_COST                                                       
+,TB3.VZ450_SEQ_NBR VZ450_SEQ_NBR                                                
+FROM                                                                            
+BMGVZP.VZ450_6300_T TB3                                                         
+WHERE TB3.MAN = '73AI326TD'                                                     
+AND TB3.MAN_BILL_DATE = '2012-02-01'                                            
+AND TB3.ORIG_SYSTEM_ID = 'VW'                                                   
+AND TB3.SUMM_TYPE_IND =  7                                                      
+  UNION ALL                                                                     
+SELECT '72' RECORD_TYPE                                                         
+       ,'2' NUM                                                                 
+       ,'Taxes'    DESC1                                                        
+       ,' '       DESC2                                                         
+       ,' '       DATE1                                                         
+,CHAR(0)      AS USG_BILLABLE                                                   
+,TB1.CHG_AMT AS USG_COST                                                        
+,TB1.VZ450_SEQ_NBR VZ450_SEQ_NBR                                                
+FROM                                                                            
+BMGVZP.VZ450_MOD_109_T TB1                                                      
+INNER JOIN                                                                      
+BMGVZP.VZ450_6300_T TB2                                                         
+ON  TB1.MAN = TB2.MAN                                                           
+AND TB1.MAN_BILL_DATE  = TB2.MAN_BILL_DATE                                      
+AND TB1.ORIG_SYSTEM_ID = TB2.ORIG_SYSTEM_ID                                     
+AND TB1.VZ450_SEQ_NBR = TB2.VZ450_SEQ_NBR                                       
+WHERE TB1.MAN = '73AI326TD'                                                     
+AND TB1.MAN_BILL_DATE = '2012-02-01'                                            
+AND TB1.ORIG_SYSTEM_ID = 'VW'                                                   
+AND TB2.SUMM_TYPE_IND =  7                                                      
+AND TB1.CHG_TYPE_CD IN ('016')                                                  
+  UNION ALL                                                                     
+SELECT  '72' RECORD_TYPE                                                        
+       ,'3'  NUM                                                                
+       ,'Surcharges'    DESC1                                                   
+       ,' '       DESC2                                                         
+       ,' '       DATE1                                                         
+,CHAR(0)      AS USG_BILLABLE                                                   
+,TB1.CHG_AMT AS USG_COST                                                        
+,TB1.VZ450_SEQ_NBR VZ450_SEQ_NBR                                                
+FROM                                                                            
+BMGVZP.VZ450_MOD_109_T TB1                                                      
+INNER JOIN                                                                      
+BMGVZP.VZ450_6300_T TB2                                                         
+ON  TB1.MAN = TB2.MAN                                                           
+AND TB1.MAN_BILL_DATE  = TB2.MAN_BILL_DATE                                      
+AND TB1.ORIG_SYSTEM_ID = TB2.ORIG_SYSTEM_ID                                     
+AND TB1.VZ450_SEQ_NBR = TB2.VZ450_SEQ_NBR                                       
+WHERE TB1.MAN = '73AI326TD'                                                     
+AND TB2.SUMM_TYPE_IND =  7                                                      
+AND TB1.MAN_BILL_DATE = '2012-02-01'                                            
+AND TB1.ORIG_SYSTEM_ID = 'VW'                                                   
+AND TB1.CHG_TYPE_CD IN ('017')) SC1                                             

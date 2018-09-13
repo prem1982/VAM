@@ -1,0 +1,17 @@
+SELECT SC1.DESCRIPTION                                                          
+ FROM                                                                           
+( SELECT TEXT_1 DESCRIPTION                                                     
+    FROM                                                                        
+BMGVZP.TEXT_FYI_T TB1                                                           
+WHERE TB1.MAN = '9L9I0OQYP'                                                     
+AND TB1.MAN_BILL_DATE = '2012-03-21'                                            
+AND TB1.RECORD_NBR = 72                                                         
+AND TB1.TEXT_TYPE_CD = 'BOB'                                                    
+UNION ALL                                                                       
+SELECT TEXT_2 DESCRIPTION                                                       
+FROM                                                                            
+BMGVZP.TEXT_FYI_T TB1                                                           
+WHERE  TB1.MAN = '9L9I0OQYP'                                                    
+AND TB1.MAN_BILL_DATE = '2012-03-21'                                            
+AND TB1.RECORD_NBR =  72                                                        
+AND TB1.TEXT_TYPE = 'BOB') SC1                                                  

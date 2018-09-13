@@ -1,0 +1,149 @@
+/* rexx */                                                              00010002
+/* Read a file of BANS and MANS run sql and write result   */           00020002
+address TSO                                                             00030002
+ trace O                                                                00040002
+acctsfil="D14XMRL.ULTRA.TEST"                                           00050003
+"ALLOC FI(input) DA('"acctsfil"') SHR REUSE"                            00060002
+"execio * diskr input (stem row. finis"                                 00070002
+"free FI(acctsfil)"                                                     00080002
+ say 'No of records from I/P file = ' row.0                             00090002
+ acctrslt = "D14XMRL.ULTRA.EXTRACT.RESULTS"                             00090103
+ "DELETE '"acctrslt"'"                                                  00091002
+ "ALLOC FI(output) DA('"acctrslt"') NEW DATACLAS(PSFB80)"               00092002
+/********************************************************************/  00110002
+  SSID="D009"                                                           00120002
+ address TSO "SUBCOM DSNREXX"                                           00130002
+ out.0=0                                                                00140002
+ man = " "                                                              00141002
+ ban = " "                                                              00142002
+ month_count = 0                                                        00142103
+ total_amount = 0.0                                                     00142203
+ Fetch_parms = ":man,:ban,:month_count,:total_amount"                   00142303
+ startdate = "2003-07-01"                                               00143003
+ enddate = "2004-06-30"                                                 00144003
+ cat26   = "'"26"'"                                                     00145003
+ cat28   = "'"28"'"                                                     00146003
+ call connect                                                           00151102
+ call process_file                                                      00230002
+ call finish                                                            00230103
+ exit                                                                   00230203
+/*---------------------------------------------------------------*/     00230302
+ process_file:                                                          00231002
+     do i = 1 to row.0                                                  00240002
+       ban = strip(substr(row.i,1,13))                                  00260002
+       man = strip(substr(row.i,15,13))                                 00270002
+       if (i < 3 ) then do                                              00285102
+          say 'ban/man ='  ban '/'   man                                00285203
+          if (man = 'N/A') then do                                      00285303
+             Say 'Using MAN from BAN as MAN = '  man ' for ban = ' ,    00285403
+                  ban                                                   00285503
+             man = ban                                                  00285603
+          end                                                           00285703
+       end                                                              00285803
+       call run_sql                                                     00285902
+     end                                                                00289002
+     say 'End of process'                                               00300002
+ return                                                                 00301003
+/*---------------------------------------------------------------*/     00317102
+ run_sql:                                                               00318002
+ sqlstmt =       ,                                                      00340103
+' SELECT                                                     ',         00341002
+'    MAN,BAN, SUM( NUMBER_MONTHS) AS NUMBER_MONTHS           ',         00342002
+'    ,SUM(BILL_AMT) AS BILL_AMT                              ',         00343002
+' FROM(                                                      ',         00344002
+' SELECT                                                     ',         00345002
+'    MAN,BAN,MAN_BILL_DATE, 1 AS NUMBER_MONTHS               ',         00346002
+'    ,SUM(BILL_AMT) AS BILL_AMT                              ',         00347002
+' FROM(                                                      ',         00348002
+' SELECT                                                     ',         00349002
+'    MAN,BAN,MAN_BILL_DATE, BILL_AMT                         ',         00349102
+' FROM                                                       ',         00349202
+'    BMGVZP.OCC_WTN_T                                        ',         00349302
+' WHERE                                                      ',         00349402
+'       MAN = '||"'"||man||"'"  || '                         ',         00349503
+'   AND BAN = '||"'"||ban ||"'" || '                         ',         00349603
+'   AND MAN_BILL_DATE BETWEEN '|| "'" || startdate || "'" ||  ,         00349703
+'                    and      '|| "'" || enddate   || "'" ||  ,         00349803
+'    AND OCC_CATEGORY IN(' || cat26 || ',' ||cat28 ||')      ',         00349903
+' UNION ALL                                                  ',         00350003
+' SELECT                                                     ',         00350103
+'    MAN,BAN,MAN_BILL_DATE, BILL_AMT                         ',         00350203
+' FROM                                                       ',         00350303
+'   BMGVZP.OCC_CKT_T                                         ',         00350403
+' WHERE                                                      ',         00350503
+'       MAN = '||"'"||man||"'"  || '                         ',         00350603
+'   AND BAN = '||"'"||ban ||"'" || '                         ',         00350703
+'   AND MAN_BILL_DATE BETWEEN '|| "'" || startdate || "'" ||  ,         00350803
+'                    and      '|| "'" || enddate   || "'" ||  ,         00350903
+'    AND OCC_CATEGORY IN(' || cat26 || ',' ||cat28 ||')      ',         00351203
+' UNION ALL                                                  ',         00351303
+' SELECT                                                     ',         00351403
+'    MAN,BAN,MAN_BILL_DATE, BILL_AMT                         ',         00351503
+' FROM                                                       ',         00351603
+'    BMGVZP.OCC_BAN_T                                        ',         00351703
+'  WHERE                                                     ',         00351803
+'        MAN = '||"'"||man||"'" '                            ',         00351903
+'    AND BAN = '||"'"||ban ||"'" '                           ',         00352003
+'   AND MAN_BILL_DATE BETWEEN '|| "'" || startdate || "'" ||  ,         00352103
+'                    and      '|| "'" || enddate   || "'" ||  ,         00352203
+'    AND OCC_CATEGORY IN(' || cat26 || ',' ||cat28 ||')      ',         00352503
+' ) AS TEMP1                                                 ',         00352603
+' GROUP BY MAN, BAN, MAN_BILL_DATE                           ',         00352703
+' ) AS TEMP2                                                 ',         00352803
+' GROUP BY MAN, BAN                                          '          00352903
+/* say 'sqlstmt='  sqlstmt  */                                          00353003
+ADDRESS DSNREXXC "EXECSQL DECLARE C1 CURSOR FOR S1"                     00380003
+ADDRESS DSNREXXC "EXECSQL PREPARE S1 FROM :sqlSTMT"                     00390003
+ADDRESS DSNREXXC "EXECSQL OPEN C1"                                      00400003
+say 'SQL CODE after OPEN = ' sqlcode                                    00401003
+if (sqlcode = 0)  then do                                               00410002
+  ADDRESS DSNREXXC  "EXECSQL FETCH C1 INTO "fetch_parms                 00420003
+   SAY 'SQLCODE ON FETCH = ' SQLCODE                                    00422003
+  if sqlcode = 0 then                                                   00430002
+    do                                                                  00440002
+      msg = ' '                                                         00441003
+      say 'MAN   ='  man                                                00480003
+      say 'BAN   ='  ban                                                00481003
+      say 'Count = ' month_count                                        00490003
+      say 'Total = ' total_amount                                       00491003
+    end                                                                 00530002
+end                                                                     00531003
+if sqlcode = 100 then                                                   00540003
+    do                                                                  00550002
+      month_count  = 0                                                  00560003
+      total_amount  = 0                                                 00570003
+      msg = 'No records found '                                         00570103
+    end                                                                 00571003
+call write_out                                                          00580003
+ADDRESS DSNREXXC "EXECSQL  close C1"                                    00610003
+return                                                                  00620003
+/*---------------------------------------------------------------*/     00704102
+ write_out:                                                             00705003
+ spac = "  "                                                            00706002
+ rec =  strip(ban)||spac||strip(man)||month_count  || ,                 00707003
+        total_amount || spac || msg                                     00707103
+ out.i = rec                                                            00708002
+ return                                                                 00709002
+/*---------------------------------------------------------------*/     00709102
+finish:                                                                 00709203
+   say 'In finish'                                                      00709303
+   ADDRESS DSNREXX "DISCONNECT"                                         00709403
+    address TSO                                                         00709503
+     "ALLOC FI(outpt) DA('D14XMRL.ULTRA.EXTRACT.RESULTS') SHR REUSE"    00709602
+     "execio * diskw outpt (stem out. finis"                            00709702
+     "free FI(outpt)"                                                   00709802
+ return                                                                 00709903
+                                                                        00710002
+/*---------------------------------------------------------------*/     00710102
+connect:                                                                00711002
+  If RC <> 0 then                                                       00720002
+     S_RC = RXSUBCOM('ADD','DSNREXX','DSNREXX')                         00730002
+  ADDRESS DSNREXX  "CONNECT" SSID                                       00740003
+  If SQLCODE ^=0 Then DO                                                00760002
+      SAY "Connection error " SQLCODE                                   00770002
+      SAY "Rexx terminating"                                            00780002
+      EXIT                                                              00790002
+  End                                                                   00800002
+  else                                                                  00801003
+    Say 'Connect sqlcode = ' SQLCODE                                    00802003
+return                                                                  00810002

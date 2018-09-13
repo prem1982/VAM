@@ -1,0 +1,14 @@
+/*REXX FREEPKG: REXX TO CREATE DB2 FREE CARDS */                        00010002
+ARG TESTID OWNER PKGNAME VERSION DB2SYS                                 00020005
+/****************************************************/                  00021000
+/****       CREATE FREE STORED PROCEDURE CARDS  *****/                  00022002
+/****************************************************/                  00023000
+FREECDS = TESTID".FREEPKG."PKGNAME"."DB2SYS                             00024002
+"FREE FI(FREECDS)"                                                      00025002
+"DELETE '"FREECDS"'"                                                    00026002
+"ALLOC FI(FREECDS) DA('"FREECDS"') NEW"                                 00027002
+QUEUE "DSN SYSTEM("DB2SYS")"                                            00028004
+QUEUE "   FREE PACKAGE ("OWNER"."PKGNAME".("VERSION"))"                 00028105
+QUEUE "END"                                                             00029104
+"EXECIO * DISKW FREECDS (FINIS"                                         00030002
+"FREE FI(FREECDS)"                                                      00040002

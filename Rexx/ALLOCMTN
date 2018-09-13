@@ -1,0 +1,91 @@
+/* REXX */                                                                      
+/* TRACE I */                                                                   
+   ARG cycle BMGNS0CN                                                           
+                                                                                
+SAY "@@@@ Start of ALLOCMTN processing messages        @@@@"                    
+NUMERIC DIGITS 13                                                               
+mtn =                                                                           
+holdmtn =                                                                       
+bprecord =                                                                      
+mtndsn. =                                                                       
+mtnrec. = 0                                                                     
+reccount. =                                                                     
+ProcessInd =                                                                    
+i = 0                                                                           
+first_time = 0                                                                  
+                                                                                
+eof = 'NO'                                                                      
+DO WHILE eof = 'NO'                                                             
+  "EXECIO 1 DISKR "bpfile""                                                     
+  IF RC = 2 THEN                                                                
+    eof = 'YES'                                                                 
+  ELSE                                                                          
+    DO                                                                          
+      PARSE PULL bprecord                                                       
+      mtn = SUBSTR(bprecord,18,13)                                              
+      IF mtn = holdmtn THEN                                                     
+        DO                                                                      
+          mtnrec.i = mtnrec.i + 1                                               
+          PUSH bprecord                                                         
+          "EXECIO 1 DISKW MO"||i                                                
+        END                                                                     
+      ELSE                                                                      
+        DO                                                                      
+          IF first_time = 0 THEN                                                
+            first_time = 1                                                      
+          ELSE                                                                  
+            DO                                                                  
+              "EXECIO 0 DISKW MO"||i" (FINIS"                                   
+              "FREE DDN(MO"||i")"                                               
+              mtnrec.i = mtnrec.i + 1                                           
+              SAY "   " mtndsn.i " had " mtnrec.i " records"                    
+              reccount.i = LEFT(ProcessInd           , 3)||,                    
+                           LEFT(mtndsn.i             ,40)||,                    
+                           RIGHT(mtnrec.i            , 7,0)                     
+            END                                                                 
+          holdmtn = mtn                                                         
+          mtn_npannx = SUBSTR(bprecord,18,6)                                    
+          mtn_linecus = SUBSTR(bprecord,24,7)                                   
+          i = i + 1                                                             
+          mtndsn.i = BMGNS0CN"."cycle".A"mtn_npannx".B"mtn_linecus              
+                                                                                
+          IF SYSDSN("'"mtndsn.i"'") = "OK" THEN                                 
+            "DELETE '"mtndsn.i"'"                                               
+                                                                                
+          SAY "Allocating master file number " i " = " mtndsn.i                 
+          "ALLOC DATASET('"mtndsn.i"') DDN(MO"||i") NEW",                       
+          "MGMTCLAS(BK3SM065) RELEASE REUSE",                                   
+          "SPACE(500,500) TRACKS RECFM(F,B) LRECL(450) BLKSIZE(0)"              
+          PUSH bprecord                                                         
+          "EXECIO 1 DISKW MO"||i                                                
+        END                                                                     
+    END                                                                         
+END                                                                             
+                                                                                
+SAY "   " mtndsn.i " had " mtnrec.i " records"                                  
+reccount.i = LEFT(ProcessInd           , 3)||,                                  
+             LEFT(mtndsn.i             ,40)||,                                  
+             RIGHT(mtnrec.i            , 7,0)                                   
+                                                                                
+"EXECIO 0 DISKW MO"||i" (FINIS"                                                 
+"FREE DDN(MO"||i")"                                                             
+                                                                                
+mtnlog = BMGNS0CN"."cycle"."MTNLOG                                              
+                                                                                
+IF SYSDSN("'"mtnlog"'") = "OK" THEN                                             
+  "DELETE '"mtnlog"'"                                                           
+                                                                                
+"ALLOC DATASET('"mtnlog"') DDN(mtnlog) NEW",                                    
+"MGMTCLAS(BK3SM065) RELEASE REUSE",                                             
+"SPACE(50,50) TRACKS RECFM(F,B) LRECL(50) BLKSIZE(0)"                           
+                                                                                
+DO h = 1 TO i                                                                   
+  PUSH reccount.h                                                               
+  "EXECIO 1 DISKW mtnlog"                                                       
+END                                                                             
+                                                                                
+"EXECIO 0 DISKW mtnlog (FINIS"                                                  
+"FREE DDN(mtnlog)"                                                              
+                                                                                
+SAY "@@@@ End   of ALLOCMTN processing messages        @@@@"                    
+EXIT                                                                            

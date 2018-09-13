@@ -1,0 +1,189 @@
+   SELECT                                                                       
+   SC1.DESC,                                                                    
+   'S'                                                                          
+   SELECT_LINK,                                                                 
+   '1110'                                                                       
+   TARGET_PAGE_ID,                                                              
+   'ALL'                                                                        
+   TARGET_SUBSET,                                                               
+   'TABLE'                                                                      
+   L_TYPE,                                                                      
+   'WHERE'                                                                      
+       || ' FROM_DATE = '                                                       
+       || X'7D'                                                                 
+       ||                                                                       
+   CASE SC1.CODE_DESC_KEY                                                       
+           WHEN 1                                                               
+           THEN CHAR ( CURRENT DATE - 6 DAYS )                                  
+           WHEN 2                                                               
+           THEN CHAR ( CURRENT DATE - 5 DAYS )                                  
+           WHEN 3                                                               
+           THEN CHAR ( CURRENT DATE - 4 DAYS )                                  
+           WHEN 4                                                               
+           THEN CHAR ( CURRENT DATE - 3 DAYS )                                  
+           WHEN 5                                                               
+           THEN CHAR ( CURRENT DATE - 2 DAYS )                                  
+           WHEN 6                                                               
+           THEN CHAR ( CURRENT DATE - 1 DAYS )                                  
+           ELSE CHAR ( CURRENT DATE )                                           
+            END ||                                                              
+   X'7D'                                                                        
+       || ' AND  THRU_DATE = '                                                  
+       || X'7D'                                                                 
+       ||                                                                       
+   CASE SC1.CODE_DESC_KEY                                                       
+           WHEN 1                                                               
+           THEN CHAR ( CURRENT DATE - 6 DAYS )                                  
+           WHEN 2                                                               
+           THEN CHAR ( CURRENT DATE - 5 DAYS )                                  
+           WHEN 3                                                               
+           THEN CHAR ( CURRENT DATE - 4 DAYS )                                  
+           WHEN 4                                                               
+           THEN CHAR ( CURRENT DATE - 3 DAYS )                                  
+           WHEN 5                                                               
+           THEN CHAR ( CURRENT DATE - 2 DAYS )                                  
+           WHEN 6                                                               
+           THEN CHAR ( CURRENT DATE - 1 DAYS )                                  
+           ELSE CHAR ( CURRENT DATE )                                           
+            END ||                                                              
+   X'7D'  AS TARGET_PARMS,                                                      
+   CHAR(SC1.ITEM_COUNT) ITEM_COUNT                                              
+  FROM (                                                                        
+   SELECT                                                                       
+   IN2.THE_DATE                                                                 
+   DESC,                                                                        
+   IN2.AMOUNT                                                                   
+   ITEM_COUNT,                                                                  
+   IN2.CODE_DESC_KEY                                                            
+  FROM (                                                                        
+   SELECT                                                                       
+   RF.CODE_DESC_KEY,                                                            
+   CASE RF.CODE_DESC_KEY                                                        
+           WHEN 1                                                               
+           THEN CHAR ( CURRENT DATE - 6 DAYS )                                  
+           WHEN 2                                                               
+           THEN CHAR ( CURRENT DATE - 5 DAYS )                                  
+           WHEN 3                                                               
+           THEN CHAR ( CURRENT DATE - 4 DAYS )                                  
+           WHEN 4                                                               
+           THEN CHAR ( CURRENT DATE - 3 DAYS )                                  
+           WHEN 5                                                               
+           THEN CHAR ( CURRENT DATE - 2 DAYS )                                  
+           WHEN 6                                                               
+           THEN CHAR ( CURRENT DATE - 1 DAYS )                                  
+           ELSE CHAR ( CURRENT DATE )                                           
+            END THE_DATE,                                                       
+   SUM (                                                                        
+   CASE RF.CODE_DESC_KEY                                                        
+           WHEN 1                                                               
+           THEN INR.DAY_7                                                       
+           WHEN 2                                                               
+           THEN INR.DAY_6                                                       
+           WHEN 3                                                               
+           THEN INR.DAY_5                                                       
+           WHEN 4                                                               
+           THEN INR.DAY_4                                                       
+           WHEN 5                                                               
+           THEN INR.DAY_3                                                       
+           WHEN 6                                                               
+           THEN INR.DAY_2                                                       
+           ELSE INR.DAY_1                                                       
+            END )                                                               
+   AMOUNT                                                                       
+  FROM (                                                                        
+   SELECT                                                                       
+   SUM (                                                                        
+   CASE                                                                         
+           WHEN ( TB1.ACTIVE_START_DATE <= ( CURRENT DATE - 6 DAYS )            
+             AND TB1.ACTIVE_END_DATE >= ( CURRENT DATE - 6 DAYS ) )             
+           THEN 1                                                               
+           ELSE 0                                                               
+            END )                                                               
+   DAY_7,                                                                       
+   SUM (                                                                        
+   CASE                                                                         
+           WHEN ( TB1.ACTIVE_START_DATE <= ( CURRENT DATE - 5 DAYS )            
+             AND TB1.ACTIVE_END_DATE >= ( CURRENT DATE - 5 DAYS ) )             
+           THEN 1                                                               
+           ELSE 0                                                               
+            END )                                                               
+   DAY_6,                                                                       
+   SUM (                                                                        
+   CASE                                                                         
+           WHEN ( TB1.ACTIVE_START_DATE <= ( CURRENT DATE - 4 DAYS )            
+             AND TB1.ACTIVE_END_DATE >= ( CURRENT DATE - 4 DAYS ) )             
+           THEN 1                                                               
+           ELSE 0                                                               
+            END )                                                               
+   DAY_5,                                                                       
+   SUM (                                                                        
+   CASE                                                                         
+           WHEN ( TB1.ACTIVE_START_DATE <= ( CURRENT DATE - 3 DAYS )            
+             AND TB1.ACTIVE_END_DATE >= ( CURRENT DATE - 3 DAYS ) )             
+           THEN 1                                                               
+           ELSE 0                                                               
+            END )                                                               
+   DAY_4,                                                                       
+   SUM (                                                                        
+   CASE                                                                         
+           WHEN ( TB1.ACTIVE_START_DATE <= ( CURRENT DATE - 2 DAYS )            
+             AND TB1.ACTIVE_END_DATE >= ( CURRENT DATE - 2 DAYS ) )             
+           THEN 1                                                               
+           ELSE 0                                                               
+            END )                                                               
+   DAY_3,                                                                       
+   SUM (                                                                        
+   CASE                                                                         
+           WHEN ( TB1.ACTIVE_START_DATE <= ( CURRENT DATE - 1 DAYS )            
+             AND TB1.ACTIVE_END_DATE >= ( CURRENT DATE - 1 DAYS ) )             
+           THEN 1                                                               
+           ELSE 0                                                               
+            END )                                                               
+   DAY_2,                                                                       
+   SUM (                                                                        
+   CASE                                                                         
+           WHEN ( TB1.ACTIVE_START_DATE <= ( CURRENT DATE )                     
+             AND TB1.ACTIVE_END_DATE >= ( CURRENT DATE ) )                      
+           THEN 1                                                               
+           ELSE 0                                                               
+            END )                                                               
+   DAY_1                                                                        
+  FROM (                                                                        
+   SELECT                                                                       
+   X.MAN,                                                                       
+   X.OSID,                                                                      
+   COUNT                                                                        
+    (                                                                           
+   *                                                                            
+    )                                                                           
+   NBR_TIMES                                                                    
+  FROM STRUCTURES_T X                                                           
+   WHERE X.REPORT_ID_TS = STRUCTURE_TS%                                         
+     AND X.MAN <> ' '                                                           
+     AND X.OSID = 'VW'                                                          
+     AND X.POSITION_TYPE = ?                                                    
+     AND X.POSITION_OID = ?                                                     
+   GROUP                                                                        
+   BY                                                                           
+   X.MAN,                                                                       
+   X.OSID                                                                       
+    )                                                                           
+   STR                                                                          
+   INNER JOIN VZW_MTN_T TB1                                                     
+     ON STR.MAN = TB1.MAN                                                       
+     AND STR.OSID = TB1.ORIG_SYSTEM_ID                                          
+     AND TB1.MAN IS NOT NULL                                                    
+     AND TB1.ACTIVE_END_DATE = '9999-12-31'                                     
+     AND (SUBSTR(TB1.MTN_STATUS,1,1) = 'A'                                      
+             OR SUBSTR(TB1.MTN_STATUS,1,1) = 'B')                               
+    )                                                                           
+   INR                                                                          
+   INNER JOIN REF_CODES_95_T RF                                                 
+     ON RF.CODE_DESC_KEY BETWEEN 1 AND 7                                        
+   GROUP                                                                        
+   BY                                                                           
+   RF.CODE_DESC_KEY                                                             
+    )                                                                           
+   IN2                                                                          
+    )                                                                           
+   SC1                                                                          

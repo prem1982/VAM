@@ -1,0 +1,19 @@
+SELECT 'X'                                                                      
+  FROM                                                                          
+(SELECT DISTINCT TB1.MAN                                                        
+FROM BMGVZP.MASTER_ACCT_NO_T TB1                                                
+LEFT OUTER JOIN                                                                 
+BMGVZP.VZ450_VMT50204_T TB2                                                     
+ON  TB1.MAN = TB2.MAN                                                           
+AND TB1.MAN_BILL_DATE = TB2.MAN_BILL_DATE                                       
+LEFT OUTER JOIN                                                                 
+BMGVZP.CURR_CHAR_DAT_T TB3                                                      
+ON  TB1.MAN = TB3.MAN                                                           
+AND TB1.MAN_BILL_DATE = TB3.MAN_BILL_DATE                                       
+AND TB3.CHG_CD = '1945'                                                         
+WHERE TB1.MAN = ?                                                               
+AND TB1.MAN_BILL_DATE = ?                                                       
+AND TB1.ORIG_SYSTEM_ID = 'VW'                                                   
+    AND TB2.MAN   IS NULL                                                       
+    AND TB3.MAN   <> ' ' ) SC1                                                  
+  WFILTER = ?                                                                   

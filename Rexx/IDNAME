@@ -1,0 +1,11 @@
+/*** IDNAME: REXX TO CONVERT ID TO USER NAME****/                               
+  ARG USERID                                                                    
+  SELECT                                                                        
+     WHEN USERID = 'ZSVRMCE' THEN USERNAME = 'DICK MCEVOY'                      
+     WHEN USERID = 'D14XMRL' THEN USERNAME = 'ERIC FOERTSCH'                    
+     WHEN USERID = 'DA8MWVD' THEN USERNAME = 'GREGG SAWYER'                     
+     WHEN USERID = 'Z615127' THEN USERNAME = 'ANTHONY FOURNIER'                 
+    OTHERWISE                                                                   
+        USERNAME = "DICK MCEVOY"                                                
+  END                                                                           
+  RETURN USERNAME                                                               

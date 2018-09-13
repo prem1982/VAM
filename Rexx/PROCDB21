@@ -1,0 +1,78 @@
+/* rexx */                                                              00010001
+/* TO UPDATE BM_CONFIG_PROC_T TABLE IN PROD    */                       00020001
+address TSO                                                             00030001
+ trace O                                                                00040001
+acctsfile="BMGVZ0CN.BMGBM3C.FILELIST.MERGE"                             00050001
+"ALLOC FI(recfil) DA('"acctsfile"') SHR REUSE"                          00060001
+"execio * diskr recfil (stem row. finis"                                00070001
+"free FI(recfil)"                                                       00080001
+ say 'No of records from I/P file = ' row.0                             00090001
+/************* input parameters *************************************/  00100001
+/********************************************************************/  00110001
+  SSID="D009"                                                           00120001
+ address TSO "SUBCOM DSNREXX"                                           00130001
+ out.0=0                                                                00140001
+ stat = " "                                                             00150001
+ stat_ind = yes                                                         00160001
+ incount = 0                                                            00170001
+  IF RC <> 0 THEN                                                       00180001
+     S_RC = RXSUBCOM('ADD','DSNREXX','DSNREXX')                         00190001
+   ADDRESS DSNREXX                                                      00200001
+  "CONNECT" SSID                                                        00210001
+IF SQLCODE ^=0 THEN SAY "connection error " SQLCODE                     00220001
+ELSE                                                                    00230001
+     do i = 1 to row.0                                                  00240001
+     man = strip(substr(row.i,1,13))                                    00260001
+     cust  = strip(substr(row.i,15,5))                                  00280001
+     conf  = strip(substr(row.i,20,2))                                  00281001
+     billd = strip(substr(row.i,25,10))                                 00282001
+     acctsd = strip(substr(row.i,40,26))                                00284001
+/*                     */                                               00285001
+/*   say man           */                                               00285101
+/*   say v450          */                                               00285201
+/*   say cust          */                                               00285301
+/*   say conf          */                                               00285401
+/*   say billd         */                                               00285501
+/*   say vload         */                                               00285601
+/*   say acctsd        */                                               00285701
+     call update_man                                                    00285801
+/*   say 'after bill & config_man '||stat_ind  */                       00285901
+     end                                                                00290001
+     say 'No of updates done in BM_CONFIG_PROC_T =' incount             00300001
+     out.0=i                                                            00310001
+   "disconnect"                                                         00311001
+     address TSO                                                        00312001
+     "ALLOC FI(outpt) DA('bmgvz0cn.procdb2.output') SHR REUSE"          00313001
+     "execio * diskw outpt (stem out. finis"                            00314001
+     "free FI(outpt)"                                                   00315001
+ exit                                                                   00316001
+                                                                        00317001
+ update_man:                                                            00692001
+ i1 = 'update bmgvzp.bm_config_proc_t ',                                00693001
+       'set acct_sent_dt = ' || "'"||strip(acctsd)||"'" ,               00694001
+       'where customer_id = ' || "'"||strip(cust)||"'" ,                00695001
+       'and   config_id = ' || "'"||strip(conf)||"'" ,                  00696001
+       'and man = ' || "'"||strip(man)||"'" ,                           00697001
+       'and man_bill_date = ' || "'"||strip(billd)||"'"                 00698001
+/*  say i3       */                                                     00700401
+/* Do the insert */                                                     00700501
+say i1                                                                  00700601
+"EXECSQL EXECUTE IMMEDIATE :i1"                                         00700701
+If SQLCODE = 0 Then                                                     00700801
+   do                                                                   00700901
+   incount = incount + 1                                                00701001
+   proc_name = 'COMMIT'                                                 00701101
+   "EXECSQL COMMIT"                                                     00702001
+   stat = "updated in BM_CONFIG_PROC_T"                                 00702101
+   write_out                                                            00702201
+   end                                                                  00702301
+ELSE                                                                    00702401
+  do                                                                    00702501
+ stat = "SQL error in update code=" ||sqlcode                           00702601
+ wirte_out                                                              00702701
+  end                                                                   00702801
+ write_out:                                                             00702901
+ spac = "             "                                                 00703001
+ rec =  strip(man)||spac||strip(cust)||strip(conf)||spac||strip(stat)   00704001
+ out.i = rec                                                            00705001
+ return                                                                 00706001

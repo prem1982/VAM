@@ -1,0 +1,409 @@
+/******************************* REXX *********************************/        
+/******************************* REXX *********************************/        
+                                                                                
+ARG db2sys .                                                                    
+                                                                                
+ trace o                                                                        
+                                                                                
+ db2sys       = strip(db2sys)                                                   
+                                                                                
+ SELECT                                                                         
+   WHEN DB2SYS  = 'D001'                                                        
+     then do                                                                    
+          TABPREF = 'BMGVZT'                                                    
+          end                                                                   
+   WHEN DB2SYS  = 'D009'                                                        
+     then do                                                                    
+          TABPREF = 'BMGVZP'                                                    
+          end                                                                   
+   WHEN DB2SYS  = 'D38X'                                                        
+     then do                                                                    
+          TABPREF = 'BMGVZS'                                                    
+          end                                                                   
+   OTHERWISE                                                                    
+          do                                                                    
+          TABPREF = 'BMGVZP'                                                    
+          end                                                                   
+ END                                                                            
+                                                                                
+ SIGNAL OFF ERROR /* TURN ERROR-TRAPPING OFF */                                 
+ "SUBCOM DSNREXX"                                                               
+ IF RC THEN                                                                     
+    S_RC = RXSUBCOM('ADD','DSNREXX','DSNREXX')                                  
+                                                                                
+ ADDRESS DSNREXX "CONNECT "DB2SYS                                               
+ IF SQLCODE ^= 0                                                                
+ then do                                                                        
+      SAY ' ERROR CONNECTING TO ' db2sys                                        
+      CALL SQLCA                                                                
+      SAY '  END EXECUTION'                                                     
+      exit 12                                                                   
+      END                                                                       
+                                                                                
+ /* READ THE DATASET */                                                         
+ "EXECIO * DISKR ACCTS (STEM accts.)"                                           
+ IF RC ^= 0                                                                     
+ THEN DO                                                                        
+      SAY ERROR READING ACCTS FILE                                              
+      EXIT 12                                                                   
+      END                                                                       
+                                                                                
+ PROC = TABPREF||.||'MANAGE_EM_ACCOUNTS'                                        
+                                                                                
+ say 'have ' accts.0 ' accounts to purge'                                       
+                                                                                
+ do i = 1 to accts.0                                                            
+                                                                                
+   call initialize_parms                                                        
+                                                                                
+   I_ACTION = 'C'                                                               
+   I_CONFIG_SUBS_OID   = word(accts.i,1)                                        
+   I_ACCOUNT_LIST      = word(accts.i,2)                                        
+   this_man            = word(accts.i,3)                                        
+                                                                                
+   call pad_parms                                                               
+                                                                                
+   call call_the_sp                                                             
+                                                                                
+   ADDRESS DSNREXX "EXECSQL COMMIT"                                             
+   IF SQLCODE ^= 0                                                              
+   THEN DO                                                                      
+        SAY 'ERROR WHILE COMMITING'                                             
+        CALL SQLCA                                                              
+        SAY '  END EXECUTION'                                                   
+        EXIT 12                                                                 
+        END                                                                     
+ end                                                                            
+                                                                                
+ return                                                                         
+                                                                                
+initialize_parms:                                                               
+                                                                                
+ I_CONFIG_SUBS_OID                 = 0;                                         
+ I_ACTION                          = ''                                         
+ I_EDI_DATA_GROUP                  = ''                                         
+ I_ACCOUNT_LIST                    = ''                                         
+                                                                                
+                                                                                
+return                                                                          
+                                                                                
+pad_parms:                                                                      
+                                                                                
+ i_action                = pad_field(i_action               ,1)                 
+ I_EDI_DATA_GROUP        = pad_field(I_EDI_DATA_GROUP       ,3)                 
+ I_ACCOUNT_LIST          = pad_field(I_ACCOUNT_LIST         ,32000)             
+                                                                                
+                                                                                
+return                                                                          
+                                                                                
+CALL_THE_SP:                                                                    
+                                                                                
+ app_user_id = 'V275365             '                                           
+ user_id     = 'V275365'                                                        
+ user_name   = 'Derek Strachan'                                                 
+ debug_level = ' '                                                              
+ return_code = 0                                                                
+ reason_code = pad_field('',8)                                                  
+ error_text  = pad_field('',2000)                                               
+                                                                                
+ sp_sqlcode  = 0                                                                
+ sp_sqltokens= pad_field(' ',70)                                                
+                                                                                
+ sp_sqlstate = '     '                                                          
+                                                                                
+ say 'calling sp:' PROC                                                         
+ say 'parms'                                                                    
+ say 'app_user_id ' app_user_id                                                 
+ say 'debug_level ' debug_level                                                 
+ say 'return_code ' return_code                                                 
+ say 'reason_code ' reason_code                                                 
+ say 'sp_sqlcode  ' sp_sqlcode                                                  
+ say 'sp_sqltokens' sp_sqltokens                                                
+ say 'sp_sqlstate ' sp_sqlstate                                                 
+ say 'config_subs_oid=' i_config_subs_oid                                       
+ say 'ACTION= ' i_action                                                        
+                                                                                
+ ADDRESS DSNREXX "EXECSQL",                                                     
+         "CALL" PROC "(:APP_USER_ID,",                                          
+                     ":USER_ID,",                                               
+                     ":USER_NAME,",                                             
+                     ":DEBUG_LEVEL,",                                           
+                     ":RETURN_CODE,",                                           
+                     ":REASON_CODE,",                                           
+                     ":ERROR_TEXT,",                                            
+                     ":SP_SQLCODE,",                                            
+                     ":SP_SQLTOKENS,",                                          
+                     ":SP_SQLSTATE,",                                           
+                     ":I_CONFIG_SUBS_OID,",                                     
+                     ":I_ACTION,",                                              
+                     ":I_EDI_DATA_GROUP,",                                      
+                     ":I_ACCOUNT_LIST )"                                        
+                                                                                
+ IF SQLCODE ^= 0 & sqlcode ^= 466                                               
+ then do                                                                        
+      SAY 'ERROR calling sp:' PROC                                              
+      CALL NEWSQLCA                                                             
+      exit 12                                                                   
+      END                                                                       
+                                                                                
+ say 'back from sp'                                                             
+ say 'return_code  = ' return_code                                              
+ say 'reason_code  = ' reason_code                                              
+ say 'error_text   = ' error_text                                               
+                                                                                
+                                                                                
+RETURN                                                                          
+                                                                                
+describe_resultset:                                                             
+                                                                                
+/****************************************************************/              
+/*  Get information about result sets returned by the           */              
+/*  stored procedure.                                           */              
+/****************************************************************/              
+                                                                                
+  ADDRESS DSNREXX "EXECSQL DESCRIBE PROCEDURE :PROC INTO :SQLDA"                
+  IF SQLCODE ^= 0 THEN CALL SQLCA                                               
+                                                                                
+  DO I = 1 TO SQLDA.SQLD                                                        
+     SAY "SQLDA."I".SQLNAME    ="SQLDA.I.SQLNAME";"                             
+     SAY "SQLDA."I".SQLTYPE    ="SQLDA.I.SQLTYPE";"                             
+     SAY "SQLDA."I".SQLLOCATOR ="SQLDA.I.SQLLOCATOR";"                          
+     SAY "SQLDA."I".SQLESTIMATE="SQLDA.I.SQLESTIMATE";"                         
+  END I                                                                         
+                                                                                
+                                                                                
+return                                                                          
+                                                                                
+get_resultset:                                                                  
+ /****************************************************************/             
+ /*  Set up a cursor to retrieve the rows from the result        */             
+ /*  set.                                                        */             
+ /****************************************************************/             
+                                                                                
+ ADDRESS DSNREXX "EXECSQL ASSOCIATE LOCATOR (:RESULT) WITH PROCEDURE ",         
+  ":PROC"                                                                       
+                                                                                
+ IF SQLCODE ^= 0 THEN CALL SQLCA                                                
+                                                                                
+ SAY RESULT                                                                     
+                                                                                
+ ADDRESS DSNREXX "EXECSQL ALLOCATE C101 CURSOR FOR RESULT SET :RESULT"          
+                                                                                
+ IF SQLCODE ^= 0 THEN CALL SQLCA                                                
+                                                                                
+ CURSOR = 'C101'                                                                
+ ADDRESS DSNREXX "EXECSQL DESCRIBE CURSOR :CURSOR INTO :SQLDA"                  
+ IF SQLCODE ^= 0 THEN CALL SQLCA                                                
+                                                                                
+ fetch_string  = "EXECSQL FETCH C101 INTO "                                     
+                                                                                
+  DO I = 1 TO SQLDA.SQLD                                                        
+  /* SAY "SQLDA."I".SQLNAME    ="SQLDA.I.SQLNAME";"  */                         
+  /* SAY "SQLDA."I".SQLTYPE    ="SQLDA.I.SQLTYPE";"  */                         
+     fetch_string = fetch_string||':'||sqlda.i.sqlname                          
+     if i < sqlda.sqld                                                          
+     then fetch_string = fetch_string||","                                      
+  END I                                                                         
+                                                                                
+  say fetch_string                                                              
+                                                                                
+ /****************************************************************/             
+ /*  Retrieve and display the rows from the result set, which    */             
+ /*  contain the command output message text.                    */             
+ /****************************************************************/             
+ DO UNTIL(SQLCODE ^= 0)                                                         
+   ADDRESS DSNREXX fetch_string                                                 
+   IF SQLCODE = 0                                                               
+   then do                                                                      
+        SAY "sqlcode is good, now how to display it "                           
+        do i = 1 to sqlda.sqld                                                  
+           interpret 'temp_var = ' sqlda.i.sqlname                              
+           len = length(sqlda.i.sqlname)                                        
+           pad = ''                                                             
+           if len < 18                                                          
+           then do                                                              
+                do j = 1 to (18 - len)                                          
+                  pad = pad || ' '                                              
+                end                                                             
+                end                                                             
+           say sqlda.i.sqlname pad ' = ' strip(temp_var)                        
+        END                                                                     
+        END                                                                     
+ END                                                                            
+                                                                                
+ IF SQLCODE ^= 0 & SQLCODE ^= 100 THEN CALL SQLCA                               
+ ADDRESS DSNREXX "EXECSQL CLOSE C101"                                           
+ IF SQLCODE ^= 0 THEN CALL SQLCA                                                
+ ADDRESS DSNREXX "EXECSQL COMMIT"                                               
+ IF SQLCODE ^= 0 THEN CALL SQLCA                                                
+                                                                                
+                                                                                
+return                                                                          
+                                                                                
+/************* SQL ERROR ROUTINE *************/                                 
+SQLCA:                                                                          
+   SAY "SQLSTATE =" SQLSTATE                                                    
+   SAY "SQLWARN =" SQLWARN.1",",                                                
+               || SQLWARN.2",",                                                 
+               || SQLWARN.3",",                                                 
+               || SQLWARN.4",",                                                 
+               || SQLWARN.5",",                                                 
+               || SQLWARN.6",",                                                 
+               || SQLWARN.7",",                                                 
+               || SQLWARN.8",",                                                 
+               || SQLWARN.9",",                                                 
+               || SQLWARN.10""                                                  
+   SAY "SQLERRD =" SQLERRD.1",",                                                
+               || SQLERRD.2",",                                                 
+               || SQLERRD.3",",                                                 
+               || SQLERRD.4",",                                                 
+               || SQLERRD.5",",                                                 
+               || SQLERRD.6                                                     
+   SAY "SQLERRP  =" SQLERRP                                                     
+   SAY "SQLERRMC =" SQLERRMC                                                    
+   SAY "SQLCODE  =" SQLCODE                                                     
+   RETURN                                                                       
+                                                                                
+/************* SQL ERROR ROUTINE *************/                                 
+NEWSQLCA:                                                                       
+                                                                                
+if right(sqlerrmc,1) <> 'FF'x then sqlerrmc = sqlerrmc || 'FF'x                 
+if sqlwarna          <> 'W'   then sqlwarna = ' '                               
+                                                                                
+SQLCA = 'SQLCA   '||,                                                           
+        x2c(d2x(136,8))||,                                                      
+        X2C(D2X(SQLCODE,8))||,                                                  
+        x2c(d2x(length(sqlerrmc),4))||,                                         
+        left(sqlerrmc,70)||,                                                    
+        left(SQLERRP,8)||,                                                      
+        x2c(d2x(sqlerrd.1,8))||,                                                
+        x2c(d2x(sqlerrd.2,8))||,                                                
+        x2c(d2x(sqlerrd.3,8))||,                                                
+        x2c(d2x(sqlerrd.4,8))||,                                                
+        x2c(d2x(sqlerrd.5,8))||,                                                
+        x2c(d2x(sqlerrd.6,8))||,                                                
+        left(SQLWARN.1,1)||,                                                    
+        left(SQLWARN.2,1)||,                                                    
+        left(SQLWARN.3,1)||,                                                    
+        left(SQLWARN.4,1)||,                                                    
+        left(SQLWARN.5,1)||,                                                    
+        left(SQLWARN.6,1)||,                                                    
+        left(SQLWARN.7,1)||,                                                    
+        left(SQLWARN.8,1)||,                                                    
+        left(SQLWARN.9,1)||,                                                    
+        left(SQLWARN.10,1)||,                                                   
+        left(SQLWARNA,1)||,                                                     
+        left(SQLSTATE,5)                                                        
+                                                                                
+message_llen  = 79                                                              
+message_lines = 12                                                              
+message_area  = x2c(d2x(message_llen*message_lines,4))||,                       
+                copies(' ',message_llen*message_lines)                          
+message_lrecl = x2c(d2x(message_llen,8))                                        
+address linkpgm "DSNTIAR sqlca message_area message_lrecl"                      
+message_line_start = 3                                                          
+                                                                                
+do messagei = 1 to message_lines                                                
+  message_line = substr(message_area,message_line_start,message_llen)           
+  message_line_start = message_line_start + message_llen                        
+  if message_line = '' then ITERATE                                             
+  msgtext=strip(message_line)                                                   
+  rc= say_msg(0)                                                                
+end                                                                             
+                                                                                
+msgtext='SQLSTATE='SQLSTATE                                                     
+rc= say_msg(0)                                                                  
+msgtext='SQLWARN ='SQLWARN.0",",                                                
+            || SQLWARN.1",",                                                    
+            || SQLWARN.2",",                                                    
+            || SQLWARN.3",",                                                    
+            || SQLWARN.4",",                                                    
+            || SQLWARN.5",",                                                    
+            || SQLWARN.6",",                                                    
+            || SQLWARN.7",",                                                    
+            || SQLWARN.8",",                                                    
+            || SQLWARN.9",",                                                    
+            || SQLWARN.10                                                       
+rc= say_msg(0)                                                                  
+msgtext='SQLERRD ='SQLERRD.1",",                                                
+            || SQLERRD.2",",                                                    
+            || SQLERRD.3",",                                                    
+            || SQLERRD.4",",                                                    
+            || SQLERRD.5",",                                                    
+            || SQLERRD.6                                                        
+rc= say_msg(0)                                                                  
+msgtext='SQLERRP  ='SQLERRP                                                     
+rc= say_msg(0)                                                                  
+msgtext='SQLERRMC ='SQLERRMC                                                    
+rc= say_msg(0)                                                                  
+msgtext='SQLCODE  ='SQLCODE                                                     
+rc= say_msg(0)                                                                  
+                                                                                
+if sqlstmt <> '' & sqlerrd.5 > 0 then                                           
+  do                                                                            
+    do i_text_pos = 1 to length(sqlstmt) by 72                                  
+      msgtext=substr(sqlstmt,i_text_pos,72)                                     
+      rc= say_msg(0)                                                            
+      if (sqlerrd.5 >= i_text_pos) &,                                           
+         (sqlerrd.5 <= i_text_pos+71) then                                      
+        do                                                                      
+          i_syn_pos = sqlerrd.5 - i_text_pos + 1                                
+          select                                                                
+            when i_syn_pos = 1 then                                             
+              syn_err_message = '|<- ThereØs a syntax error here *****'         
+            when i_syn_pos < 5 then                                             
+              syn_err_message = copies('*',i_syn_pos-1)||,                      
+                                '|<- ThereØs a syntax error here *****'         
+            when i_syn_pos < 34 then                                            
+              syn_err_message = '****'copies(' ',i_syn_pos-5)||,                
+                                '|<- ThereØs a syntax error here *****'         
+            otherwise                                                           
+              syn_err_message = '****'copies(' ',i_syn_pos-30)||,               
+                                'ThereØs a syntax error here ->| *****'         
+          end                                                                   
+          msgtext=syn_err_message                                               
+           rc= say_msg(0)                                                       
+       end                                                                      
+     end                                                                        
+   end                                                                          
+                                                                                
+return                                                                          
+                                                                                
+pad_field:                                                                      
+arg fl,len                                                                      
+                                                                                
+pad_fl = "'"left(fl,len,' ')"'"                                                 
+                                                                                
+return pad_fl                                                                   
+                                                                                
+                                                                                
+SAY_MSG:                                                                        
+arg bl                                                                          
+if datatype(msgtext.0) = 'NUM' then ,                                           
+   do m=1 to msgtext.0                                                          
+      m=right(m,2,0)                                                            
+      say msgtext.m                                                             
+   end                                                                          
+else ,                                                                          
+   do                                                                           
+      say msgtext                                                               
+   end                                                                          
+do bl                                                                           
+   say ' '                                                                      
+end                                                                             
+drop msgtext.                                                                   
+RETURN 1                                                                        
+                                                                                
+/*************  SYNTAX ERROR HANDLER **********/                                
+CRAPCODE:                                                                       
+SAY 'YOU HAVE CRAP CODE AT LINE' SIGL                                           
+SAY SOURCELINE(SIGL)                                                            
+SAY 'REXX GAVE A RETURN CODE OF' RC ', WHICH MEANS :'                           
+SAY ERRORTEXT(RC)                                                               
+EXIT                                                                            
+/************* EXTERNAL ERROR HANDLER **********/                               
+BADDIES:                                                                        
+SAY 'YOU HAVE BEEN LET DOWN BY FACTORS BEYOND YOUR CONTROL AT LINE' SIGL        
+SAY SOURCELINE(SIGL)                                                            
+SAY 'RC =' RC                                                                   
+EXIT                                                                            

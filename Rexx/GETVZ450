@@ -1,0 +1,14 @@
+/*REXX GETVZ450: REXX TO CREATE NDM PROCESS OVERRIDES*/                         
+ARG TESTID PROCESS JULIAN FILEID                                                
+PROCCRDS = TESTID".GETVZ450."PROCESS                                            
+NOTIFYID = SYSVAR(SYSUID)                                                       
+/****************************************************/                          
+"FREE FI(PROCCRDS)"                                                             
+"DELETE '"PROCCRDS"'"                                                           
+"ALLOC FI(PROCCRDS) DA('"PROCCRDS"') NEW"                                       
+QUEUE "   SUB PROC="PROCESS" -"                                                 
+QUEUE "       &FILEID="FILEID " -"                                              
+QUEUE "       &JULIAN="JULIAN " -"                                              
+QUEUE "       &NOTIFYID="NOTIFYID " -"                                          
+"EXECIO * DISKW PROCCRDS (FINIS"                                                
+"FREE FI(PROCCRDS)"                                                             

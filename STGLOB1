@@ -1,0 +1,99 @@
+SELECT *                                                                00001032
+FROM BMGVZP.STG_LOB_RPT_T                                               00002032
+WHERE MAN = 'PKT03H97L'                                                 00002132
+--AND VCH_100_B = 'View Data in Megabytes'                              00002245
+--AND REPORT_ID_TS = '2010-12-22-15.20.41.997028'                       00002362
+AND CH_30_A = 'C'                                                       00002460
+ORDER BY REPORT_ID_TS DESC;                                             00003032
+SELECT RTRIM(STG.CH_30_A) REC_TYPE                                      00003156
+      ,STG.INT_A   REC_TYPE_LINE                                        00003256
+      ,RTRIM(STG.VCH_100_A) || ' ' AS COL0                              00003356
+      ,RTRIM(STG.VCH_100_B) || ' ' AS COL1                              00003456
+      ,RTRIM(STG.VCH_100_C) || ' ' AS COL2                              00003556
+      ,RTRIM(STG.VCH_100_D) || ' ' AS COL3                              00003656
+      ,RTRIM(STG.VCH_500_A) || ' ' AS TARGET_PARMS                      00003756
+  FROM BMGVZP.STG_LOB_RPT_T STG                                         00003856
+ WHERE STG.REPORT_ID_TS = '2010-12-22-15.20.41.997028'                  00003970
+   AND STG.CH_30_A = 'C'                                                00004056
+   AND STG.INT_A > 1;                                                   00004156
+    SELECT CASE WHEN SC1.REC_TYPE_LINE > 99999                          00004237
+                 THEN ' '                                               00005037
+                WHEN SC1.REC_TYPE_LINE IN (3,5,7)                       00006064
+                 THEN ' '                                               00007037
+             ELSE SC1.COL0                                              00008037
+             END COL0                                                   00009037
+          ,CASE WHEN SC1.REC_TYPE_LINE > 99999                          00010037
+              THEN 'NO_LINE'                                            00020037
+              WHEN SC1.REC_TYPE_LINE IN (3,5,7)                         00030064
+              THEN 'NO_LINE'                                            00040037
+              ELSE 'CHAR' END TARGET_FMT                                00050037
+                                                                        00060037
+          ,SC1.COL1                                                     00070037
+          ,CASE WHEN SC1.REC_TYPE_LINE > 99999                          00080037
+                THEN 'NO_LINE'                                          00090037
+                WHEN SC1.REC_TYPE_LINE IN (3,5,7)                       00100064
+                THEN 'NO_LINE'                                          00110037
+                ELSE 'CHAR' END TARGET_FMT                              00120037
+          ,CASE WHEN SC1.REC_TYPE_LINE > 99999                          00130037
+                 AND SC1.REC_TYPE_LINE <>  3                            00131069
+                 AND SC1.REC_TYPE_LINE <>  5                            00132069
+                 AND SC1.REC_TYPE_LINE <>  7                            00133069
+                THEN 'S'                                                00140037
+                WHEN SC1.REC_TYPE_LINE IN (3,5,7)                       00150069
+                THEN 'S'                                                00160037
+                ELSE ' ' END SELECT_LINK                                00170037
+          ,CASE WHEN SC1.REC_TYPE_LINE > 99999                          00180037
+                 AND SC1.REC_TYPE_LINE <>  3                            00181064
+                 AND SC1.REC_TYPE_LINE <>  5                            00182064
+                 AND SC1.REC_TYPE_LINE <>  7                            00183064
+              THEN '279'                                                00190050
+                WHEN SC1.REC_TYPE_LINE =   3                            00191065
+              THEN '90213'                                              00192050
+                WHEN SC1.REC_TYPE_LINE =   5                            00192165
+              THEN '90214'                                              00192266
+                WHEN SC1.REC_TYPE_LINE =   7                            00192365
+              THEN '90215'                                              00192466
+              ELSE ' ' END TARGET_PAGE_ID                               00193050
+          ,CASE WHEN SC1.REC_TYPE_LINE <= 99999                         00200037
+                 AND SC1.REC_TYPE_LINE <>  3                            00201068
+                 AND SC1.REC_TYPE_LINE <>  5                            00202068
+                 AND SC1.REC_TYPE_LINE <>  7                            00203068
+                          THEN ' '                                      00210037
+                WHEN SC1.REC_TYPE_LINE  IN (3,5,7)                      00220064
+                          THEN 'ALL'                                    00230051
+                WHEN SC1.REC_TYPE = 'A'                                 00240037
+                          THEN '1_ALL'                                  00250037
+                WHEN SC1.REC_TYPE = 'B'                                 00260037
+                          THEN '2_ALL'                                  00270037
+                    ELSE '3_ALL' END TARGET_SUBSET                      00280037
+          ,CASE WHEN SC1.REC_TYPE_LINE > 99999                          00290037
+              THEN SC1.TARGET_PARMS                                     00300037
+                WHEN SC1.REC_TYPE_LINE IN (3,5,7)                       00310064
+              THEN SC1.TARGET_PARMS                                     00320037
+              ELSE ' ' END TARGET_PARMS                                 00330037
+          ,CASE WHEN SC1.REC_TYPE_LINE > 99999                          00331037
+                 THEN ''                                                00332037
+--              WHEN SC1.REC_TYPE_LINE = 999998                         00333052
+--               THEN ''                                                00334047
+                ELSE SC1.COL2                                           00335037
+                END COL2                                                00336037
+                                                                        00337037
+          ,CASE WHEN SC1.REC_TYPE_LINE > 99999                          00338037
+                 THEN ''                                                00339037
+                WHEN SC1.REC_TYPE_LINE IN (3,5,7)                       00339164
+                 THEN ''                                                00339237
+                ELSE SC1.COL3                                           00339337
+                END COL3                                                00339437
+      FROM (                                                            00340016
+      SELECT RTRIM(STG.CH_30_A) REC_TYPE                                00350016
+            ,STG.INT_A   REC_TYPE_LINE                                  00360016
+            ,RTRIM(STG.VCH_100_A) || ' ' AS COL0                        00370016
+            ,RTRIM(STG.VCH_100_B) || ' ' AS COL1                        00380016
+            ,RTRIM(STG.VCH_100_C) || ' ' AS COL2                        00390016
+            ,RTRIM(STG.VCH_100_D) || ' ' AS COL3                        00400016
+            ,RTRIM(STG.VCH_500_A) || ' ' AS TARGET_PARMS                00410016
+        FROM BMGVZP.STG_LOB_RPT_T STG                                   00420022
+       WHERE STG.REPORT_ID_TS = '2010-12-29-10.11.32.821530'            00430072
+         AND STG.CH_30_A = 'C'                                          00440034
+         AND STG.INT_A > 1                                              00450034
+           ) SC1                                                        00460016

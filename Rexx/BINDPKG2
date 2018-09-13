@@ -1,0 +1,30 @@
+/*REXX BINDPKG: REXX TO BIND DB2 PACKAGE */                             00010000
+ARG TESTID TBLHILVL OWNER DB2SYS PKGNAME MEMBER                         00020000
+BINDCDS = TESTID".BINDPKG2."MEMBER"."DB2SYS                             00030001
+BINDDSN = TESTID".BINDPKG2."MEMBER"."DB2SYS".DSN"                       00030101
+CALL WRAPDSN BINDDSN DB2SYS                                             00030200
+BINDEND = TESTID".BINDPKG2."MEMBER"."DB2SYS".END"                       00030301
+CALL WRAPEND BINDEND                                                    00030400
+PDSMEM = "BMGVZ0CN.TEST.BINDCNTL("MEMBER")"                             00030500
+/****************************************************/                  00030600
+"FREE FI(BINDCDS)"                                                      00030700
+"DELETE '"BINDCDS"'"                                                    00030800
+"ALLOC FI(BINDCDS) DA('"BINDCDS"') NEW"                                 00030900
+QUEUE "      BIND PACKAGE("PKGNAME") -"                                 00031000
+QUEUE "      MEMBER("MEMBER") -"                                        00032000
+QUEUE "      ACTION(REPLACE) -"                                         00033000
+QUEUE "      OWNER("OWNER") -"                                          00034000
+QUEUE "      QUALIFIER("TBLHILVL") -"                                   00035000
+QUEUE "      ISOLATION(UR) -"                                           00036000
+QUEUE "      RELEASE(COMMIT) -"                                         00037000
+QUEUE "      VALIDATE(BIND) -"                                          00038000
+QUEUE "      KEEPDYNAMIC(YES) -"                                        00039000
+QUEUE "      DYNAMICRULES(BIND) -"                                      00040000
+QUEUE "      PATH("TBLHILVL") -"                                        00041000
+QUEUE "      EXPLAIN(NO)"                                               00050000
+"EXECIO * DISKW BINDCDS (FINIS"                                         00060000
+"FREE FI(PDSMEM)"                                                       00070000
+"ALLOC FI(PDSMEM) DA('"PDSMEM"') SHR"                                   00080000
+"REPRO INFILE(BINDCDS) OUTFILE(PDSMEM)"                                 00090000
+"FREE FI(PDSMEM)"                                                       00100000
+"FREE FI(BINDCDS)"                                                      00110000

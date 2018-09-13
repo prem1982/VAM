@@ -1,0 +1,31 @@
+/*REXX GETELEM: TO EXTRACT (TAKE-OUT OF ENDEVOR) ELEMENTS */                    
+ARG  TYPE MEMBER ENVIRON SYSTEM SUBSYS STAGE PDSDSN VV LL                       
+                                                                                
+CCID = SUBSYS"BR"                                                               
+QUEUE  "RETRIEVE ELEMENT "MEMBER                                                
+IF DATATYPE(VV,'NUM') & DATATYPE(LL,'NUM')                                      
+THEN DO                                                                         
+    VV = RIGHT(VV,2,'0')                                                        
+    LL = RIGHT(LL,2,'0')                                                        
+    QUEUE      " VERSION " VV " LEVEL "LL                                       
+END                                                                             
+QUEUE  "    FROM ENVIRONMENT "ENVIRON                                           
+QUEUE  "         SYSTEM      "SYSTEM                                            
+QUEUE  "         SUBSYSTEM   "SUBSYS                                            
+QUEUE  "    TYPE  "TYPE                                                         
+QUEUE  "    STAGE "STAGE                                                        
+QUEUE  "  TO DSNAME '"PDSDSN"'"                                                 
+QUEUE  "  OPTIONS CCID     '"CCID"'"                                            
+QUEUE  "          OVERRIDE SIGNOUT"                                             
+QUEUE  "          REPLACE"                                                      
+/** USE THE DEFAULT NO REPLACE .                                                
+ **/                                                                            
+QUEUE  "          NO SIGNOUT"                                                   
+QUEUE  "          NOSEARCH"                                                     
+QUEUE  " ."                                                                     
+USERID = SYSVAR(SYSUID)                                                         
+SCLDSN = USERID"."MEMBER"."TYPE"."SYSTEM".SCL"                                  
+"DELETE '"SCLDSN"'"                                                             
+"ALLOC FI(CARDDSN) DA('"SCLDSN"')  NEW CATALOG DATACLAS(PSFB80)"                
+"EXECIO * DISKW CARDDSN (FINIS"                                                 
+"FREE FI(CARDDSN)"                                                              

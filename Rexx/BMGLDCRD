@@ -1,0 +1,18 @@
+/*REXX BMGLDCRD: REXX TO CREATE DB2 LOAD STATEMENT*/                    00010000
+ARG BMGNY0PN OWNER TBLNAME DB2SYS RESUME                                00020000
+CALL GETNAMEL TBLNAME                                                   00030000
+LONGNAME = RESULT                                                       00040000
+LOADCDS = BMGNY0PN".BMGLDCRD."DB2SYS"."OWNER"."TBLNAME                  00080000
+"FREE FI(LOADCDS)"                                                      00090000
+"DELETE '"LOADCDS"'"                                                    00100000
+"ALLOC FI(LOADCDS) DA('"LOADCDS"') NEW"                                 00110000
+IF RESUME = "YES" THEN                                                  00120000
+   QUEUE "   LOAD DATA INDDN SYSREC00 RESUME "RESUME" LOG(NO)"          00130000
+ELSE                                                                    00140000
+   DO                                                                   00141005
+      QUEUE "   LOAD DATA INDDN SYSREC00 LOG(NO) REPLACE"               00150005
+      QUEUE " STATISTICS TABLE(ALL) INDEX(ALL) UPDATE ALL"              00160005
+   END                                                                  00160205
+QUEUE "        INTO TABLE "OWNER"."LONGNAME""                           00161004
+"EXECIO * DISKW LOADCDS (FINIS"                                         00170000
+"FREE FI(LOADCDS)"                                                      00180000

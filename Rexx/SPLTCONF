@@ -1,0 +1,53 @@
+/*REXX to split wholesale configurations in to a file format                    
+compatible with the bill manager input file */                                  
+say "Please Enter the input dsn without quotes :"                               
+pull recalfile                                                                  
+say "Please Enter the output dsn without quotes :"                              
+pull recalfil1                                                                  
+address TSO                                                                     
+/*recalfile="V657305.bala.config"*/                                             
+"ALLOC FI(recfil) DA('"recalfile"') SHR REUSE"                                  
+"execio * diskr recfil (stem row. finis"                                        
+"free FI(recfil)"                                                               
+if RC <> 0 then                                                                 
+do                                                                              
+say " PLEASE PROVIDE CORRECT INPUT FILE "                                       
+exit                                                                            
+end                                                                             
+splt.0=0                                                                        
+j=0                                                                             
+    do i=1 to ROW.0                                                             
+      row.i=strip(row.i)                                                        
+      len=length(row.i)                                                         
+      revstr= reverse(row.i)                                                    
+      postn=pos('{',revstr)                                                     
+      noofman=len-postn+2                                                       
+      getmanno=substr(row.i,noofman,1)                                          
+      spltstr=substr(row.i,1,noofman-1)                                         
+      call splitconfig                                                          
+    end                                                                         
+    splt.0=j                                                                    
+/*RECALFIL1="V657305.BALA.CONFIG1" */                                           
+"ALLOC DA('"recalfil1"') NEW SPACE(50,25) CYLINDERS DSORG(PS)",                 
+          "RECFM(F,B) LRECL(450) MGMTCLAS(LUSE15)"                              
+if RC <> 0 then                                                                 
+do                                                                              
+say " output file not allocated "                                               
+exit                                                                            
+end                                                                             
+"ALLOC FI(recfil1) DA('"recalfil1"') SHR REUSE"                                 
+"execio * diskW recfil1 (stem splt. finis"                                      
+"free FI(recfil1)"                                                              
+if RC <> 0 then                                                                 
+do say " PLEASE PROVIDE CORRECT INPUT FILE "                                    
+exit                                                                            
+end                                                                             
+EXIT                                                                            
+/*********************************************************************/         
+splitconfig:                                                                    
+do k = 1 to getmanno                                                            
+j=j+1                                                                           
+nthman=(13*(k-1))+noofman+1                                                     
+splt.j=substr(row.i,nthman,13)||'   '||strip(spltstr)                           
+end                                                                             
+return                                                                          

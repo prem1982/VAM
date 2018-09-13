@@ -1,0 +1,19 @@
+  SELECT SC1.DATA_DATE                                                          
+        ,SC1.DATA_TIME                                                          
+        ,SC1.DATA_DESC                                                          
+        ,CHAR(SC1.USAGE_AMT) || SC1.DATA_TYPE USAGE_AMT                         
+    FROM (                                                                      
+      SELECT STG.MTN                                                            
+            ,STG.DATA_DATE                                                      
+            ,SUBSTR(CHAR(STG.DATA_TIME),1,2)                                    
+              || ':' || SUBSTR(CHAR(STG.DATA_TIME),4,2)                         
+              || ':' || SUBSTR(CHAR(STG.DATA_TIME),7,2)                         
+                 AS DATA_TIME                                                   
+            ,STG.DATA_USAGE_DESC DATA_DESC                                      
+            ,(STG.DATA_USAGE_AMT + STG.DATA_USAGE_AMT10) AS USAGE_AMT           
+            ,STG.DATA_USAGE_TYPE DATA_TYPE                                      
+        FROM STG_UNBIL_DATA_T STG                                               
+       WHERE STG.REPORT_ID_TS = ?                                               
+         AND STG.DATA_USAGE_TYPE <> 'XX'                                        
+         ) SC1                                                                  
+    WFILTER = ?                                                                 

@@ -1,0 +1,228 @@
+   SELECT                                                                       
+   'Total'                                                                      
+   WTN,                                                                         
+   ' '                                                                          
+   ACCT_NBR,                                                                    
+   ' '                                                                          
+   USER_NAME,                                                                   
+   ' '                                                                          
+   COST_CNTR,                                                                   
+   ' '                                                                          
+   USER_ID,                                                                     
+   ' '                                                                          
+   DEVICE_ID,                                                                   
+   ' '                                                                          
+   PRICE_PL_DESC,                                                               
+   CASE                                                                         
+           WHEN ALIAS_FLAG% = 'Y'                                               
+           THEN ' '                                                             
+           ELSE ''                                                              
+            END ACCT_ALIAS,                                                     
+   ' '                                                                          
+   BILL_CYCLE,                                                                  
+   ' '                                                                          
+   OVERAGE,                                                                     
+   CHAR(SUM(SC1.PEAK_MINS)) PEAK_MINS,                                          
+   CHAR(SUM(SC1.OFFPEAK_MINS)) OFFPEAK_MINS,                                    
+   CHAR(SUM(SC1.NIGHT_MINS)) NIGHT_MINS,                                        
+   CHAR(SUM(SC1.WE_MINS)) WE_MINS,                                              
+   CHAR(SUM(SC1.OTHER_MINS)) OTHER_MINS,                                        
+   CHAR(SUM(SC1.IN_PEAK)) IN_PEAK,                                              
+   CHAR(SUM(SC1.IN_OFFPEAK)) IN_OFFPEAK,                                        
+   CHAR(SUM(SC1.FF_MIN)) FF_MIN                                                 
+  FROM (                                                                        
+   SELECT                                                                       
+   STG.WTN                                                                      
+   WTN,                                                                         
+   STG.WIRELESS_DAN                                                             
+   ACCT_NBR,                                                                    
+   STG.ACCT_ALIAS                                                               
+       || ' '                                                                   
+   ACCT_ALIAS,                                                                  
+   SUBSTR (                                                                     
+   STG.CH_30_A,                                                                 
+   1,                                                                           
+   2                                                                            
+    )                                                                           
+   BILL_CYCLE,                                                                  
+   ' '                                                                          
+   OVERAGE,                                                                     
+   RTRIM                                                                        
+    (                                                                           
+   STG.VCH_100_A                                                                
+    )                                                                           
+       || ' '                                                                   
+   USER_NAME,                                                                   
+   RTRIM                                                                        
+    (                                                                           
+   STG.VCH_100_C                                                                
+    )                                                                           
+       || ' '                                                                   
+   COST_CNTR,                                                                   
+   RTRIM                                                                        
+    (                                                                           
+   STG.VCH_100_D                                                                
+    )                                                                           
+       || ' '                                                                   
+   USER_ID,                                                                     
+   STG.CH_30_B                                                                  
+   DEVICE_ID,                                                                   
+   RTRIM                                                                        
+    (                                                                           
+   STG.VCH_500_A                                                                
+    )                                                                           
+       || ' '                                                                   
+   PRICE_PL_DESC,                                                               
+   STG.INT_A                                                                    
+   PEAK_MINS,                                                                   
+   STG.INT_B                                                                    
+   OFFPEAK_MINS,                                                                
+   STG.INT_C                                                                    
+   NIGHT_MINS,                                                                  
+   STG.INT_D                                                                    
+   WE_MINS,                                                                     
+   STG.INT_E                                                                    
+   OTHER_MINS,                                                                  
+   STG.INT_F                                                                    
+   IN_PEAK,                                                                     
+   STG.INT_G                                                                    
+   IN_OFFPEAK,                                                                  
+   STG.INT_J                                                                    
+   FF_MIN,                                                                      
+   DECIMAL (                                                                    
+   STG.AMT_1,                                                                   
+   12,                                                                          
+   0                                                                            
+    )                                                                           
+   KB_USAGE,                                                                    
+   DECIMAL (                                                                    
+   STG.AMT_2,                                                                   
+   12,                                                                          
+   0                                                                            
+    )                                                                           
+   MB_USAGE,                                                                    
+   DECIMAL (                                                                    
+   STG.AMT_3,                                                                   
+   12,                                                                          
+   0                                                                            
+    )                                                                           
+   BB_KB_USAGE,                                                                 
+   DECIMAL (                                                                    
+   STG.AMT_4,                                                                   
+   12,                                                                          
+   0                                                                            
+    )                                                                           
+   BB_MB_USAGE,                                                                 
+   DECIMAL (                                                                    
+   STG.DEC_15_3_A,                                                              
+   12,                                                                          
+   0                                                                            
+    )                                                                           
+   GD_KB_USAGE,                                                                 
+   DECIMAL (                                                                    
+   STG.DEC_15_3_B,                                                              
+   12,                                                                          
+   0                                                                            
+    )                                                                           
+   GD_MB_USAGE,                                                                 
+   DECIMAL (                                                                    
+   STG.ADJ_AMT,                                                                 
+   12,                                                                          
+   0                                                                            
+    )                                                                           
+   GB_KB_USAGE,                                                                 
+   DECIMAL (                                                                    
+   STG.OTHER_CHG,                                                               
+   12,                                                                          
+   0                                                                            
+    )                                                                           
+   GB_MB_USAGE,                                                                 
+   DECIMAL (                                                                    
+   STG.AMT_5,                                                                   
+   12,                                                                          
+   0                                                                            
+    )                                                                           
+   DOM_TXT_RCV,                                                                 
+   DECIMAL (                                                                    
+   STG.AMT_6,                                                                   
+   12,                                                                          
+   0                                                                            
+    )                                                                           
+   DOM_TXT_SNT,                                                                 
+   DECIMAL (                                                                    
+   STG.AMT_7,                                                                   
+   12,                                                                          
+   0                                                                            
+    )                                                                           
+   INTL_TXT_RCV,                                                                
+   DECIMAL (                                                                    
+   STG.AMT_8,                                                                   
+   12,                                                                          
+   0                                                                            
+    )                                                                           
+   INTL_TXT_SNT,                                                                
+   DECIMAL (                                                                    
+   STG.AMT_9,                                                                   
+   12,                                                                          
+   0                                                                            
+    )                                                                           
+   IN_NW_TXT_RCV,                                                               
+   DECIMAL (                                                                    
+   STG.AMT_10,                                                                  
+   12,                                                                          
+   0                                                                            
+    )                                                                           
+   IN_NW_TXT_SNT,                                                               
+   DECIMAL (                                                                    
+   STG.FULL_AMT,                                                                
+   12,                                                                          
+   0                                                                            
+    )                                                                           
+   GLOB_TXT_RCV,                                                                
+   DECIMAL (                                                                    
+   STG.BILL_AMT,                                                                
+   12,                                                                          
+   0                                                                            
+    )                                                                           
+   GLOB_TXT_SNT,                                                                
+   DECIMAL (                                                                    
+   STG.DISC_AMT,                                                                
+   12,                                                                          
+   0                                                                            
+    )                                                                           
+   PIX_FLIX_RCV,                                                                
+   DECIMAL (                                                                    
+   STG.OTHER_AMT,                                                               
+   12,                                                                          
+   0                                                                            
+    )                                                                           
+   PIX_FLIX_SNT,                                                                
+   DECIMAL (                                                                    
+   STG.CHG_AMT,                                                                 
+   12,                                                                          
+   0                                                                            
+    )                                                                           
+   IN_PIX_RCV,                                                                  
+   DECIMAL (                                                                    
+   STG.DEC_15_6_A,                                                              
+   12,                                                                          
+   0                                                                            
+    )                                                                           
+   IN_PIX_SNT,                                                                  
+   DECIMAL (                                                                    
+   STG.DEC_15_6_B,                                                              
+   12,                                                                          
+   0                                                                            
+    )                                                                           
+   INTL_PIX_RCV,                                                                
+   DECIMAL (                                                                    
+   STG.DEC_15_6_C,                                                              
+   12,                                                                          
+   0                                                                            
+    )                                                                           
+   INTL_PIX_SNT                                                                 
+  FROM STG_LOB_RPT_T STG                                                        
+   WHERE STG.REPORT_ID_TS = ?                                                   
+    )                                                                           
+   SC1                                                                          
+   WFILTER = ?                                                                  

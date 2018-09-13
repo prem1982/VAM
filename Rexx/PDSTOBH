@@ -1,0 +1,13 @@
+/*REXX PDSTOBH: REXX TO CREATE NDM PROCESS OVERRIDES*/                          
+ARG TESTID FROMPDS TOPDS MEMBER                                                 
+PROCCRDS = TESTID".PDSTOBH.INFO"                                                
+/****************************************************/                          
+"FREE FI(PROCCRDS)"                                                             
+"DELETE '"PROCCRDS"'"                                                           
+"ALLOC FI(PROCCRDS) DA('"PROCCRDS"') NEW"                                       
+QUEUE "   SUB PROC=PDSTOBH" -"                                                  
+QUEUE "       &FROMPDS=" FROMPDS" -"                                            
+QUEUE "       &TOPDS=" TOPDS" -"                                                
+QUEUE "       &MEMBER=" MEMBER" -"                                              
+"EXECIO * DISKW PROCCRDS (FINIS"                                                
+"FREE FI(PROCCRDS)"                                                             

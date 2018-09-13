@@ -1,0 +1,14 @@
+/*REXX STARTSP: REXX TO START DB2 STORED PROCEDURE */                   00010004
+ARG TESTID DB2SYS OWNER MEMBER                                          00020004
+CALL GETPROCL MEMBER                                                    00030004
+PROCNAME = RESULT                                                       00040004
+DB2CNTL = TESTID".STARTSP."MEMBER"."DB2SYS                              00050004
+/****************************************************/                  00060004
+"FREE FI(DB2CNTL)"                                                      00070004
+"DELETE '"DB2CNTL"'"                                                    00080004
+"ALLOC FI(DB2CNTL) DA('"DB2CNTL"') NEW"                                 00090004
+QUEUE "  DSN SYSTEM("DB2SYS")"                                          00100004
+QUEUE "  -START PROCEDURE("OWNER"."PROCNAME")"                          00140006
+QUEUE "  END"                                                           00150004
+"EXECIO * DISKW DB2CNTL (FINIS"                                         00160004
+"FREE FI(DB2CNTL)"                                                      00170004

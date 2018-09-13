@@ -1,0 +1,232 @@
+/* rexx */                                                              00010000
+/*===================================================================== 00020000
+This program ("exec") compares tables in d001 and d019 used by report   00030000
+gallery                                                                 00040000
+                                                                        00050000
+                                                                        00060000
+THINGS TO DO                                                            00070000
+-Debug parameter.                                                       00080000
+=====================================================================*/ 00090000
+/*                                                                      00091000
+trace r                                                                 00092000
+*/                                                                      00093000
+signal on error name baddies /* Routine for external errors */          00094000
+signal on syntax name crapcode /* Routine for code errors */            00095000
+                                                                        00096000
+msgs = msg(on) /* TSO/E message switch  - c.f. CONTROL MSG in CLIST */  00097000
+                                                                        00098000
+/*--------------------------------------------------------------------- 00099000
+Initialise                                                              00100000
+---------------------------------------------------------------------*/ 00110000
+/* Input member-to-table-name cross-reference listing */                00120000
+tbllist_dsn = "TBLCMPS1.DATA"                                           00130000
+                                                                        00140000
+/* Output report library */                                             00150000
+rpt_dsn = "TBLCMPS1.REPORT"                                             00160000
+                                                                        00170000
+/* Output report lines */                                               00180000
+rpt_ix = 0                                                              00190000
+rpt_line. = ""                                                          00200000
+                                                                        00210000
+/* DB2 stuff */                                                         00220000
+ssid = 'D001'                                                           00230000
+tbl_prefix = 'BMGVZT'                                                   00240000
+                                                                        00250000
+/*--------------------------------------------------------------------- 00260000
+Read the cross-reference records                                        00270000
+---------------------------------------------------------------------*/ 00280000
+address tso                                                             00290000
+                                                                        00300000
+"alloc f(tbllist) da("tbllist_dsn") shr reu"                            00310000
+                                                                        00320000
+"execio * diskr tbllist (stem tblrec. finis"                            00330000
+                                                                        00340000
+"free f(tbllist)"                                                       00350000
+                                                                        00360000
+proc_ct = 0                                                             00370000
+                                                                        00380000
+/* Establish the DB2 connection */                                      00390000
+signal off error /* Turn error-trapping off */                          00400000
+"SUBCOM DSNREXX"                                                        00410000
+signal on error name baddies /* Routine for external errors */          00420000
+if RC then                                                              00430000
+   s_rc = RXSUBCOM('ADD','DSNREXX','DSNREXX')                           00440000
+                                                                        00450000
+address DSNREXX "CONNECT" ssid                                          00460000
+If SQLCODE ^= 0 Then Call SQLCA                                         00470000
+                                                                        00480000
+/* Report Heading */                                                    00490000
+rpt_ix = rpt_ix + 1                                                     00500000
+rpt_line.rpt_ix = 'Report for DB2 subsystem ' ssid,                     00501000
+                  ' tables ' tbl_prefix                                 00502000
+say rpt_line.rpt_ix                                                     00503000
+                                                                        00504000
+/* Process each DDL member to build DLCGEN cards */                     00505000
+signal off error                                                        00506000
+do tx = 1 to tblrec.0                                                   00507000
+   /* Call member processing sub-routine */                             00508000
+   tbl_base = word(tblrec.tx,1)                                         00509000
+   tbl_stg  = word(tblrec.tx,2)                                         00510000
+   call process1 tbl_prefix tbl_base tbl_stg                            00520000
+   say tbl_base',' tbl_stg ':' result                                   00530000
+   proc_ct = proc_ct + 1                                                00540000
+end /* do tx = 1 to tblrec.0*/                                          00550000
+                                                                        00560000
+say 'Total table pairs processed : ' proc_ct                            00570000
+                                                                        00580000
+Address DSNREXX "DISCONNECT"                                            00590000
+If SQLCODE ^= 0 Then Call SQLCA                                         00600000
+                                                                        00610000
+/* Allocate the report file */                                          00620000
+"alloc f(rpt) da("rpt_dsn") old reu"                                    00630000
+                                                                        00640000
+/* Write the report */                                                  00650000
+"execio" rpt_ix "diskw rpt (stem rpt_line. finis"                       00660000
+                                                                        00661000
+/* Free the report file ("Fly, my pretty, fly!") */                     00662000
+"free f(rpt)"                                                           00663000
+                                                                        00664000
+/*--------------------------------------------------------------------- 00665000
+End of main program                                                     00666000
+---------------------------------------------------------------------*/ 00667000
+exit                                                                    00668000
+                                                                        00669000
+/*--------------------------------------------------------------------- 00670000
+Table processing                                                        00680000
+---------------------------------------------------------------------*/ 00690000
+process1: PROCEDURE expose rpt_line. rpt_ix                             00700000
+/* Receive arguments "No we don't!" "Oh yes we do!" "Oh no we don't!"*/ 00710000
+arg tbl_prefix tbl_base tbl_stg                                         00720000
+                                                                        00730000
+/* Initialise */                                                        00740000
+address tso                                                             00750000
+rpt_ix = rpt_ix + 1                                                     00760000
+rpt_line.rpt_ix = "===>" tbl_base "/" tbl_stg                           00770000
+say rpt_line.rpt_ix                                                     00780000
+                                                                        00790000
+/* Populate an SQLDA with the base table details */                     00800000
+sqlda_base. = '<null>'                                                  00810000
+table = tbl_prefix"."tbl_base                                           00820000
+Address DSNREXX "EXECSQL DESCRIBE TABLE :TABLE INTO :SQLDA_base"        00830000
+If SQLCODE ^= 0 Then Call SQLCA                                         00840000
+Address DSNREXX "EXECSQL COMMIT"                                        00850000
+                                                                        00860000
+/* Populate an SQLDA with the stage table details */                    00870000
+sqlda_stg. = '<null>'                                                   00871000
+table = tbl_prefix"."tbl_stg                                            00871100
+Address DSNREXX "EXECSQL DESCRIBE TABLE :TABLE INTO :SQLDA_stg"         00871200
+If SQLCODE ^= 0 Then Call SQLCA                                         00871300
+Address DSNREXX "EXECSQL COMMIT"                                        00871400
+                                                                        00871500
+/*- First, check that the first two columns of the stage table are      00871600
+as expected */                                                          00871700
+if (sqlda_stg.1.sqlname ^= 'REPORT_ID_TS'),                             00871800
+ | (sqlda_stg.2.sqlname ^= 'LINE_NUM')                                  00871900
+then                                                                    00872000
+   do                                                                   00873000
+   rpt_ix = rpt_ix + 1                                                  00874000
+   rpt_line.rpt_ix = "Standard staging columns 1 & 2 not found."        00875000
+   say rpt_line.rpt_ix                                                  00876000
+   end                                                                  00877000
+                                                                        00878000
+/* Chug through name compare, noting anomalies */                       00879000
+is = 3                                                                  00880000
+ib = 1                                                                  00881000
+do until (ib > sqlda_base.sqld & is > sqlda_stg.sqld)                   00882000
+   select /* Look for differences between columns */                    00883000
+   when sqlda_base.ib.sqlname ^= sqlda_stg.is.sqlname then              00884000
+      /* Name */                                                        00885000
+      do                                                                00886000
+      rpt_ix = rpt_ix + 1                                               00887000
+      rpt_line.rpt_ix = "   Name mismatch at" ib ":",                   00888000
+                        sqlda_base.ib.sqlname "/",                      00889000
+                        sqlda_stg.is.sqlname                            00890000
+      say rpt_line.rpt_ix                                               00900000
+      end                                                               00900100
+   when sqlda_base.ib.sqltype ^= sqlda_stg.is.sqltype then              00900200
+      /* Data type */                                                   00900300
+      do                                                                00900400
+      rpt_ix = rpt_ix + 1                                               00900500
+      rpt_line.rpt_ix = "   Type mismatch at" ib ":",                   00900600
+                        sqlda_base.ib.sqltype "/",                      00900700
+                        sqlda_stg.is.sqltype                            00900800
+      say rpt_line.rpt_ix                                               00900900
+      end                                                               00901000
+   when sqlda_base.ib.sqllen ^= sqlda_stg.is.sqllen then                00901100
+      /* Length */                                                      00901200
+      do                                                                00901300
+      rpt_ix = rpt_ix + 1                                               00901400
+      rpt_line.rpt_ix = "   Length mismatch at" ib ":",                 00901500
+                        sqlda_base.ib.sqllen "/",                       00901600
+                        sqlda_stg.is.sqllen                             00901700
+      say rpt_line.rpt_ix                                               00901800
+      end                                                               00901900
+   when sqlda_base.ib.sqlprecision ^= sqlda_stg.is.sqlprecision then    00902000
+      /* Precision */                                                   00902100
+      do                                                                00902200
+      rpt_ix = rpt_ix + 1                                               00902300
+      rpt_line.rpt_ix = "   Precision mismatch at" ib ":",              00902400
+                        sqlda_base.ib.sqlprecision "/",                 00902500
+                        sqlda_stg.is.sqlprecision                       00902600
+      say rpt_line.rpt_ix                                               00902700
+      end                                                               00902800
+   when sqlda_base.ib.sqlscale ^= sqlda_stg.is.sqlscale then            00902900
+      /* Scale */                                                       00903000
+      do                                                                00903100
+      rpt_ix = rpt_ix + 1                                               00903200
+      rpt_line.rpt_ix = "   Scale mismatch at" ib ":",                  00903300
+                        sqlda_base.ib.sqlscale "/",                     00903400
+                        sqlda_stg.is.sqlscale                           00903500
+      say rpt_line.rpt_ix                                               00903600
+      end                                                               00903700
+   otherwise                                                            00903800
+      nop                                                               00903900
+   end /* select */                                                     00904000
+   is = is + 1                                                          00905000
+   ib = ib + 1                                                          00906000
+end                                                                     00907000
+                                                                        00908000
+/*--------------------------------------------------------------------- 00909000
+End of PROCESS1 sub-routine                                             00910000
+---------------------------------------------------------------------*/ 00920000
+return 0                                                                00930000
+                                                                        00940000
+/*--------------------------------------------------------------------- 00950000
+Display SQLCA                                                           00960000
+---------------------------------------------------------------------*/ 00970000
+SQLCA:                                                                  00980000
+  say "SQLSTATE =" SQLSTATE                                             00990000
+  say "SQLWARN =" SQLWARN.0",",                                         01000000
+              || SQLWARN.1",",                                          01010000
+              || SQLWARN.2",",                                          01020000
+              || SQLWARN.3",",                                          01030000
+              || SQLWARN.4",",                                          01040000
+              || SQLWARN.5",",                                          01050000
+              || SQLWARN.6",",                                          01060000
+              || SQLWARN.7",",                                          01070000
+              || SQLWARN.8",",                                          01080000
+              || SQLWARN.9",",                                          01090000
+              || SQLWARN.10""                                           01100000
+  say "SQLERRD =" SQLERRD.1",",                                         01110000
+              || SQLERRD.2",",                                          01120000
+              || SQLERRD.3",",                                          01130000
+              || SQLERRD.4",",                                          01140000
+              || SQLERRD.5",",                                          01150000
+              || SQLERRD.6                                              01160000
+  say "SQLERRP  =" SQLERRP                                              01170000
+  say "SQLERRMC =" SQLERRMC                                             01180000
+  say "SQLCODE  =" SQLCODE                                              01190000
+  Exit 20                                                               01200000
+                                                                        01210000
+crapcode: /* Syntax error-handling routine */                           01220000
+say 'You have crap code at line' sigl                                   01230000
+say sourceline(sigl)                                                    01240000
+say 'REXX gave a return code of' rc ', which means :'                   01250000
+say errortext(rc)                                                       01260000
+EXIT /* End of syntax error-handling routine */                         01270000
+                                                                        01280000
+baddies: /* External error. "Not my fault, guv, honest!" */             01290000
+say 'You have been let down by factors beyond your control at line' sigl01300000
+say sourceline(sigl)                                                    01310000
+say 'RC =' rc                                                           01320000
+EXIT /* End of code error-handling routine */                           01330000

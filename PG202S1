@@ -1,0 +1,101 @@
+ SELECT SC1.CHG_DESC                                                            
+        ,CASE WHEN SC1.SEC = 'A' THEN CHAR(SC1.CHG_AMT)                         
+              ELSE ' '                                                          
+          END CHG_AMT                                                           
+    FROM (                                                                      
+   SELECT IN1.SEC                                                               
+         ,IN1.CHG_DESC                                                          
+         ,IN1.VZ450_SEQ_NBR                                                     
+         ,SUM(IN1.CHG_AMT) CHG_AMT                                              
+     FROM (                                                                     
+    SELECT 'A' AS SEC                                                           
+          ,TB1.BILL_DATE                                                        
+          ,TB2.VZ450_SEQ_NBR                                                    
+          ,CASE WHEN TB2.MAN IS NULL THEN 'NO ACCOUNT CHARGES'                  
+   ELSE TB2.DESCRIPTION1                                                        
+            END CHG_DESC                                                        
+          ,COALESCE((TB2.CHARGE + TB2.DISCOUNT),0.00) AS CHG_AMT                
+      FROM BMGVZP.ACCT_SUM_T TB1                                                
+     LEFT OUTER JOIN BMGVZP.VZ450_7200_T TB2                                    
+       ON TB1.MAN = TB2.MAN                                                     
+      AND TB1.MAN_BILL_DATE = TB2.MAN_BILL_DATE                                 
+      AND TB1.ORIG_SYSTEM_ID = TB2.ORIG_SYSTEM_ID                               
+      AND TB1.BAN = TB2.BAN                                                     
+      AND TB1.BILL_DATE = TB2.BILL_DATE                                         
+      AND TB2.WORKING_TEL_NBR = ' '                                             
+     LEFT OUTER JOIN BMGVZP.SHORT_TEXT_T TB3                                    
+       ON TB2.MAN = TB3.MAN                                                     
+      AND TB2.MAN_BILL_DATE = TB3.MAN_BILL_DATE                                 
+      AND TB2.ORIG_SYSTEM_ID = TB3.ORIG_SYSTEM_ID                               
+      AND TB2.BAN = TB3.BAN                                                     
+      AND TB2.BILL_DATE = TB3.BILL_DATE                                         
+      AND TB2.VZ450_SEQ_NBR = TB3.VZ450_SEQ_NBR                                 
+     WHERE TB1.MAN = ?                                                          
+       AND TB1.MAN_BILL_DATE = ?                                                
+       AND TB1.ORIG_SYSTEM_ID = ?                                               
+       AND TB1.BAN = ?                                                          
+       AND TB1.BILL_DATE = ?                                                    
+       AND TB2.RECORD_IND NOT IN (6,7)                                          
+UNION ALL                                                                       
+    SELECT 'B' AS SEC                                                           
+          ,TB1.BILL_DATE                                                        
+          ,TB2.VZ450_SEQ_NBR                                                    
+          ,CASE WHEN TB2.MAN IS NULL THEN 'NO ACCOUNT CHARGES'                  
+   ELSE TB2.DESCRIPTION2                                                        
+            END CHG_DESC                                                        
+          ,COALESCE((TB2.CHARGE + TB2.DISCOUNT),0.00) AS CHG_AMT                
+      FROM BMGVZP.ACCT_SUM_T TB1                                                
+     LEFT OUTER JOIN BMGVZP.VZ450_7200_T TB2                                    
+       ON TB1.MAN = TB2.MAN                                                     
+      AND TB1.MAN_BILL_DATE = TB2.MAN_BILL_DATE                                 
+      AND TB1.ORIG_SYSTEM_ID = TB2.ORIG_SYSTEM_ID                               
+      AND TB1.BAN = TB2.BAN                                                     
+      AND TB1.BILL_DATE = TB2.BILL_DATE                                         
+      AND TB2.WORKING_TEL_NBR = ' '                                             
+     LEFT OUTER JOIN BMGVZP.SHORT_TEXT_T TB3                                    
+       ON TB2.MAN = TB3.MAN                                                     
+      AND TB2.MAN_BILL_DATE = TB3.MAN_BILL_DATE                                 
+      AND TB2.ORIG_SYSTEM_ID = TB3.ORIG_SYSTEM_ID                               
+      AND TB2.BAN = TB3.BAN                                                     
+      AND TB2.BILL_DATE = TB3.BILL_DATE                                         
+      AND TB2.VZ450_SEQ_NBR = TB3.VZ450_SEQ_NBR                                 
+     WHERE TB1.MAN = ?                                                          
+       AND TB1.MAN_BILL_DATE = ?                                                
+       AND TB1.ORIG_SYSTEM_ID = ?                                               
+       AND TB1.BAN = ?                                                          
+       AND TB1.BILL_DATE = ?                                                    
+       AND TB2.RECORD_IND NOT IN (6,7)                                          
+UNION ALL                                                                       
+    SELECT 'C' AS SEC                                                           
+          ,TB1.BILL_DATE                                                        
+          ,TB2.VZ450_SEQ_NBR                                                    
+          ,CASE WHEN TB2.MAN IS NULL THEN 'NO ACCOUNT CHARGES'                  
+   ELSE  TB3.TEXT_VALUE                                                         
+            END CHG_DESC                                                        
+          ,COALESCE((TB2.CHARGE + TB2.DISCOUNT),0.00) AS CHG_AMT                
+      FROM BMGVZP.ACCT_SUM_T TB1                                                
+     LEFT OUTER JOIN BMGVZP.VZ450_7200_T TB2                                    
+       ON TB1.MAN = TB2.MAN                                                     
+      AND TB1.MAN_BILL_DATE = TB2.MAN_BILL_DATE                                 
+      AND TB1.ORIG_SYSTEM_ID = TB2.ORIG_SYSTEM_ID                               
+      AND TB1.BAN = TB2.BAN                                                     
+      AND TB1.BILL_DATE = TB2.BILL_DATE                                         
+      AND TB2.WORKING_TEL_NBR = ' '                                             
+     LEFT OUTER JOIN BMGVZP.SHORT_TEXT_T TB3                                    
+       ON TB2.MAN = TB3.MAN                                                     
+      AND TB2.MAN_BILL_DATE = TB3.MAN_BILL_DATE                                 
+      AND TB2.ORIG_SYSTEM_ID = TB3.ORIG_SYSTEM_ID                               
+      AND TB2.BAN = TB3.BAN                                                     
+      AND TB2.BILL_DATE = TB3.BILL_DATE                                         
+      AND TB2.VZ450_SEQ_NBR = TB3.VZ450_SEQ_NBR                                 
+     WHERE TB1.MAN = ?                                                          
+       AND TB1.MAN_BILL_DATE = ?                                                
+       AND TB1.ORIG_SYSTEM_ID = ?                                               
+       AND TB1.BAN = ?                                                          
+       AND TB1.BILL_DATE = ?                                                    
+       AND TB2.RECORD_IND NOT IN (6,7)                                          
+          ) IN1                                                                 
+   WHERE IN1.CHG_DESC <> ' '                                                    
+   GROUP BY  IN1.VZ450_SEQ_NBR, IN1.SEC,IN1.CHG_DESC                            
+         ) SC1                                                                  
+    WFILTER = ?                                                                 

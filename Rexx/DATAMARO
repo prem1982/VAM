@@ -1,0 +1,43 @@
+/*REXX DATAMARO: REXX TO COPY UNIX FILES */                                     
+CALDATE  = DATE('S')                                                            
+SAY 'CALDATE='CALDATE                                                           
+YYYY = SUBSTR(CALDATE,1,4)                                                      
+MM   = SUBSTR(CALDATE,5,2)                                                      
+DD   = SUBSTR(CALDATE,7,2)                                                      
+MMM    = GETMMM(MM)                                                             
+"OCOPY INDD(UNIXOUT) OUTDD(MVSOUT) TEXT CONVERT(YES) PATHOPTS(USE)"             
+"OCOPY INDD(UNIXERRS) OUTDD(MVSERRS) TEXT CONVERT(YES) PATHOPTS(USE)"           
+EDIFIL = 'BMGVZ0CN.EDI.'MMM||YYYY                                               
+PATHNM = '/u/bmgvz2cn/Batch/edi'MMM||YYYY'.out'                                 
+"FREE FI(UNIXIN)"                                                               
+"ALLOC FI(UNIXIN) PATH('"PATHNM"') PATHOPTS(ORDONLY)"                           
+"DELETE '"EDIFIL"'"                                                             
+"FREE FI(EDIFIL)"                                                               
+"ALLOC FI(EDIFIL) DA('"EDIFIL"') NEW CATALOG",                                  
+    " NEW CATALOG DATACLAS(PSVB) LRECL(4096)",                                  
+    " SPACE(25,25) CYLINDERS MGMTCLAS(NOBK07)"                                  
+"OCOPY INDD(UNIXIN) OUTDD(EDIFIL) TEXT CONVERT(YES) PATHOPTS(USE)"              
+IF MM = 1 THEN                                                                  
+   DO                                                                           
+      MM = 12                                                                   
+      YYYY = YYYY - 1                                                           
+   END                                                                          
+ELSE                                                                            
+   DO                                                                           
+      MM = MM - 1                                                               
+      IF LENGTH(MM) = 1 THEN MM = "0"MM                                         
+   END                                                                          
+MMM    = GETMMM(MM)                                                             
+"OCOPY INDD(UNIXOUT) OUTDD(MVSOUT) TEXT CONVERT(YES) PATHOPTS(USE)"             
+"OCOPY INDD(UNIXERRS) OUTDD(MVSERRS) TEXT CONVERT(YES) PATHOPTS(USE)"           
+EDIFIL = 'BMGVZ0CN.EDI.'MMM||YYYY                                               
+PATHNM = '/u/bmgvz2cn/Batch/edi'MMM||YYYY'.out'                                 
+"FREE FI(UNIXIN)"                                                               
+"ALLOC FI(UNIXIN) PATH('"PATHNM"') PATHOPTS(ORDONLY)"                           
+"DELETE '"EDIFIL"'"                                                             
+"FREE FI(EDIFIL)"                                                               
+"ALLOC FI(EDIFIL) DA('"EDIFIL"') NEW CATALOG",                                  
+    " NEW CATALOG DATACLAS(PSVB) LRECL(4096)",                                  
+    " SPACE(25,25) CYLINDERS MGMTCLAS(NOBK07)"                                  
+"OCOPY INDD(UNIXIN) OUTDD(EDIFIL) TEXT CONVERT(YES) PATHOPTS(USE)"              
+EXIT                                                                            

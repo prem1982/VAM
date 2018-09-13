@@ -1,0 +1,170 @@
+/* rexx */                                                              00010000
+/*===================================================================== 00020000
+This program ("exec") updates the DAN and account name on the           00030000
+master or billed accnt table                                            00040000
+                                                                        00050000
+THINGS TO DO                                                            00060000
+=====================================================================*/ 00070000
+/*                                                                      00080000
+trace r                                                                 00090000
+*/                                                                      00100000
+signal on error name baddies /* Routine for external errors */          00110000
+signal on syntax name crapcode /* Routine for code errors */            00120000
+                                                                        00130000
+msgs = msg(on) /* TSO/E message switch  - c.f. CONTROL MSG in CLIST */  00140000
+                                                                        00150000
+/*--------------------------------------------------------------------- 00160000
+Initialise                                                              00170000
+---------------------------------------------------------------------*/ 00180000
+/* Optional COMMIT can be specified; otherwise ROLLBACK is invoked      00190000
+   so that changes are not committed. */                                00200000
+parse upper arg opt .                                                   00210000
+                                                                        00220000
+If opt = 'COMMIT' then                                                  00230000
+   do                                                                   00240000
+   say 'COMMIT requested - updates will be permanent.'                  00250000
+   end                                                                  00260000
+else                                                                    00270000
+   do                                                                   00280000
+   say 'Updates will NOT be permanent.'                                 00290000
+   end                                                                  00300000
+                                                                        00310000
+/* DB2 stuff */                                                         00320000
+                                                                        00330000
+ssid = 'D38X'                                                           00340000
+/*                                                                      00350000
+ssid = 'D001'                                                           00360000
+                                                                        00370000
+ssid = 'D009'                                                           00380000
+                                                                        00390000
+ssid = 'D019'                                                           00400000
+*/                                                                      00410000
+                                                                        00420000
+tbl_prefix = 'BMGVZS'                                                   00430000
+/*                                                                      00440000
+tbl_prefix = 'DA8MWVD'                                                  00450000
+                                                                        00460000
+tbl_prefix = 'BMGVZT'                                                   00470000
+                                                                        00480000
+tbl_prefix = 'BMGVZP'                                                   00490000
+*/                                                                      00500000
+                                                                        00510000
+/* Initialise */                                                        00520000
+proc_ct = 0                                                             00530000
+not_found_ct = 0                                                        00540000
+error_ct = 0                                                            00550000
+                                                                        00560000
+/* Establish the DB2 connection */                                      00570000
+signal off error /* Turn error-trapping off */                          00580000
+"SUBCOM DSNREXX"                                                        00590000
+if RC then                                                              00600000
+   s_rc = RXSUBCOM('ADD','DSNREXX','DSNREXX')                           00610000
+                                                                        00620000
+address DSNREXX                                                         00630000
+proc_name = 'CONNECT'                                                   00640000
+"CONNECT" ssid                                                          00650000
+If SQLCODE ^= 0 Then Call SQL_err                                       00660000
+                                                                        00670000
+/* Prepare the insert statement */                                      00680000
+update_stmt = "UPDATE "||tbl_prefix||".MASTER_ACCT_NO_T" ||,            00690000
+              " SET DAN = '" || MAN_DAN  || "',                         00700000
+              " WHERE " ,                                               00720000
+              " MAN = " || MAN                                          00721000
+                                                                        00730000
+/* Start timestamp */                                                   00740000
+say '   Start TS :' time(long)                                          00750000
+                                                                        00760000
+/* Do the UPDATE */                                                     00770000
+proc_name = 'EXECUTE IMMEDIATE update_stmt'                             00780000
+"EXECSQL EXECUTE IMMEDIATE :update_stmt"                                00790000
+If SQLCODE ^= 0 Then                                                    00800000
+   do                                                                   00810000
+   Call SQL_err                                                         00820000
+   exit result                                                          00830000
+   end                                                                  00840000
+                                                                        00850000
+say 'Total rows processed :' sqlerrd.3                                  00860000
+                                                                        00870000
+/* Timestamp after update */                                            00880000
+say '  Update TS :' time(long)                                          00890000
+                                                                        00900000
+/* If COMMIT option selected, make the update permanent; otherwise      00910000
+   undo it with ROLLBACK */                                             00920000
+if opt = 'COMMIT' then                                                  00930000
+   do                                                                   00940000
+   proc_name = 'COMMIT'                                                 00950000
+   "EXECSQL COMMIT"                                                     00960000
+   /* Timestamp after COMMIT */                                         00970000
+   say '  COMMIT TS :' time(long)                                       00980000
+   end                                                                  00990000
+else                                                                    01000000
+   do                                                                   01010000
+   proc_name = 'ROLLBACK'                                               01020000
+   "EXECSQL ROLLBACK"                                                   01030000
+   /* Timestamp after ROLLBACK */                                       01040000
+   say 'ROLLBACK TS :' time(long)                                       01050000
+   end                                                                  01060000
+                                                                        01070000
+if SQLCODE < 0 Then                                                     01080000
+   do                                                                   01090000
+   Call SQL_err                                                         01100000
+   exit result                                                          01110000
+   end                                                                  01120000
+                                                                        01130000
+/*--------------------------------------------------------------------- 01140000
+End of main program                                                     01150000
+---------------------------------------------------------------------*/ 01160000
+proc_name = 'DISCONNECT'                                                01170000
+"DISCONNECT"                                                            01180000
+If SQLCODE ^= 0 Then Call SQL_err                                       01190000
+                                                                        01200000
+exit                                                                    01210000
+/*--------------------------------------------------------------------- 01220000
+Handle SQL Error; if deemed useful, display SQLCA                       01230000
+---------------------------------------------------------------------*/ 01240000
+SQL_err:                                                                01250000
+select                                                                  01260000
+when SQLCODE = +100 then                                                01270000
+   do                                                                   01280000
+   return 4                                                             01290000
+   end                                                                  01300000
+otherwise                                                               01310000
+   do                                                                   01320000
+   say "SQL error in " proc_name                                        01330000
+   say "SQLSTATE =" SQLSTATE                                            01340000
+   say "SQLWARN =" SQLWARN.0",",                                        01350000
+               || SQLWARN.1",",                                         01360000
+               || SQLWARN.2",",                                         01370000
+               || SQLWARN.3",",                                         01380000
+               || SQLWARN.4",",                                         01390000
+               || SQLWARN.5",",                                         01400000
+               || SQLWARN.6",",                                         01410000
+               || SQLWARN.7",",                                         01420000
+               || SQLWARN.8",",                                         01430000
+               || SQLWARN.9",",                                         01440000
+               || SQLWARN.10""                                          01450000
+   say "SQLERRD =" SQLERRD.1",",                                        01460000
+               || SQLERRD.2",",                                         01470000
+               || SQLERRD.3",",                                         01480000
+               || SQLERRD.4",",                                         01490000
+               || SQLERRD.5",",                                         01500000
+               || SQLERRD.6                                             01510000
+   say "SQLERRP  =" SQLERRP                                             01520000
+   say "SQLERRMC =" SQLERRMC                                            01530000
+   say "SQLCODE  =" SQLCODE                                             01540000
+   return 20                                                            01550000
+   end                                                                  01560000
+end                                                                     01570000
+                                                                        01580000
+crapcode: /* Syntax error-handling routine */                           01590000
+say 'You have crap code at line' sigl                                   01600000
+say sourceline(sigl)                                                    01610000
+say 'REXX gave a return code of' rc ', which means :'                   01620000
+say errortext(rc)                                                       01630000
+EXIT /* End of syntax error-handling routine */                         01640000
+                                                                        01650000
+baddies: /* External error. "Not my fault, guv, honest!" */             01660000
+say 'You have been let down by factors beyond your control at line' sigl01670000
+say sourceline(sigl)                                                    01680000
+say 'RC =' rc                                                           01690000
+EXIT /* End of code error-handling routine */                           01700000

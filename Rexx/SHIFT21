@@ -1,0 +1,3 @@
+/*SHIFT21: REXX */                                                              
+"  EXECUTIL SEARCHDD(YES)"                                                      
+"  %SHIFT 21"                                                                   

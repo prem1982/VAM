@@ -1,0 +1,41 @@
+   SELECT SC1.SUMMARY_DESC                                                      
+         ,SC1.CUR_DELAY_IND                                                     
+         ,SC1.USG_TYP_DESC                                                      
+         ,CHAR(SC1.GRD_ALLOWANCE) AS GRD_ALLOWANCE                              
+         ,CHAR(SC1.GRD_USED) AS GRD_USED                                        
+         ,CHAR(SC1.GRD_BILLABLE) AS GRD_BILLABLE                                
+         ,CHAR(SC1.GRD_COST) AS GRD_COST                                        
+     FROM (                                                                     
+   SELECT INR.SUMMARY_DESC                                                      
+         ,INR.CUR_DELAY_IND                                                     
+         ,INR.USG_TYP_DESC                                                      
+         ,SUM(DECIMAL(INR.GRD_ALLOWANCE,9,0)) AS GRD_ALLOWANCE                  
+         ,SUM(DECIMAL(INR.GRD_USED,9,0)) AS GRD_USED                            
+         ,SUM(DECIMAL(INR.GRD_BILLABLE,9,0)) AS GRD_BILLABLE                    
+         ,SUM(INR.GRD_COST) AS GRD_COST                                         
+     FROM (                                                                     
+          SELECT V63.SUMMARY_DESC                                               
+               ,CASE WHEN V63.CUR_DELAY_IND = 2 THEN 'Previous'                 
+                 ELSE 'Current'                                                 
+                 END AS CUR_DELAY_IND                                           
+              ,V63.USG_TYP_DESC                                                 
+              ,SUM(V63.GRD_ALLOWANCE) GRD_ALLOWANCE                             
+              ,SUM(V63.GRD_USED) GRD_USED                                       
+              ,SUM(V63.GRD_BILLABLE) GRD_BILLABLE                               
+              ,SUM(V63.GRD_COST) GRD_COST                                       
+           FROM VZ450_6300_T V63                                                
+          WHERE V63.MAN = ?                                                     
+            AND V63.MAN_BILL_DATE = ?                                           
+            AND V63.ORIG_SYSTEM_ID = 'VW'                                       
+            AND V63.WORKING_TEL_NBR = ?                                         
+            AND V63.ASSOC_CHG_CD = '1944'                                       
+          GROUP BY V63.SUMMARY_DESC                                             
+              ,V63.CUR_DELAY_IND                                                
+              ,V63.USG_TYP_DESC                                                 
+          ) INR                                                                 
+    WHERE INR.SUMMARY_DESC <> ' '                                               
+  GROUP BY INR.SUMMARY_DESC                                                     
+          ,INR.CUR_DELAY_IND                                                    
+          ,INR.USG_TYP_DESC                                                     
+   ) SC1                                                                        
+    WFILTER = ?                                                                 

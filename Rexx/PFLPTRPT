@@ -1,0 +1,42 @@
+/* REXX */                                                                      
+/* This process does a "LISTDS pds MEMBERS" on all the files listed             
+   in the sysin PFLSRPT#.  It traps this member list and creates                
+   an @INDEX member in the same pds and writes the members of the               
+   input pds into this @INDEX member.                                           
+   The @INDEX member is used by web macro PFLPVAMR.D2W to                       
+   list all available members of the dataset that can be reviewed               
+   via the web screens.                                             */          
+/* trace ?i */                                                                  
+                                                                                
+"EXECIO * DISKR PFLFSYSN (STEM FILE_LIST. FINIS"           /* read for list */  
+"FREE DD(PFLFSYSN)"                                                             
+                                                                                
+DO REC_COUNT = 1 to FILE_LIST.0                            /* for each dataset*/
+     PARSE VAR FILE_LIST.REC_COUNT filename other_junk     /* capture filename*/
+                                                                                
+        checkit = sysdsn("'"filename"(@INDEX)'")           /* delete @INDEX   */
+        IF checkit = 'OK' THEN                                                  
+         DO                                                                     
+            "DELETE '"filename"(@INDEX)'"                                       
+         END                                                                    
+                                                                                
+     Members. = ''                                 /* initalize stem variable */
+                                                                                
+     X = OUTTRAP('Members.')                       /* trap the results ofthe  */
+     ADDRESS TSO "LISTDS '"filename"' MEMBERS"     /* into the Member. stem   */
+     X = OUTTRAP(OFF)                                                           
+                                                                                
+        "ALLOC DA('"filename"(@INDEX)') F(REPTCNTL) OLD"                        
+     DO i = Members.0 to 7 by -1        /* loop to write the results */         
+                                        /* of the LISTDS to the      */         
+        memname = strip(Members.i,b)    /* @INDEX member of the same */         
+                                        /* pds dataset that the      */         
+        QUEUE memname                   /* LISTDS was just performed */         
+        QUEUE ''                        /* against.                  */         
+        "EXECIO * DISKW REPTCNTL ("                                             
+     END                                                                        
+     "EXECIO 0 DISKW REPTCNTL (FINIS"                                           
+     "FREE DD(REPTCNTL)"                                                        
+END                                                                             
+                                                                                
+EXIT        /* RETURN TO CALLING ENVIRONMENT */                                 

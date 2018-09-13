@@ -1,0 +1,24 @@
+/*REXX DUMPMAN: REXX TO CREATE DB2 UNLOAD SQL*/                         00010000
+ARG BMGNY0PN OWNER DB2SYS DUMPLBL                                       00020000
+CALL GETNAMEL TBLSPACE                                                  00030000
+TBLNAME = RESULT                                                        00040000
+UNLDCDS = BMGNY0PN"."DB2SYS".DUMPCDS."DUMPLBL                           00040300
+UNLDDSN = BMGNY0PN"."DB2SYS".DUMPMAN."DUMPLBL                           00040400
+"FREE FI(UNLDCDS)"                                                      00040500
+"DELETE '"UNLDCDS"'"                                                    00040600
+"DELETE '"UNLDDSN"'"                                                    00040700
+"ALLOC FI(UNLDCDS) DA('"UNLDCDS"') NEW"                                 00040800
+QUEUE "   SELECT TB1.MAN ,"                                             00040900
+QUEUE "          TB1.MAN_BILL_DATE ,"                                   00041000
+QUEUE "          TB1.ORIG_SYSTEM_ID"                                    00042000
+QUEUE "          FROM "OWNER".MASTER_ACCT_NO_V TB1"                     00043000
+QUEUE "          WHERE MAN='6178152190190'"                             00043100
+QUEUE "             OR MAN = '6178152482482'"                           00043301
+QUEUE "             OR MAN = '4139051135135'"                           00043401
+QUEUE "             OR MAN = '4139051136136'"                           00043501
+QUEUE "             OR MAN = '4139103877380'"                           00043601
+QUEUE "             OR MAN = '4135850182966'"                           00043701
+QUEUE "   ;"                                                            00044000
+QUEUE                                                                   00044101
+"EXECIO * DISKW UNLDCDS (FINIS"                                         00045000
+"FREE FI(UNLDCDS)"                                                      00046000

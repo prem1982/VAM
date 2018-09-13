@@ -1,0 +1,12 @@
+/*REXX DCLGEN: REXX TO CREATE DB2 DCLGEN CARDS */                       00010000
+ARG TBLHILVL TBLNAME DB2SYS SUFFIX COPYLIB                              00020002
+CALL GETNAMEL TBLNAME                                                   00021000
+LONGNAME = RESULT                                                       00022000
+"  DSN SYSTEM(D38X)"                                                    00029002
+"   DCLGEN TABLE("TBLHILVL"."LONGNAME") -"                              00030002
+"          LIBRARY("COPYLIB"("TBLNAME")) -"                             00031002
+"          LANGUAGE(COBOL) -"                                           00032003
+"          ACTION(REPLACE) -"                                           00040002
+"          QUOTE -"                                                     00041002
+"          COLSUFFIX(YES) NAMES("SUFFIX")"                              00042002
+"  END"                                                                 00050002

@@ -1,0 +1,4 @@
+/*REXX TSOCAN: REXX TO ISSUE TSO CANCEL*/                               00010000
+ARG JOBNM                                                               00020000
+"$CO "JOBNM                                                             00090001
+"CANCEL "JOBNM                                                          00100001

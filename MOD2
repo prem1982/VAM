@@ -1,0 +1,63 @@
+  SELECT V72.WORKING_TEL_NBR WTN                                                
+        ,CASE WHEN V72.ASSOC_CHG_CD = '1938'                                    
+              THEN V72.DESCRIPTION1                                             
+              WHEN (V72.ASSOC_CHG_CD = '1937'                                   
+                     AND V72.OC_C_TYP = 'V')                                    
+              THEN V72.DESCRIPTION1                                             
+              WHEN (V72.ASSOC_CHG_CD = '1930'                                   
+                     AND V72.RECORD_IND = 8)                                    
+              THEN V72.DESCRIPTION1                                             
+              ELSE ' ' END TAX_DESC                                             
+        ,V72.DESCRIPTION2  TAX_DESC2                                            
+        ,V72.FROM_DATE     FROM_DATE                                            
+        ,VMOD.CHG_TYPE_CD  CHG_TYPE_CD_MOD109                                   
+        ,SUM(CASE WHEN V72.ASSOC_CHG_CD = '1930'                                
+                   AND V72.RECORD_IND  <> 8                                     
+                  THEN (V72.CHARGE + V72.DISCOUNT)                              
+                  ELSE 0 END) ACCT_LVL_CHGS                                     
+        ,SUM(CASE WHEN V72.ASSOC_CHG_CD = '1931'                                
+              THEN (V72.CHARGE + V72.DISCOUNT)                                  
+              ELSE 0 END) MONTHLY_CHGS                                          
+        ,SUM(CASE WHEN V72.ASSOC_CHG_CD = '1940'                                
+              THEN (V72.CHARGE + V72.DISCOUNT)                                  
+              ELSE 0 END) EQUIP_CHGS                                            
+        ,SUM(CASE WHEN (V72.ASSOC_CHG_CD = '1937'                               
+                    AND V72.OC_C_TYP <> 'V')                                    
+                  THEN (V72.CHARGE + V72.DISCOUNT)                              
+                  ELSE 0 END) OCC_CHGS                                          
+        ,SUM(CASE WHEN V72.ASSOC_CHG_CD = '1938'                                
+               THEN (V72.CHARGE + V72.DISCOUNT)                                 
+               WHEN (V72.ASSOC_CHG_CD = '1937'                                  
+                      AND V72.OC_C_TYP = 'V')                                   
+               THEN (V72.CHARGE + V72.DISCOUNT)                                 
+               ELSE 0 END) TAX_SURCHGS                                          
+        ,SUM(CASE WHEN V72.ASSOC_CHG_CD = '1930'                                
+                   AND V72.RECORD_IND   = 8                                     
+                  THEN V72.CHARGE                                               
+                  ELSE 0 END) THIRD_PARTY_CHGS                                  
+        ,SUM(VMOD.CHG_AMT) CHG_AMT_MOD109                                       
+FROM                                                                            
+BMGVZP.VZ450_7200_T V72                                                         
+LEFT OUTER JOIN                                                                 
+BMGVZP.VZ450_MOD_109_T VMOD                                                     
+  ON V72.MAN =VMOD.MAN                                                          
+ AND V72.MAN_BILL_DATE  = VMOD.MAN_BILL_DATE                                    
+ AND V72.ORIG_SYSTEM_ID = VMOD.ORIG_SYSTEM_ID                                   
+ AND V72.VZ450_SEQ_NBR  = VMOD.VZ450_SEQ_NBR                                    
+-- AND VMOD.CHG_TYPE_CD = '016'                                                 
+--LEFT OUTER JOIN                                                               
+--BMGVZP.VZ450_MOD_109_T VMOD1                                                  
+--  ON V72.MAN =VMOD.MAN                                                        
+-- AND V72.MAN_BILL_DATE  = VMOD1.MAN_BILL_DATE                                 
+-- AND V72.ORIG_SYSTEM_ID = VMOD1.ORIG_SYSTEM_ID                                
+-- AND V72.VZ450_SEQ_NBR  = VMOD1.VZ450_SEQ_NBR                                 
+-- AND VMOD.CHG_TYPE_CD = '016'                                                 
+WHERE V72.MAN = '73AI326TD'                                                     
+           GROUP BY V72.WORKING_TEL_NBR                                         
+                   ,V72.DESCRIPTION1                                            
+                   ,V72.DESCRIPTION2                                            
+                   ,V72.FROM_DATE                                               
+                   ,V72.ASSOC_CHG_CD                                            
+                   ,V72.OC_C_TYP                                                
+                   ,V72.RECORD_IND                                              
+                   ,VMOD.CHG_TYPE_CD                                            

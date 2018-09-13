@@ -1,0 +1,18 @@
+/*REXX DLETLIST: TAKES LIST OF DSNS AS INPUT AND DELETES THEM*/                 
+ARG LISTIN                                                                      
+"FREE FI(LISTIN)"                                                               
+"ALLOC FI(LISTIN) DA('"LISTIN"')"                                               
+"EXECIO * DISKR LISTIN (STEM LISTREC. FINIS"                                    
+DO TX = 1 TO LISTREC.0                                                          
+   BEG = 1                                                                      
+   XBEG = 0                                                                     
+   DO WHILE XBEG = 0                                                            
+      IF BEG = 44 THEN XBEG = 44                                                
+      IF SUBSTR(LISTREC.TX,BEG,1) = " " THEN XBEG = BEG - 1                     
+      BEG = BEG + 1                                                             
+   END                                                                          
+   "DELETE '"SUBSTR(LISTREC.TX,1,XBEG)"'"                                       
+END                                                                             
+SAY ' DELETED 'LISTREC.0' DATASETS'                                             
+"FREE FI(LISTIN)"                                                               
+EXIT                                                                            

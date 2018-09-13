@@ -1,0 +1,6 @@
+/*SCRSORT: REXX */                                                              
+ARG BMGNS0PN CYCINFO CUSTNO CONFIGNO                                            
+"DELETE (",                                                                     
+        "'"BMGNS0PN"."CYCINFO"."CUSTNO"."CONFIGNO".SORTED'",                    
+        "'"BMGNS0PN"."CYCINFO"."CUSTNO"."CONFIGNO".BMDATA'",                    
+        ")"                                                                     

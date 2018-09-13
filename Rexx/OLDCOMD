@@ -1,0 +1,130 @@
+/* REXX */                                                                      
+PARSE UPPER ARG CMD                    /* GET THE DB2 COMMAND TEXT */           
+TRACE I                                                                         
+IF LEFT(CMD,2) = ""'" & RIGHT(CMD,2) = "'"" THEN                                
+CMD = SUBSTR(CMD,2,LENGTH(CMD)-2)                                               
+ELSE                                                                            
+IF LEFT(CMD,2) = """'" & RIGHT(CMD,2) = "'""" THEN                              
+CMD = SUBSTR(CMD,3,LENGTH(CMD)-4)                                               
+COMMAND    = SUBSTR("COMMAND",1,18," ")                                         
+/****************************************************************/              
+/*  SET UP THE IFCA, RETURN AREA, AND OUTPUT AREA FOR THE       */              
+/*  IFI COMMAND CALL.                                           */              
+/****************************************************************/              
+IFCA = SUBSTR('00'X,1,180,'00'X)                                                
+IFCA = OVERLAY(D2C(LENGTH(IFCA),2),IFCA,1+0)                                    
+IFCA = OVERLAY("IFCA",IFCA,4+1)                                                 
+/*RTRNAREASIZE = 2000 /*1048572*/ */                                            
+RTRNAREASIZE = 262144 /*1048572*/                                               
+RTRNAREA = D2C(RTRNAREASIZE+4,4)LEFT(' ',RTRNAREASIZE,' ')                      
+OUTPUT = D2C(LENGTH(CMD)+4,2)||'0000'X||CMD                                     
+BUFFER = SUBSTR(" ",1,16," ")                                                   
+/****************************************************************/              
+/*  MAKE THE IFI COMMAND CALL.                                  */              
+/****************************************************************/              
+  ADDRESS LINKPGM "DSNWLIR COMMAND IFCA RTRNAREA OUTPUT"                        
+WRC = RC                                                                        
+RTRN=    SUBSTR(IFCA,12+1,4)                                                    
+REAS=    SUBSTR(IFCA,16+1,4)                                                    
+TOTLEN = C2D(SUBSTR(IFCA,20+1,4))                                               
+SAY ' OUTPUT ---LATEST!! ' OUTPUT                                               
+SAY ' RTNAREA --LATEST!! '  RTRNAREA                                            
+/****************************************************************/              
+/*  SET UP THE HOST COMMAND ENVIRONMENT FOR SQL CALLS.          */              
+/****************************************************************/              
+/*ADDRESS DSNREXX "CONNECT  D38X"  */                                           
+"SUBCOM DSNREXX"                       /* HOST CMD ENV AVAILABLE?  */           
+IF RC THEN                             /* NO--ADD HOST CMD ENV     */           
+   S_RC = RXSUBCOM('ADD','DSNREXX','DSNREXX')                                   
+/****************************************************************/              
+/*  SET UP SQL STATEMENTS TO INSERT COMMAND OUTPUT MESSAGES     */              
+/*  INTO A TEMPORARY TABLE.                                     */              
+/****************************************************************/              
+SQLSTMT='INSERT INTO SYSIBM.SYSDUMMY1(SEQNO,TEXT) VALUES(?,?)'                  
+ADDRESS DSNREXX "EXECSQL DECLARE C1 CURSOR FOR S1"                              
+IF SQLCODE ^= 0 THEN CALL SQLCA                                                 
+ADDRESS DSNREXX "EXECSQL PREPARE S1 FROM :SQLSTMT"                              
+IF SQLCODE ^= 0 THEN CALL SQLCA                                                 
+/****************************************************************/              
+/*  EXTRACT MESSAGES FROM THE RETURN AREA AND INSERT THEM INTO  */              
+/*  THE TEMPORARY TABLE.                                        */              
+/****************************************************************/              
+SEQNO = 0                                                                       
+OFFSET = 4+1                                                                    
+DO WHILE ( OFFSET < TOTLEN )                                                    
+  LEN = C2D(SUBSTR(RTRNAREA,OFFSET,2))                                          
+  SEQNO = SEQNO + 1                                                             
+  TEXT = SUBSTR(RTRNAREA,OFFSET+4,LEN-4-1)                                      
+  ADDRESS DSNREXX "EXECSQL EXECUTE S1 USING :SEQNO,:TEXT"                       
+  IF SQLCODE ^= 0 THEN CALL SQLCA                                               
+  OFFSET = OFFSET + LEN                                                         
+END                                                                             
+/****************************************************************/              
+/*  SET UP A CURSOR FOR A RESULT SET THAT CONTAINS THE COMMAND  */              
+/*  OUTPUT MESSAGES FROM THE TEMPORARY TABLE.                   */              
+/****************************************************************/              
+SQLSTMT='SELECT SEQNO,TEXT FROM SYSIBM.SYSPRINT ORDER BY SEQNO'                 
+ADDRESS DSNREXX "EXECSQL DECLARE C2 CURSOR FOR S2"                              
+IF SQLCODE ^= 0 THEN CALL SQLCA                                                 
+                                                                                
+ADDRESS DSNREXX "EXECSQL PREPARE S2 FROM :SQLSTMT"                              
+IF SQLCODE ^= 0 THEN CALL SQLCA                                                 
+/****************************************************************/              
+/*  OPEN THE CURSOR TO RETURN THE MESSAGE OUTPUT RESULT SET TO  */              
+/*  THE CALLER.                                                 */              
+/****************************************************************/              
+ADDRESS DSNREXX "EXECSQL OPEN C2"                                               
+IF SQLCODE ^= 0 THEN CALL SQLCA                                                 
+                                                                                
+S_RC = RXSUBCOM('DELETE','DSNREXX','DSNREXX') /* REMOVE CMD ENV  */             
+                                                                                
+EXIT SUBSTR(RTRNAREA,1,TOTLEN+4)                                                
+                                                                                
+/****************************************************************/              
+/*  ROUTINE TO DISPLAY THE SQLCA                                */              
+/****************************************************************/              
+SQLCA:                                                                          
+SAY 'SQLCODE ='SQLCODE                                                          
+SAY 'SQLERRMC ='SQLERRMC                                                        
+SAY 'SQLERRP ='SQLERRP                                                          
+SAY 'SQLERRD ='SQLERRD.1',',                                                    
+            || SQLERRD.2',',                                                    
+            || SQLERRD.3',',                                                    
+            || SQLERRD.4',',                                                    
+            || SQLERRD.5',',                                                    
+            || SQLERRD.6                                                        
+                                                                                
+SAY 'SQLWARN ='SQLWARN.0',',                                                    
+            || SQLWARN.1',',                                                    
+            || SQLWARN.2',',                                                    
+            || SQLWARN.3',',                                                    
+            || SQLWARN.4',',                                                    
+            || SQLWARN.5',',                                                    
+            || SQLWARN.6',',                                                    
+            || SQLWARN.7',',                                                    
+            || SQLWARN.8',',                                                    
+            || SQLWARN.9',',                                                    
+            || SQLWARN.10                                                       
+SAY 'SQLSTATE='SQLSTATE                                                         
+SAY 'SQLCODE ='SQLCODE                                                          
+EXIT 'SQLERRMC ='SQLERRMC';' ,                                                  
+||  'SQLERRP ='SQLERRP';' ,                                                     
+||  'SQLERRD ='SQLERRD.1',',                                                    
+            || SQLERRD.2',',                                                    
+            || SQLERRD.3',',                                                    
+            || SQLERRD.4',',                                                    
+            || SQLERRD.5',',                                                    
+            || SQLERRD.6';' ,                                                   
+                                                                                
+||  'SQLWARN ='SQLWARN.0',',                                                    
+            || SQLWARN.1',',                                                    
+            || SQLWARN.2',',                                                    
+            || SQLWARN.3',',                                                    
+            || SQLWARN.4',',                                                    
+            || SQLWARN.5',',                                                    
+            || SQLWARN.6',',                                                    
+            || SQLWARN.7',',                                                    
+            || SQLWARN.8',',                                                    
+            || SQLWARN.9',',                                                    
+            || SQLWARN.10';' ,                                                  
+||  'SQLSTATE='SQLSTATE';'                                                      

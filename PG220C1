@@ -1,0 +1,37 @@
+   SELECT SC1.WTN                                                               
+         ,SC1.CUST_ID_CD                                                        
+         ,SC1.USER_ID                                                           
+         ,SC1.ACCT_NBR                                                          
+         ,SC1.ACCT_ALIAS                                                        
+         ,SC1.LAST_BILL_DATE                                                    
+         ,SC1.COST_CNTR                                                         
+         ,SC1.EMAIL_ID                                                          
+         ,SC1.ACCT_NRC_AMT                                                      
+         ,SC1.MRC_AMT                                                           
+         ,SC1.DATA_USAGE_AMT                                                    
+         ,SC1.NRC_AMT                                                           
+         ,SC1.TAX_AMT                                                           
+         ,SC1.THIRD_PARTY_LINE                                                  
+         ,SC1.TOTAL_AMT                                                         
+         ,SC1.MEMO_BILL                                                         
+     FROM (                                                                     
+      SELECT 'Wireless Number' AS WTN                                           
+         ,'User Name' AS CUST_ID_CD                                             
+         ,'User ID' AS USER_ID                                                  
+         ,'Account Number' AS ACCT_NBR                                          
+         ,CASE WHEN ALIAS_FLAG% = 'Y'                                           
+             THEN 'Billing Account Alias'                                       
+             ELSE '' END ACCT_ALIAS                                             
+         ,'Billing Cycle Date' AS LAST_BILL_DATE                                
+         ,'Cost Center' AS COST_CNTR                                            
+         ,'Email Address' AS EMAIL_ID                                           
+         ,'Account Chgs' AS ACCT_NRC_AMT                                        
+         ,'Monthly Access Charges' AS MRC_AMT                                   
+         ,'Total Data Usage Charges' AS DATA_USAGE_AMT                          
+         ,'Monthly Non Recurring Chgs' AS NRC_AMT                               
+         ,'Taxes and Surchgs' AS TAX_AMT                                        
+         ,'Third-Party Charges' as THIRD_PARTY_LINE                             
+         ,'Total Additional Chgs' AS TOTAL_AMT                                  
+         ,' ' AS MEMO_BILL                                                      
+      FROM SYSIBM.SYSDUMMY1                                                     
+       ) SC1                                                                    

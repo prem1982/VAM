@@ -1,0 +1,21 @@
+/*REXX TPEREMOT: REXX TO CREATE NDM PROCESS OVERRIDES*/                         
+ARG TESTID REMOTDSN RECFM LRECL BLKSIZE NUMVOLS RETPD                           
+PROCCRDS = TESTID".TPEREMOT.DATASET.NAMES"                                      
+NOTIFYID = SYSVAR(SYSUID)                                                       
+CALL FILENAME" LOCALDSN"                                                        
+LOCALDSN = RESULT                                                               
+/****************************************************/                          
+"FREE FI(PROCCRDS)"                                                             
+"DELETE '"PROCCRDS"'"                                                           
+"ALLOC FI(PROCCRDS) DA('"PROCCRDS"') NEW"                                       
+QUEUE "   SUB PROC=TPEREMOT -"                                                  
+QUEUE "       &REMOTDSN="REMOTDSN" -"                                           
+QUEUE "       &LOCALDSN="LOCALDSN" -"                                           
+QUEUE "       &NOTIFYID="NOTIFYID" -"                                           
+QUEUE "          &RECFM="RECFM" -"                                              
+QUEUE "          &LRECL="LRECL" -"                                              
+QUEUE "        &BLKSIZE="BLKSIZE" -"                                            
+QUEUE "        &NUMVOLS="NUMVOLS " -"                                           
+QUEUE "          &RETPD="RETPD" -"                                              
+"EXECIO * DISKW PROCCRDS (FINIS"                                                
+"FREE FI(PROCCRDS)"                                                             

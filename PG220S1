@@ -1,0 +1,140 @@
+ SELECT SC1.WTN                                                                 
+    ,'S' SELECT_LINK                                                            
+    ,'241' TARGET_PAGE_ID                                                       
+    ,'ALL' TARGET_SUBSET                                                        
+    ,'CONSTANT1 = ~' || X'7D' || RTRIM(SC1.ACCT_NBR) || X'7D' || '~'            
+       || ' AND CONSTANT2 = ~'                                                  
+           || X'7D' || RTRIM(SC1.COST_CNTR) || X'7D' || '~'                     
+       || ' AND CONSTANT3 = ~'                                                  
+           || X'7D' || RTRIM(SC1.CUST_ID_CD) || X'7D' || '~'                    
+        || ' AND FROM_DATE = ' || X'7D' || FROM_DATE% || X'7D'                  
+        || ' AND THRU_DATE = ' || X'7D' || THRU_DATE% || X'7D'                  
+        || ' AND MAN =  ' || X'7D' || SC1.MAN || X'7D'                          
+        || ' AND WTN = ' || X'7D'|| RTRIM(SC1.WTN) || X'7D'                     
+        || ' AND SERVICE_TYPE = ' || X'7D' || 'MTN' || X'7D'                    
+        || ' AND MAN_BILL_DATE = '                                              
+                  || X'7D' || CHAR(SC1.MAN_BILL_DATE) || X'7D'                  
+       AS TARGET_PARMS                                                          
+    ,SC1.CUST_ID_CD                                                             
+    ,SC1.USER_ID                                                                
+    ,SC1.ACCT_NBR                                                               
+    ,SC1.ACCT_ALIAS                                                             
+    ,SC1.LAST_BILL_DATE                                                         
+    ,SC1.COST_CNTR                                                              
+    ,SC1.EMAIL_ID                                                               
+    ,CHAR(SC1.ACCT_NRC_AMT) ACCT_NRC_AMT                                        
+    ,CHAR(SC1.MRC_AMT) MRC_AMT                                                  
+    ,CHAR(SC1.DATA_USAGE_AMT) DATA_USAGE_AMT                                    
+    ,CHAR(SC1.NRC_AMT) NRC_AMT                                                  
+    ,CHAR(SC1.TAX_AMT) TAX_AMT                                                  
+    ,CHAR(SC1.THIRD_PARTY_LINE) THIRD_PARTY_LINE                                
+    ,CHAR(SC1.TOTAL_AMT) TOTAL_AMT                                              
+    ,CASE WHEN ACTION% = 'D' THEN ' '                                           
+          WHEN SUBSTR(CHAR(FROM_DATE%),1,8) =                                   
+               SUBSTR(CHAR(THRU_DATE%),1,8) THEN                                
+               'Memo Bill'                                                      
+          ELSE ' '                                                              
+     END AS MEMO_BILL                                                           
+    ,CASE WHEN ACTION% = 'D' THEN ' '                                           
+          WHEN SUBSTR(CHAR(FROM_DATE%),1,8) =                                   
+               SUBSTR(CHAR(THRU_DATE%),1,8) THEN 'S'                            
+          ELSE ' '                                                              
+     END AS SELECT_LINK                                                         
+    ,'226' TARGET_PAGE_ID                                                       
+    ,'ALL' TARGET_SUBSET                                                        
+    ,CASE WHEN SUBSTR(CHAR(FROM_DATE%),1,8) =                                   
+               SUBSTR(CHAR(THRU_DATE%),1,8) THEN                                
+           'MAN = ' || X'7D' || SC1.MAN  || X'7D'                               
+        || ' AND MAN_BILL_DATE = '                                              
+                  || X'7D' || CHAR(SC1.MAN_BILL_DATE) || X'7D'                  
+        || ' AND ORIG_SYSTEM_ID = ' || X'7D' || 'VW' || X'7D'                   
+        || ' AND BAN = ' || X'7D' || SC1.MAN || X'7D'                           
+        || ' AND BILL_DATE = '                                                  
+                  || X'7D' || CHAR(SC1.MAN_BILL_DATE) || X'7D'                  
+        || ' AND FROM_DATE = ' || X'7D' || FROM_DATE% || X'7D'                  
+        || ' AND THRU_DATE = ' || X'7D' || THRU_DATE% || X'7D'                  
+        || ' AND WTN = ' || X'7D'|| RTRIM(SC1.WTN) || X'7D'                     
+        || ' AND SERVICE_TYPE = ' || X'7D' || 'MTN' || X'7D'                    
+          ELSE ' '                                                              
+     END AS TARGET_PARMS                                                        
+     FROM (                                                                     
+     SELECT INR.MAN                                                             
+           ,INR.WTN                                                             
+           ,CASE WHEN INR.CUST_ID_CD = ' ' THEN 'No User Name'                  
+                 ELSE INR.CUST_ID_CD END CUST_ID_CD                             
+           ,CASE WHEN INR.USER_ID = ' ' THEN 'No User ID'                       
+                 ELSE INR.USER_ID END USER_ID                                   
+           ,INR.ACCT_NBR                                                        
+           ,CASE WHEN ALIAS_FLAG% = 'Y'                                         
+                   THEN INR.ACCT_ALIAS || ' '                                   
+                ELSE '' END ACCT_ALIAS                                          
+           ,MAX(INR.MAN_BILL_DATE) MAN_BILL_DATE                                
+           ,INR.LAST_BILL_DATE                                                  
+           ,CASE WHEN INR.COST_CNTR = ' ' THEN 'No Cost Center'                 
+                 ELSE INR.COST_CNTR END COST_CNTR                               
+           ,CASE WHEN INR.EMAIL_ID = ' ' THEN 'No Email Address'                
+                 ELSE INR.EMAIL_ID END EMAIL_ID                                 
+           ,SUM(INR.ACCT_NRC_AMT) ACCT_NRC_AMT                                  
+           ,SUM(INR.MRC_AMT) MRC_AMT                                            
+           ,SUM(INR.NRC_AMT) NRC_AMT                                            
+           ,SUM(INR.DATA_USAGE_AMT) DATA_USAGE_AMT                              
+           ,SUM(INR.TAX_AMT) TAX_AMT                                            
+           ,SUM(INR.THIRD_PARTY_LINE) THIRD_PARTY_LINE                          
+           ,SUM(INR.ACCT_NRC_AMT                                                
+                 + INR.MRC_AMT                                                  
+                 + INR.NRC_AMT                                                  
+                 + INR.DATA_USAGE_AMT                                           
+                 + INR.TAX_AMT) TOTAL_AMT                                       
+        FROM (                                                                  
+      SELECT STG.MAN                                                            
+            ,STG.WTN                                                            
+            ,STG.VCH_50_A CUST_ID_CD                                            
+            ,STG.VCH_50_C USER_ID                                               
+            ,STG.WIRELESS_DAN ACCT_NBR                                          
+            ,STG.ACCT_ALIAS                                                     
+            ,STG.MAN_BILL_DATE                                                  
+            ,STG.man_BILL_DATE LAST_BILL_DATE                                   
+            ,STG.VCH_50_B COST_CNTR                                             
+            ,STG.VCH_100_B EMAIL_ID                                             
+            ,CASE WHEN ACCTLVL.LOW_MTN IS NULL THEN 0                           
+                  WHEN ACCTLVL.LOW_MTN = STG.WTN                                
+                           THEN ACCTLVL.LOW_MTN_CHGS                            
+                  ELSE ACCTLVL.MTN_CHGS                                         
+              END ACCT_NRC_AMT                                                  
+            ,STG.AMT_8 MRC_AMT                                                  
+            ,STG.AMT_4 DATA_USAGE_AMT                                           
+            ,(STG.AMT_9                                                         
+                        + STG.AMT_6                                             
+                        + STG.ADJ_AMT) NRC_AMT                                  
+            ,STG.AMT_7  TAX_AMT                                                 
+            ,STG.AMT_13 THIRD_PARTY_LINE                                        
+        FROM STG_LOB_RPT_T STG                                                  
+       LEFT OUTER JOIN (                                                        
+      SELECT STG.MAN                                                            
+            ,STG.MAN_BILL_DATE                                                  
+            ,STG.WTN AS LOW_MTN                                                 
+            ,SUM(STG.AMT_3) MTN_CHGS                                            
+            ,SUM(STG.AMT_1) LOW_MTN_CHGS                                        
+        FROM STG_LOB_RPT_T STG                                                  
+       WHERE STG.REPORT_ID_TS = ?                                               
+         AND STG.LINE_NUM < 0                                                   
+      GROUP BY STG.MAN                                                          
+            ,STG.MAN_BILL_DATE                                                  
+            ,STG.WTN                                                            
+                ) ACCTLVL                                                       
+          ON STG.MAN = ACCTLVL.MAN                                              
+         AND STG.MAN_BILL_DATE = ACCTLVL.MAN_BILL_DATE                          
+       WHERE STG.REPORT_ID_TS = ?                                               
+         AND STG.LINE_NUM >= 0                                                  
+         ) INR                                                                  
+     GROUP BY INR.MAN                                                           
+           ,INR.WTN                                                             
+           ,INR.CUST_ID_CD                                                      
+           ,INR.USER_ID                                                         
+           ,INR.ACCT_NBR                                                        
+           ,INR.ACCT_ALIAS                                                      
+           ,INR.LAST_BILL_DATE                                                  
+           ,INR.COST_CNTR                                                       
+           ,INR.EMAIL_ID                                                        
+    ) SC1                                                                       
+  WFILTER = ?                                                                   

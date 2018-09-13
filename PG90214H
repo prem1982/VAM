@@ -1,0 +1,13 @@
+    SELECT SC1.DATE_RANGE                                                       
+          ,'For your reference, your data usage is also'                        
+           || ' shown in Gigabytes' as NOTE1                                    
+          ,SC1.IN_MEGA                                                          
+          ,SC1.IN_KILO                                                          
+          ,'*Rounded Up' as NOTE2                                               
+       FROM (                                                                   
+      SELECT 'Date Usage' AS DATE_USAGE                                         
+      ,FROM_DATE% || ' - ' || THRU_DATE% as DATE_RANGE                          
+      ,char(INT(CAREA_2%)) AS IN_MEGA                                           
+      ,CHAR(DECIMAL((DECIMAL(CAREA_2%) * 1020),4,3)) AS IN_KILO                 
+       FROM SYSIBM.SYSDUMMY1                                                    
+           ) SC1                                                                

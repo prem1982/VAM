@@ -1,0 +1,3 @@
+/*REXX TSOCOPY: CONVERT ASCII FILE TO EBCDIC USING TSO COPY*/                   
+ARG OLDFILE NEWFILE                                                     00020001
+"COPY '"OLDFILE"' '"NEWFILE"'"                                                  

@@ -1,0 +1,6 @@
+/*SCR00500: REXX */                                                             
+ARG BMGNS0PN CYCINFO CUSTNO CONFIGNO                                            
+"DELETE (",                                                                     
+        "'"BMGNS0PN"."CYCINFO"."CUSTNO"."CONFIGNO".BMG00501'",                  
+        "'"BMGNS0PN"."CYCINFO"."CUSTNO"."CONFIGNO".BMG00502'",                  
+        ")"                                                                     

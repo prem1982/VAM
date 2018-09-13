@@ -1,0 +1,38 @@
+/*REXX IBILLMQ: REXX TO CREATE UNIX SCRIPT COMMANDS */                  00001000
+PARSE ARG BMGNY0PN JULCYCL UNIXDIR HOST QMGR                            00002000
+SAY 'UNIXDIR='UNIXDIR                                                   00003000
+UNIXCRDS = BMGNY0PN".IBILLMQ.SCRIPT."JULCYCL                            00004000
+/****************************************************/                  00005000
+"FREE FI(UNIXCRDS)"                                                     00006000
+"DELETE '"UNIXCRDS"'"                                                   00007000
+"ALLOC FI(UNIXCRDS) DA('"UNIXCRDS"') NEW DATACLAS(PSVB) LRECL(80) ",    00008000
+           " MGMTCLAS(LUSE15)"                                          00009000
+QUEUE  "cd ${1:-"UNIXDIR"}                                       "      00009100
+QUEUE  "CP=.:IBillNotifiers.jar:com.ibm.mqjms.jar:com.ibm.mq.jar "      00009200
+QUEUE  "JAVAX=jms.jar:connector.jar                              "      00009300
+QUEUE  "java -cp $CP:$JAVAX com.verizon.vams.ibill.IBillNotifiers \"    00009400
+QUEUE  "host="HOST" \"                                                  00009500
+QUEUE  "qm="QMGR" \"                                                    00009600
+QUEUE  "q=VAM.ESG_NOTIFIERS \"                                          00009700
+QUEUE  "file=//"BMGNY0PN".MQMANS."JULCYCL" "                            00009800
+"EXECIO * DISKW UNIXCRDS (FINIS"                                        00009900
+"OCOPY INDD(UNIXCRDS) OUTDD(SCRIPT) TEXT CONVERT(YES) PATHOPTS(USE)"    00010000
+"FREE FI(UNIXCRDS)"                                                     00010100
+/***** FOLLOWING IS FOR EDI/MAGTAPE VZQUALITY *****/                    00010200
+CALDATE  = DATE('S')                                                    00020000
+YYYY = SUBSTR(CALDATE,1,4)                                              00030000
+MM   = SUBSTR(CALDATE,5,2)                                              00030100
+DD   = SUBSTR(CALDATE,7,2)                                              00030200
+CALL EDISTATS' BMGVZ0CN.VZQ 'YYYY MM                                    00031000
+IF MM = 1 THEN                                                          00032000
+   DO                                                                   00033000
+      MM = 12                                                           00034000
+      YYYY = YYYY - 1                                                   00035000
+   END                                                                  00036000
+ELSE                                                                    00037000
+   DO                                                                   00038000
+      MM = MM - 1                                                       00038100
+      IF LENGTH(MM) = 1 THEN MM = "0"MM                                 00038200
+   END                                                                  00039000
+CALL EDISTATS' BMGVZ0CN.VZQ 'YYYY MM                                    00039100
+RETURN 0                                                                00040000

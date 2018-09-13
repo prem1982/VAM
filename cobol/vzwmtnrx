@@ -1,0 +1,318 @@
+/******************************* REXX *********************************/00010016
+/******************************* REXX *********************************/00020016
+                                                                        00030016
+ARG db2sys .                                                            00040016
+ say 'db2sys=' db2sys                                                   00050016
+ trace o                                                                00060016
+                                                                        00070016
+ db2sys       = strip(db2sys)                                           00080016
+ x = "|"                                                                00090016
+ numeric digits 10                                                      00100016
+                                                                        00110016
+ SELECT                                                                 00120016
+   WHEN DB2SYS  = 'D001'                                                00130016
+     then do                                                            00140016
+          TABPREF = 'BMGVZT'                                            00150016
+          HILVL   = 'BMGVZ0CN'                                          00151016
+          end                                                           00160016
+   WHEN DB2SYS  = 'D009'                                                00170016
+     then do                                                            00180016
+          TABPREF = 'BMGVZP'                                            00190016
+          HILVL   = 'BMGVZ0CN'                                          00191016
+          end                                                           00200016
+   WHEN DB2SYS  = 'D38X'                                                00210016
+     then do                                                            00220016
+          TABPREF = 'BMGVZS'                                            00230016
+          HILVL   = 'BMGVZ0CN'                                          00231016
+          end                                                           00240016
+   OTHERWISE                                                            00250016
+          do                                                            00260016
+          TABPREF = 'BMGVZP'                                            00270016
+          HILVL   = 'BMGVZ0PN'                                          00271016
+          end                                                           00280016
+ END                                                                    00290016
+                                                                        00300016
+ SIGNAL OFF ERROR /* TURN ERROR-TRAPPING OFF */                         00310016
+ "SUBCOM DSNREXX"                                                       00320016
+ IF RC THEN                                                             00330016
+    S_RC = RXSUBCOM('ADD','DSNREXX','DSNREXX')                          00340016
+                                                                        00350016
+ ADDRESS DSNREXX "CONNECT "DB2SYS                                       00360016
+ IF SQLCODE ^= 0                                                        00370016
+ then do                                                                00380016
+      SAY ' ERROR CONNECTING TO ' db2sys                                00390016
+      CALL SQLCA                                                        00400016
+      SAY '  END EXECUTION'                                             00410016
+      exit 12                                                           00420016
+      END                                                               00430016
+                                                                        00440016
+ more = 'Y'                                                             00450016
+                                                                        00460016
+BILLFD   = HILVL".EAST.ACCT.FOUND"                                      00461016
+"FREE FI(BILLFD)"                                                       00462016
+"DELETE '"BILLFD"'"                                                     00463016
+"ALLOC FI(BILLFD) DA('"BILLFD"') NEW CATALOG DATACLAS(PSFB80) LRECL(80)"00464016
+                                                                        00469716
+BILLFN   = HILVL".EAST.ACCT.NTFOUND"                                    00461016
+"FREE FI(BILLFN)"                                                       00462016
+"DELETE '"BILLFN"'"                                                     00463016
+"ALLOC FI(BILLFN) DA('"BILLFN"') NEW CATALOG DATACLAS(PSFB80) LRECL(80)"00464016
+                                                                        00469716
+ "EXECIO * DISKR CONFIGS (STEM cfgs.)"                                  00470016
+ if RC ^= 0                                                             00480016
+ then do                                                                00490016
+      say error reading CONFIGS file                                    00500016
+      if rc = 2                                                         00510016
+      then do                                                           00520016
+           say rc                                                       00530016
+           say Empty input file                                         00540016
+           exit 0                                                       00550016
+           end                                                          00560016
+      exit 12                                                           00570016
+      end                                                               00580016
+ acctfound    = 0                                                       00610016
+ acctnotfound = 0                                                       00610016
+ do i = 1 to cfgs.0                                                     00620016
+   location    = substr(cfgs.i,3,2)                                     00630016
+   mtn         = substr(cfgs.i,25,10)                                   00640016
+   ecpdid      = substr(cfgs.i,491,10)                                  00650016
+/* say 'location=' location */                                          00660016
+/* say 'mtn     =' mtn      */                                          00670016
+/* say 'ecpdid  =' ecpdid   */                                          00680016
+   call check_mtn                                                       00690016
+/* say 'mtn_found=' mtn_found  */                                       00691016
+  if mtn_found = 'Y' then                                               00700016
+     do                                                                 00710016
+        acctfound = acctfound + 1                                       00710116
+        billfd.i = location|| "||" ||mtn|| "||"  ||ecpdid               00710216
+     end                                                                00720016
+  else                                                                  00730016
+      do                                                                00740016
+         acctnotfound = acctnotfound + 1                                00740116
+         billfn.i = location|| "||" ||mtn|| "||"  ||ecpdid              00741016
+      end                                                               00750016
+ end                                                                    00890016
+    say 'total-no-of-recds-read=' cfgs.0                                00900016
+    say 'no-of-acct-found='       acctfound                             00900116
+    say 'no-of-acct-not-found='   acctnotfound                          00901016
+                                                                        00910016
+ "EXECIO * DISKW BILLFD    (STEM BILLFD. FINIS)"                        00911016
+ "FREE FI(BILLFD)"                                                      00912016
+ "EXECIO * DISKW BILLFN    (STEM BILLFN. FINIS)"                        00911016
+ "FREE FI(BILLFN)"                                                      00912016
+ return                                                                 00920016
+                                                                        00930016
+/************* check mtn            *************/                      00940016
+check_mtn:                                                              00950016
+                                                                        00950016
+profile_sql ="SELECT LOCATION,   " ||,                                  00990016
+             "MTN,               " ||,                                  01000016
+             "ECPD_PROFILE_ID    " ||,                                  01010016
+        "FROM "tabpref".VZW_MTN_T " ||,                                 01170016
+        "WHERE LOCATION    = '"location "' "||,                         01180016
+        "  AND MTN         = '"mtn"' "||,                               01190016
+        "  AND ECPD_PROFILE_ID      = '"ecpdid"' "||,                   01200016
+      "WITH UR "                                                        01260016
+                                                                        01270016
+/**** FETCH PARAMETERS *****/                                           01280016
+CPARMS= ":c_LOCATION,",                                                 01290016
+      ||":c_MTN,",                                                      01300016
+      ||":c_ECPD_ID"                                                    01310016
+                                                                        01470016
+CSQL = "FETCH C52 INTO "CPARMS                                          01480016
+                                                                        01490016
+/**** DECLARE CURSOR *****/                                             01500016
+DCLSQL2 = "DECLARE C52 CURSOR FOR S52"                                  01510016
+ADDRESS DSNREXX "EXECSQL "DCLSQL2                                       01520016
+IF SQLCODE ^= 0                                                         01530016
+then do                                                                 01540016
+     SAY 'ERROR DECLARING CURSOR C52 - SQLCODE=' SQLCODE                01550016
+     CALL SQLCA                                                         01560016
+     exit 12                                                            01570016
+     END                                                                01580016
+                                                                        01590016
+/**** PREPARE SELECT SQL ****/                                          01600016
+ADDRESS DSNREXX "EXECSQL PREPARE S52 FROM :PROFILE_SQL"                 01610016
+IF SQLCODE ^= 0                                                         01620016
+then do                                                                 01630016
+     SAY 'ERROR PREPARING 'PROFILE_SQL ' - SQLCODE=' SQLCODE            01640016
+     CALL SQLCA                                                         01650016
+     exit 12                                                            01660016
+     END                                                                01670016
+                                                                        01680016
+/**** OPEN CURSOR ****/                                                 01690016
+ADDRESS DSNREXX "EXECSQL OPEN C52"                                      01700016
+IF SQLCODE ^= 0                                                         01710016
+then do                                                                 01720016
+     SAY 'ERROR OPENING CURSOR C52 - SQLCODE=' SQLCODE                  01730016
+     CALL SQLCA                                                         01740016
+     exit 12                                                            01750016
+     END                                                                01760016
+                                                                        01770016
+ADDRESS DSNREXX "EXECSQL "CSQL                                          01780016
+                                                                        01790016
+if SQLCODE = 0                                                          01800016
+then do                                                                 01810016
+     mtn_found = 'Y'                                                    01820016
+     end                                                                01830016
+else do                                                                 01831016
+     mtn_found = 'N'                                                    01831116
+     end                                                                01832016
+                                                                        01840016
+                                                                        01850016
+ADDRESS DSNREXX "EXECSQL CLOSE C52"                                     01860016
+IF SQLCODE ^= 0                                                         01870016
+then do                                                                 01880016
+     SAY 'ERROR CLOSING CURSOR C52 - SQLCODE=' SQLCODE                  01890016
+     CALL SQLCA                                                         01900016
+     exit 12                                                            01910016
+     END                                                                01920016
+                                                                        01930016
+                                                                        01940016
+return                                                                  01950016
+                                                                        01960016
+                                                                        01970016
+                                                                        02290016
+/************* SQL ERROR ROUTINE *************/                         02910016
+SQLCA:                                                                  02920016
+                                                                        02930016
+if right(sqlerrmc,1) <> 'FF'x then sqlerrmc = sqlerrmc || 'FF'x         02940016
+if sqlwarna          <> 'W'   then sqlwarna = ' '                       02950016
+                                                                        02960016
+SQLCA = 'SQLCA   '||,                                                   02970016
+        x2c(d2x(136,8))||,                                              02980016
+        X2C(D2X(SQLCODE,8))||,                                          02990016
+        x2c(d2x(length(sqlerrmc),4))||,                                 03000016
+        left(sqlerrmc,70)||,                                            03010016
+        left(SQLERRP,8)||,                                              03020016
+        x2c(d2x(sqlerrd.1,8))||,                                        03030016
+        x2c(d2x(sqlerrd.2,8))||,                                        03040016
+        x2c(d2x(sqlerrd.3,8))||,                                        03050016
+        x2c(d2x(sqlerrd.4,8))||,                                        03060016
+        x2c(d2x(sqlerrd.5,8))||,                                        03070016
+        x2c(d2x(sqlerrd.6,8))||,                                        03080016
+        left(SQLWARN.1,1)||,                                            03090016
+        left(SQLWARN.2,1)||,                                            03100016
+        left(SQLWARN.3,1)||,                                            03110016
+        left(SQLWARN.4,1)||,                                            03120016
+        left(SQLWARN.5,1)||,                                            03130016
+        left(SQLWARN.6,1)||,                                            03140016
+        left(SQLWARN.7,1)||,                                            03150016
+        left(SQLWARN.8,1)||,                                            03160016
+        left(SQLWARN.9,1)||,                                            03170016
+        left(SQLWARN.10,1)||,                                           03180016
+        left(SQLWARNA,1)||,                                             03190016
+        left(SQLSTATE,5)                                                03200016
+                                                                        03210016
+message_llen  = 79                                                      03220016
+message_lines = 12                                                      03230016
+message_area  = x2c(d2x(message_llen*message_lines,4))||,               03240016
+                copies(' ',message_llen*message_lines)                  03250016
+message_lrecl = x2c(d2x(message_llen,8))                                03260016
+address linkpgm "DSNTIAR sqlca message_area message_lrecl"              03270016
+message_line_start = 3                                                  03280016
+                                                                        03290016
+do messagei = 1 to message_lines                                        03300016
+  message_line = substr(message_area,message_line_start,message_llen)   03310016
+  message_line_start = message_line_start + message_llen                03320016
+  if message_line = '' then ITERATE                                     03330016
+  msgtext=strip(message_line)                                           03340016
+  rc= say_msg(0)                                                        03350016
+end                                                                     03360016
+                                                                        03370016
+msgtext='SQLSTATE='SQLSTATE                                             03380016
+rc= say_msg(0)                                                          03390016
+msgtext='SQLWARN ='SQLWARN.0",",                                        03400016
+            || SQLWARN.1",",                                            03410016
+            || SQLWARN.2",",                                            03420016
+            || SQLWARN.3",",                                            03430016
+            || SQLWARN.4",",                                            03440016
+            || SQLWARN.5",",                                            03450016
+            || SQLWARN.6",",                                            03460016
+            || SQLWARN.7",",                                            03470016
+            || SQLWARN.8",",                                            03480016
+            || SQLWARN.9",",                                            03490016
+            || SQLWARN.10                                               03500016
+rc= say_msg(0)                                                          03510016
+msgtext='SQLERRD ='SQLERRD.1",",                                        03520016
+            || SQLERRD.2",",                                            03530016
+            || SQLERRD.3",",                                            03540016
+            || SQLERRD.4",",                                            03550016
+            || SQLERRD.5",",                                            03560016
+            || SQLERRD.6                                                03570016
+rc= say_msg(0)                                                          03580016
+msgtext='SQLERRP  ='SQLERRP                                             03590016
+rc= say_msg(0)                                                          03600016
+msgtext='SQLERRMC ='SQLERRMC                                            03610016
+rc= say_msg(0)                                                          03620016
+msgtext='SQLCODE  ='SQLCODE                                             03630016
+rc= say_msg(0)                                                          03640016
+                                                                        03650016
+if sqlstmt <> '' & sqlerrd.5 > 0 then                                   03660016
+  do                                                                    03670016
+    do i_text_pos = 1 to length(sqlstmt) by 72                          03680016
+      msgtext=substr(sqlstmt,i_text_pos,72)                             03690016
+      rc= say_msg(0)                                                    03700016
+      if (sqlerrd.5 >= i_text_pos) &,                                   03710016
+         (sqlerrd.5 <= i_text_pos+71) then                              03720016
+        do                                                              03730016
+          i_syn_pos = sqlerrd.5 - i_text_pos + 1                        03740016
+          select                                                        03750016
+            when i_syn_pos = 1 then                                     03760016
+              syn_err_message = '|<- ThereØs a syntax error here *****' 03770016
+            when i_syn_pos < 5 then                                     03780016
+              syn_err_message = copies('*',i_syn_pos-1)||,              03790016
+                                '|<- ThereØs a syntax error here *****' 03800016
+            when i_syn_pos < 34 then                                    03810016
+              syn_err_message = '****'copies(' ',i_syn_pos-5)||,        03820016
+                                '|<- ThereØs a syntax error here *****' 03830016
+            otherwise                                                   03840016
+              syn_err_message = '****'copies(' ',i_syn_pos-30)||,       03850016
+                                'ThereØs a syntax error here ->| *****' 03860016
+          end                                                           03870016
+          msgtext=syn_err_message                                       03880016
+           rc= say_msg(0)                                               03890016
+       end                                                              03900016
+     end                                                                03910016
+   end                                                                  03920016
+                                                                        03930016
+return                                                                  03940016
+                                                                        03950016
+pad_field:                                                              03960016
+arg fl,len                                                              03970016
+                                                                        03980016
+pad_fl = "'"left(fl,len,' ')"'"                                         03990016
+                                                                        04000016
+return pad_fl                                                           04010016
+                                                                        04020016
+                                                                        04030016
+SAY_MSG:                                                                04040016
+arg bl                                                                  04050016
+if datatype(msgtext.0) = 'NUM' then ,                                   04060016
+   do m=1 to msgtext.0                                                  04070016
+      m=right(m,2,0)                                                    04080016
+      say msgtext.m                                                     04090016
+   end                                                                  04100016
+else ,                                                                  04110016
+   do                                                                   04120016
+      say msgtext                                                       04130016
+   end                                                                  04140016
+do bl                                                                   04150016
+   say ' '                                                              04160016
+end                                                                     04170016
+drop msgtext.                                                           04180016
+RETURN 1                                                                04190016
+                                                                        04200016
+/*************  SYNTAX ERROR HANDLER **********/                        04210016
+CRAPCODE:                                                               04220016
+SAY 'YOU HAVE CRAP CODE AT LINE' SIGL                                   04230016
+SAY SOURCELINE(SIGL)                                                    04240016
+SAY 'REXX GAVE A RETURN CODE OF' RC ', WHICH MEANS :'                   04250016
+SAY ERRORTEXT(RC)                                                       04260016
+EXIT                                                                    04270016
+/************* EXTERNAL ERROR HANDLER **********/                       04280016
+BADDIES:                                                                04290016
+SAY 'YOU HAVE BEEN LET DOWN BY FACTORS BEYOND YOUR CONTROL AT LINE' SIGL04300016
+SAY SOURCELINE(SIGL)                                                    04310016
+SAY 'RC =' RC                                                           04320016
+EXIT                                                                    04330016

@@ -1,0 +1,24 @@
+SELECT SC1.COL0                                                                 
+      ,SC1.COL1                                                                 
+      ,SC1.COL2                                                                 
+      ,SC1.COL3                                                                 
+      ,SC1.COL4                                                                 
+      ,SC1.COL5                                                                 
+      ,SC1.COL6                                                                 
+--    ,SC1.COL7                                                                 
+FROM (SELECT TB1.COLUMN_1 COL0                                                  
+      ,TB1.COLUMN_2       COL1                                                  
+      ,TB1.COLUMN_3       COL2                                                  
+      ,TB1.COLUMN_4       COL3                                                  
+      ,TB1.COLUMN_5       COL4                                                  
+      ,TB1.COLUMN_6       COL5                                                  
+      ,TB1.COLUMN_7       COL6                                                  
+      ,TB1.COLUMN_8       COL7                                                  
+FROM BMGVZP.VZ450_VMT50204_T  TB1                                               
+WHERE TB1.MAN = ?                                                               
+  AND TB1.MAN_BILL_DATE = ?                                                     
+  AND TB1.ORIG_SYSTEM_ID = 'VW'                                                 
+  AND TB1.SEQ_CD = '00'                                                         
+  AND TB1.SYSTEM_ID = 'OSU'                                                     
+  ) SC1                                                                         
+   WFILTER = ?                                                                  

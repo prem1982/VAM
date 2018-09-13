@@ -1,0 +1,5 @@
+SELECT *                                                                        
+FROM                                                                            
+SYSIBM.SYSROUTINES                                                              
+WHERE NAME = 'PORTAL_IBRS_INFO'                                                 
+FETCH FIRST 10 ROW ONLY                                                         

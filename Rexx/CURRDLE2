@@ -1,0 +1,18 @@
+/*REXX CURRDLE2:REXX TO DELETE CURR_CHAR_DAT_T ROW*/                            
+ARG MAN BP SYS                                                                  
+/**** CREATE SELECT STRING *****/                                               
+SQLX = " DELETE FROM BMGVZP.CURR_CHAR_DAT_T" ||,                                
+        " WHERE MAN = '"MAN"'" ||,                                              
+          " AND MAN_BILL_DATE = '"BP"'" ||,                                     
+          " AND ORIG_SYSTEM_ID = '"SYS"'" ||,                                   
+          " AND (" ||,                                                          
+               " TB1.CHG_CD = '0120'" ||,                                       
+             " OR TB1.CHG_CD = '0355'" ||,                                      
+             " OR TB1.CHG_CD = '0600'" ||,                                      
+             " OR TB1.CHG_CD = '0700'" ||,                                      
+             " OR TB1.CHG_CD = '0800'" ||,                                      
+             " OR TB1.CHG_CD = '1400'" ||,                                      
+             " OR TB1.CHG_CD = '1420'" ||,                                      
+             " OR TB1.CHG_CD = '1605'" ||,                                      
+              " )"                                                              
+RETURN SQLX                                                                     

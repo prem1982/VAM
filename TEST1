@@ -1,0 +1,30 @@
+SELECT 'S' SELECT_LINK                                                          
+    ,'INT' L_TYPE ,CHAR(1212) AS TARGET_PAGE_ID                                 
+    ,RTRIM(H13028.RPT_PAGE_SUBSET) AS TARGET_SUBSET                             
+    ,' ' || ' AND RPT_SECTION = ' || X'7D' || H13028.RPT_SECTION ||             
+X'7D' || ' AND RPT_PAGE_ID = ' || '1212' || ' AND RPT_PAGE_SUBSET = ' ||        
+    X'7D' || H13028.RPT_PAGE_SUBSET || X'7D' || ' AND RPT_DESC = ' ||           
+    X'7D' || H13028.RPT_DESC  || X'7D' AS TARGET_PARMS ,H13028.RPT_ID           
+    FROM ( SELECT '286231427-00001' ACCT_NBR                                    
+        ,'286231427-00001' ACCT_NBR2                                            
+        ,' ' WTN                                                                
+        ,' ' WTN2                                                               
+        ,'9999-12-31' BILL_DATE                                                 
+        ,COALESCE(RPTS.RPT_SECTION,' ') RPT_SECTION                             
+        ,COALESCE(RPTS.RPT_CATEGORY,' ') RPT_CATEGORY                           
+        ,COALESCE(RPTS.REPORT_SUB_GROUP,' ') RPT_GROUP                          
+        ,COALESCE(RPTS.REPORT_DESCRIPTION,' ') RPT_DESC                         
+        ,COALESCE(CHAR(INTEGER(RPTS.RPT_ID)),' ') RPT_ID                        
+        ,CASE WHEN 1212 IN (1250)                                               
+            THEN 'ALL'                                                          
+            ELSE '1_ALL ' END                                                   
+            RPT_PAGE_SUBSET                                                     
+        FROM SYSIBM.SYSDUMMY1                                                   
+        LEFT OUTER JOIN                                                         
+        BMGVZP.PL_RPT_CNTL_T RPTS                                               
+        ON RPTS.PAGE_ID = 1212                                                  
+        AND UPPER(RPT_SECTION) = UPPER('WIRELESS ')                             
+        AND ('1_ALL ' = 'ALL'                                                   
+        OR RPTS.PAGE_SUBSET = '1_ALL '                                          
+        OR RTRIM(RPTS.PAGE_SUBSET) || '_ALL' = '1_ALL ') )                      
+        H13028 FOR FETCH ONLY WITH UR                                           

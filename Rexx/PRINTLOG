@@ -1,0 +1,8 @@
+ /* Rexx exec to display the given Unix file to the job log. */                 
+                                                                                
+ parse arg FILE                                                                 
+                                                                                
+ say "Displaying file: "FILE                                                    
+ say                                                                            
+                                                                                
+ address TSO "EXEC 'SYS1.CLIST(OSHELL)' 'cat "FILE"'"                           

@@ -1,0 +1,12 @@
+/*REXX*/                                                                        
+ARG BMGNY0PN DB2SYS DATABASE TBLSPACE                                           
+/****************** DSN COMMANDS **************************/                    
+DSNCDS = BMGNY0PN".DSNCDS."DB2SYS"."TBLSPACE                                    
+"FREE FI(DSNCDS)"                                                               
+"DELETE '"DSNCDS"'"                                                             
+"ALLOC FI(DSNCDS) DA('"DSNCDS"') NEW "                                          
+QUEUE "  DSN SYSTEM ("DB2SYS")                      "                           
+QUEUE "     -START DB("DATABASE") SPACENAM("TBLSPACE") ACCESS(FORCE)"           
+QUEUE "  END                                        "                           
+"EXECIO * DISKW DSNCDS (FINIS"                                                  
+"FREE FI(DSNCDS)"                                                               

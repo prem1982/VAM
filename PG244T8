@@ -1,0 +1,33 @@
+SELECT 'Total Equip Chgs'                                                       
+CHG_TYPE                                                                        
+,' ' CHG_DESC                                                                   
+,'                                                                              
+' FROM_DATE ,' ' TO_DATE ,                                                      
+CHAR(SUM(SC1.CHG_AMT)) CHG                                                      
+_AMT FROM ( SELECT 'Equipm                                                      
+ent Charges' AS CHG_TYPE ,                                                      
+RTRIM(V72.DESCRIPTION1) ||                                                      
+ ' ' || V72.DESCRIPTION2 A                                                      
+S CHG_DESC ,V72.FROM_DATE                                                       
+,V72.TO_DATE ,(V72.CHARGE                                                       
++ V72.DISCOUNT) AS CHG_AMT                                                      
+ FROM VZ450_7200_T V72 INN                                                      
+ER JOIN ( SELECT 1 LINE_NO                                                      
+ ,DATE(CASE WHEN FROM_DATE                                                      
+% = ' ' THEN SUBSTR(CHAR(C                                                      
+URRENT DATE),1,8) || '01'                                                       
+ELSE FROM_DATE% END) FROM_DATE                                                  
+     ,CASE WHEN THRU_DATE%                                                      
+ = ' ' THEN DATE(SUBSTR(CH                                                      
+AR(CURRENT DATE),1,8) || '                                                      
+01') + 1 MONTH - 1 DAY ELS                                                      
+E DATE(THRU_DATE%) END THR                                                      
+U_DATE FROM SYSIBM.SYSDUMM                                                      
+Y1 ) DTS ON DTS.LINE_NO =                                                       
+1 AND DTS.FROM_DATE <= V72                                                      
+.MAN_BILL_DATE AND DTS.THR                                                      
+U_DATE >= V72.MAN_BILL_DATE                                                     
+  WHERE V72.MAN = ? AND V7                                                      
+2.ORIG_SYSTEM_ID = 'VW' AN                                                      
+D V72.WORKING_TEL_NBR = ?                                                       
+AND V72.ASSOC_CHG_CD = '1940') SC1 WFILTER = ?                                  

@@ -1,0 +1,16 @@
+/*REXX SNDBIGVZ: REXX TO CREATE NDM PROCESS OVERRIDES*/                         
+ARG TESTID REMOTDSN                                                             
+PROCCRDS = TESTID".SNDREMOT.DATASET.NAMES"                                      
+NOTIFYID = SYSVAR(SYSUID)                                                       
+CALL FILENAME" LOCALDSN"                                                        
+LOCALDSN = RESULT                                                               
+/****************************************************/                          
+"FREE FI(PROCCRDS)"                                                             
+"DELETE '"PROCCRDS"'"                                                           
+"ALLOC FI(PROCCRDS) DA('"PROCCRDS"') NEW"                                       
+QUEUE "   SUB PROC=SNDBIGVZ -"                                                  
+QUEUE "       &REMOTDSN="REMOTDSN" -"                                           
+QUEUE "       &LOCALDSN="LOCALDSN" -"                                           
+QUEUE "       &NOTIFYID="NOTIFYID" -"                                           
+"EXECIO * DISKW PROCCRDS (FINIS"                                                
+"FREE FI(PROCCRDS)"                                                             

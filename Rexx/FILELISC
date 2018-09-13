@@ -1,0 +1,23 @@
+/*REXX FILELISC:APPEND A PARTICULAR DSN TO A FILELIST */                00020001
+ARG DSNAME LISTIN LISTOUT                                               00030002
+X = OUTTRAP(DSN.)                                                               
+CALL PADBLNKS DSNAME 44                                                         
+DSNX = RESULT                                                                   
+"FREE FI(LISTOUT)"                                                              
+"FREE FI(LISTIN)"                                                               
+/****** READ THE LISTDSN DD INTO MEMORY USING STEM DMPREC ******/       00380010
+"ALLOC FI(LISTIN) DA('"LISTIN"')"                                               
+"EXECIO * DISKR LISTIN (STEM LISTREC. FINIS"                            00382010
+"FREE FI(LISTIN)"                                                               
+DO TX = 1 TO LISTREC.0                                                  00507001
+   BEGPT   = SUBSTR(LISTREC.TX,1,26)                                            
+   ENDPT   = SUBSTR(LISTREC.TX,71,76)                                           
+   QUEUE BEGPT||DSNX||ENDPT                                                     
+END                                                                     00550001
+QUEUE                                                                           
+"DELETE '"LISTOUT"'"                                                            
+"ALLOC FI(LISTOUT) DA('"LISTOUT"') NEW CATALOG DATACLAS(PSFB80)",               
+ " LRECL(146)"                                                                  
+"EXECIO * DISKW LISTOUT (FINIS"                                                 
+"FREE FI(LISTOUT)"                                                              
+EXIT                                                                    00668001

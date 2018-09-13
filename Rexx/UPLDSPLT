@@ -1,0 +1,281 @@
+/******************************* REXX *********************************/        
+/* REXX EXEC UPDSPLT     v 1.0                                        */        
+/* takes dataset with discounting btn uploads and splits them         */        
+/******************************* REXX *********************************/        
+                                                                                
+ARG .                /* no arguments */                                         
+                                                                                
+ more         = 'Y'                                                             
+ timestamp    = ''                                                              
+                                                                                
+ PFLREPe.     = ''                                                              
+ bytesize.    = ''                                                              
+ xmitcrd.     = ''                                                              
+ report.      = ''                                                              
+                                                                                
+ i = 0                                                                          
+                                                                                
+ xmitcrd_cnt           = 0                                                      
+ report_cnt            = 0                                                      
+ num_of_files          = 0                                                      
+                                                                                
+ storage_values = ''                                                            
+ storage_type   = ''                                                            
+                                                                                
+ p_storage = 0                                                                  
+ s_storage = 0                                                                  
+                                                                                
+ dataclass    = 'PSVB'                                                          
+ mgmtclass    = 'NOBK03'                                                        
+                                                                                
+"EXECIO 1 DISKR PFLREP (STEM PFLREPe.)"                                         
+if RC ^= 0                                                                      
+then do                                                                         
+     say error reading PFLREP file                                              
+     if rc = 2                                                                  
+     then do                                                                    
+          say rc                                                                
+          say Empty input file                                                  
+          exit 0                                                                
+          end                                                                   
+     exit 12                                                                    
+end                                                                             
+                                                                                
+file_ts = ''                                                                    
+dsname  = ''                                                                    
+email   = ''                                                                    
+customer_id = ''                                                                
+config_type = ''                                                                
+config_number = ''                                                              
+user_id = ''                                                                    
+file_name = ''                                                                  
+                                                                                
+/* main loop, process each record in the PFLREP array */                        
+                                                                                
+do while (more = 'Y')                                                           
+                                                                                
+  /* looking for '---FILE_TS' in position 1 of the file */                      
+  /* this indicates the logical start of a file. */                             
+  /* Extract the dataset name, ftp address etc   */                             
+                                                                                
+  if substr(PFLREPe.1,1,6) = '---END'                                           
+  then do                                                                       
+       /* close the previous file */                                            
+       "EXECIO 0 DISKW SPLIT (FINIS)"                                           
+       ADDRESS TSO "FREE F(SPLIT)"                                              
+                                                                                
+       subject = 'BTN Upload for '||customer_id||'-'||config_type||,            
+            '-'||config_number||' of file "'||strip(file_name)||'"'             
+                                                                                
+       call write_xmit_cards                                                    
+                                                                                
+       file_ts = ''                                                             
+       dsname  = ''                                                             
+       email   = ''                                                             
+       customer_id = ''                                                         
+       config_type = ''                                                         
+       config_number = ''                                                       
+       user_id = ''                                                             
+       file_name = ''                                                           
+       end                                                                      
+                                                                                
+  if substr(PFLREPe.1,1,10) = '---FILE_TS'                                      
+  then do                                                                       
+       num_of_files = num_of_files + 1                                          
+       file_ts = strip(substr(PFLREPe.1,index(PFLREPe.1,'=')+1))                
+       end                                                                      
+                                                                                
+  if substr(PFLREPe.1,1,7) = '---DSNM'                                          
+  then do                                                                       
+       dsname = strip(substr(PFLREPe.1,index(PFLREPe.1,'=')+1))                 
+       end                                                                      
+                                                                                
+  if substr(PFLREPe.1,1,8) = '---EMAIL'                                         
+  then do                                                                       
+       email = strip(substr(PFLREPe.1,index(PFLREPe.1,'=')+1))                  
+       end                                                                      
+                                                                                
+  if substr(PFLREPe.1,1,11) = '---CUSTOMER'                                     
+  then do                                                                       
+       customer_id = strip(substr(PFLREPe.1,index(PFLREPe.1,'=')+1))            
+       end                                                                      
+                                                                                
+  if substr(PFLREPe.1,1,14) = '---CONFIG_TYPE'                                  
+  then do                                                                       
+       config_type = strip(substr(PFLREPe.1,index(PFLREPe.1,'=')+1))            
+       end                                                                      
+                                                                                
+  if substr(PFLREPe.1,1,16) = '---CONFIG_NUMBER'                                
+  then do                                                                       
+       config_number = strip(substr(PFLREPe.1,index(PFLREPe.1,'=')+1))          
+       end                                                                      
+                                                                                
+  if substr(PFLREPe.1,1,10) = '---USER_ID'                                      
+  then do                                                                       
+       user_id = strip(substr(PFLREPe.1,index(PFLREPe.1,'=')+1))                
+       end                                                                      
+                                                                                
+  if substr(PFLREPe.1,1,12) = '---FILE_NAME'                                    
+  then do                                                                       
+       file_name = strip(substr(PFLREPe.1,index(PFLREPe.1,'=')+1))              
+                                                                                
+       /* see if dataset exists, if not then allocate it new */                 
+       /* otherwise allocate it reuse old                    */                 
+                                                                                
+       ADDRESS TSO "LISTCAT ENT('"dsname"')"                                    
+       IF RC = 0                                                                
+       then do                                                                  
+            ADDRESS TSO "ALLOC F(SPLIT) DA('"dsname"') REUSE OLD"               
+            END                                                                 
+       ELSE DO                                                                  
+            bytesize = 90000                                                    
+            storage_values = calculate_file_size(bytesize,dsname)               
+            p_storage    = word(storage_values, 1)                              
+            s_storage    = word(storage_values, 2)                              
+            storage_type = word(storage_values, 3)                              
+                                                                                
+            ADDRESS TSO "ALLOC F(SPLIT) DA('"dsname"')",                        
+            "mgmtclas("mgmtclass") lrecl(204) recfm(v b) ",                     
+            "dataclas("dataclass")",                                            
+            storage_type" space("p_storage","s_storage") NEW"                   
+            END;                                                                
+       end                                                                      
+                                                                                
+  if substr(PFLREPe.1,1,3) ^= '---'                                             
+  then do                                                                       
+       "EXECIO 1 DISKW SPLIT (STEM PFLREPe.)"                                   
+       end                                                                      
+                                                                                
+  "EXECIO 1 DISKR PFLREP (STEM PFLREPe.)"                                       
+                                                                                
+  if rc ^= 0                                                                    
+  then more = 'N'                                                               
+                                                                                
+end  /* do i */                                                                 
+                                                                                
+/* write the stacked up xmit cards */                                           
+                                                                                
+if xmitcrd_cnt > 0                                                              
+then do                                                                         
+   "MAKEBUF"                                                                    
+   "EXECIO * DISKW xmitcrd (STEM xmitcrd. FINIS)"                               
+   "DROPBUF"                                                                    
+end                                                                             
+                                                                                
+                                                                                
+return                                                                          
+                                                                                
+                                                                                
+ /*********************************************************************/        
+ /* NAME:     calculate_file_size                                     */        
+ /*                                                                   */        
+ /* FUNCTION: Calculates the amount of space that needs to be         */        
+ /*           allocated to store the split file.                      */        
+ /*           Space unit to use is TRACKS.  If there are more than    */        
+ /*           500 TRACKS, then the space unit to use is CYLINDERS.    */        
+ /*           The secondary space allocation should be 10% of the     */        
+ /*           primary space allocated.                                */        
+ /*********************************************************************/        
+ calculate_file_size:procedure                                                  
+                                                                                
+   PARSE ARG in_string, in_dsname                                               
+                                                                                
+   bytes_per_track = 56664                                                      
+   tracks_per_cyl  = 15                                                         
+   block_size = 32004                                                           
+                                                                                
+   file_byte_cnt = 0                                                            
+   pr_storage    = 0                                                            
+   sec_storage   = 0                                                            
+                                                                                
+   filename     = ''                                                            
+   storage_type = ''                                                            
+                                                                                
+   filename = strip(substr(in_string,1,40))                                     
+                                                                                
+   IF filename = in_dsname THEN DO                                              
+      file_byte_cnt = strip(substr(in_string,41))                               
+                                                                                
+      IF file_byte_cnt <= block_size                                            
+      THEN DO                                                                   
+           pr_storage  = 1                                                      
+           sec_storage = 1                                                      
+           storage_type = 'TRACKS'                                              
+      END                                                                       
+      ELSE DO                                                                   
+       /*  pr_storage = (file_byte_cnt % bytes_per_track) + 1 */                
+         pr_storage = (file_byte_cnt % block_size) + 1                          
+         sec_storage = ((pr_storage * .10) % 1) + 1                             
+         storage_type = 'TRACKS'                                                
+                                                                                
+         IF pr_storage > 500         /* more than 500 trks */                   
+         THEN DO                                                                
+            pr_storage = (pr_storage % tracks_per_cyl) + 1                      
+            sec_storage = ((pr_storage * .10) % 1) + 1                          
+            storage_type = 'CYLINDERS'                                          
+                                                                                
+            IF pr_storage > 100         /* more than 100 cyls */                
+            THEN DO                                                             
+               sec_storage = (pr_storage - 100) + 1                             
+               pr_storage = 100                                                 
+               storage_type = 'CYLINDERS'                                       
+            END                                                                 
+         END                                                                    
+      END                                                                       
+   END                                                                          
+                                                                                
+ return (pr_storage sec_storage storage_type)                                   
+                                                                                
+ /*********************************************************************/        
+ /* NAME:     write_xmit_cards                                        */        
+ /*                                                                   */        
+ /* FUNCTION: Stores the information necessary to XMIT each of the    */        
+ /*           split files to a buffer.                                */        
+ /*********************************************************************/        
+ write_xmit_cards:                                                              
+                                                                                
+     /* ALLOC           */                                                      
+     xmitcrd_cnt = xmitcrd_cnt + 1                                              
+     xmitcrd.xmitcrd_cnt = "ALLOC F(REPORT) DA('"dsname"') SHR"                 
+                                                                                
+     /* REXX            */                                                      
+     xmitcrd_cnt = xmitcrd_cnt + 1                                              
+     xmitcrd.xmitcrd_cnt = "%XMITIP "email"  +"                                 
+                                                                                
+     /* subject         */                                                      
+     xmitcrd_cnt = xmitcrd_cnt + 1                                              
+     xmitcrd.xmitcrd_cnt = "SUBJECT '"subject"'     +"                          
+                                                                                
+     /* FROM            */                                                      
+     xmitcrd_cnt = xmitcrd_cnt + 1                                              
+  xmitcrd.xmitcrd_cnt = 'FROM "VAM PROFILE" <DO.NOT.REPLY@VERIZON> +'           
+                                                                                
+     /* NOMSG           */                                                      
+     xmitcrd_cnt = xmitcrd_cnt + 1                                              
+     xmitcrd.xmitcrd_cnt = "NOMSG                  +"                           
+                                                                                
+     /* FILEDD          */                                                      
+     xmitcrd_cnt = xmitcrd_cnt + 1                                              
+     xmitcrd.xmitcrd_cnt = "FILEDD (REPORT)          +"                         
+                                                                                
+     /* FILENAME        */                                                      
+     xmitcrd_cnt = xmitcrd_cnt + 1                                              
+     this_config = customer_id||'-'||config_type||'-'||config_number            
+     xmitcrd.xmitcrd_cnt = "FILENAME "file_ts||'-'||this_config".TXT +"         
+                                                                                
+     /* format          */                                                      
+     xmitcrd_cnt = xmitcrd_cnt + 1                                              
+     xmitcrd.xmitcrd_cnt = "FORMAT TXT/TXT           +"                         
+                                                                                
+     /* margin          */                                                      
+     xmitcrd_cnt = xmitcrd_cnt + 1                                              
+     xmitcrd.xmitcrd_cnt = "MARGIN 0.50/0.25/0.50/0.50"                         
+                                                                                
+     /* free            */                                                      
+     xmitcrd_cnt = xmitcrd_cnt + 1                                              
+     xmitcrd.xmitcrd_cnt = "FREE F(REPORT)"                                     
+                                                                                
+                                                                                
+ return                                                                         
+                                                                                
+                                                                                

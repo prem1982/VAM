@@ -1,0 +1,83 @@
+  SELECT 'Total' SUMM_TYPE                                                      
+        ,' ' ALLOWANCE_MIN                                                      
+        ,CHAR(SUM(SC1.INCLUDED_NBR)) INCLUDED_NBR                               
+        ,CHAR(SUM(SC1.BILLABLE_NBR)) BILLABLE_NBR                               
+        ,CHAR(SUM(SC1.AIRTIME_CHGS)) AIRTIME_CHGS                               
+        ,CHAR(SUM(SC1.IN_MINS)) IN_MINS                                         
+        ,CHAR(SUM(SC1.FF_MIN))  FF_MIN                                          
+        ,CHAR(SUM(SC1.LD_CHGS)) LD_CHGS                                         
+   FROM (                                                                       
+    SELECT INR.SUMM_TYPE                                                        
+          ,MAX(INR.ALLOWANCE_MIN) ALLOWANCE_MIN                                 
+          ,INTEGER(SUM(INR.INCLUDED_NBR)) INCLUDED_NBR                          
+          ,INTEGER(SUM(INR.BILLABLE_NBR)) BILLABLE_NBR                          
+          ,DECIMAL(SUM(INR.AIRTIME_USAGE_CHGS),11,2) AIRTIME_CHGS               
+          ,INTEGER(SUM(INR.IN_MINS)) IN_MINS                                    
+          ,INTEGER(SUM(INR.FF_MIN))  FF_MIN                                     
+          ,DECIMAL(SUM(INR.LD_CHGS),11,2) LD_CHGS                               
+        FROM (                                                                  
+         SELECT SUM(CASE WHEN V63.ASSOC_CHG_CD = '1936' THEN 0                  
+                    WHEN V63.ASSOC_CHG_CD = '1942' THEN 0                       
+                    WHEN UPPER(V63.SUMMARY_DESC) =                              
+                        'LONG DISTANCE - VERIZON WIRELESS'                      
+                      THEN 0                                                    
+                    WHEN UPPER(V63.SUMMARY_DESC) = '411 CONNECT'                
+                      THEN 0                                                    
+                    ELSE V63.GRD_COST END) AIRTIME_USAGE_CHGS                   
+               ,SUM(CASE WHEN V63.ASSOC_CHG_CD = '1936' THEN 0                  
+                    WHEN V63.ASSOC_CHG_CD = '1942'                              
+                                 THEN V63.GRD_COST                              
+                    WHEN UPPER(V63.SUMMARY_DESC) =                              
+                        'LONG DISTANCE - VERIZON WIRELESS'                      
+                      THEN V63.GRD_COST                                         
+                    WHEN UPPER(V63.SUMMARY_DESC) = '411 CONNECT'                
+                      THEN V63.GRD_COST                                         
+                    ELSE 0 END) LD_CHGS                                         
+               ,SUM(CASE WHEN V63.SUMM_TYPE_IND = 1                             
+                    AND UPPER(V63.SUMMARY_DESC) = 'FRIENDS & FAMILY'            
+                      THEN V63.USG_USED ELSE 0 END) FF_MIN                      
+               ,CASE WHEN V63.ASSOC_CHG_CD = '1935' THEN 'Voice'                
+                  WHEN V63.ASSOC_CHG_CD = '1936' THEN 'Data'                    
+                  WHEN V63.ASSOC_CHG_CD = '1942' THEN 'Roaming'                 
+                  ELSE ' ' END SUMM_TYPE                                        
+               ,SUM(CASE WHEN UPPER(V63.USG_TYP_DESC) = 'MINUTES'               
+                       THEN (V63.GRD_BILLABLE)                                  
+                       ELSE 0 END) BILLABLE_NBR                                 
+               ,SUM(CASE WHEN UPPER(V63.USG_TYP_DESC) = 'MINUTES'               
+                       THEN (V63.GRD_USED - V63.GRD_BILLABLE)                   
+                       ELSE 0 END) INCLUDED_NBR                                 
+               ,MAX(CASE WHEN V63.ASSOC_CHG_CD <> '1935' THEN ' '               
+                         WHEN V63.USG_DIS_PROP = 0                              
+                        THEN V63.USG_COL_TXT                                    
+                         WHEN V63.USG_DIS_PROP = 1                              
+                        THEN CHAR(INTEGER(V63.GRD_ALLOWANCE))                   
+                     ELSE ' '                                                   
+                 END) ALLOWANCE_MIN                                             
+              ,SUM(CASE WHEN SUBSTR(UPPER(V63.SUMMARY_DESC),1,10)               
+                          = 'IN CALLING'                                        
+                  THEN COALESCE(V63.GRD_USED,0) ELSE 0                          
+                   END) IN_MINS                                                 
+      FROM VZ450_6300_T V63                                                     
+       INNER JOIN (                                                             
+                      SELECT 1 LINE_NO                                          
+                       ,DATE(CASE WHEN FROM_DATE% = ' ' THEN                    
+                         SUBSTR(CHAR(CURRENT DATE),1,8)                         
+                              || '01'                                           
+                        ELSE FROM_DATE% END) FROM_DATE                          
+                       ,CASE WHEN THRU_DATE% = ' ' THEN                         
+                         DATE(SUBSTR(CHAR(CURRENT DATE),1,8)                    
+                              || '01') + 1 MONTH - 1 DAY                        
+                        ELSE DATE(THRU_DATE%) END THRU_DATE                     
+                        FROM SYSIBM.SYSDUMMY1                                   
+          ) DTS                                                                 
+         ON DTS.LINE_NO = 1                                                     
+        AND DTS.FROM_DATE <= V63.MAN_BILL_DATE                                  
+        AND DTS.THRU_DATE >= V63.MAN_BILL_DATE                                  
+     WHERE V63.MAN = ?                                                          
+       AND V63.ORIG_SYSTEM_ID = 'VW'                                            
+       AND V63.WORKING_TEL_NBR = ?                                              
+      GROUP BY V63.ASSOC_CHG_CD                                                 
+      ) INR                                                                     
+    GROUP BY INR.SUMM_TYPE                                                      
+    ) SC1                                                                       
+  WFILTER = ?                                                                   

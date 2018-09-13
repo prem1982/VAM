@@ -1,0 +1,40 @@
+/*REXX JMPCMAIL:CREATE EMAIL FOR BATCH PORTAL REPORT*/                  00010000
+ARG                                                                     00020000
+/*                                                                      00030000
+X = OUTTRAP(DSN.)                                                       00040000
+*/                                                                      00050000
+QUEUE "                                                              "  00080000
+QUEUE "~FROM~                                                        "  00090000
+QUEUE " Do_Not_Reply@verizon.com                                     "  00100000
+QUEUE "~ADDRESS~                                                     "  00110000
+QUEUE " dick.mcevoy@verizonbusiness.com                              "  00120000
+QUEUE "~CC-ADDRESS~                                                  "  00130000
+QUEUE " mcienabler@yahoo.com                                         "  00131000
+QUEUE "~BCC-ADDRESS~                                                 "  00132000
+QUEUE " dickmcevoy13@yahoo.com                                       "  00133000
+QUEUE "~SUBJECT~                                                     "  00134000
+QUEUE " Your Download Request is Ready - Verizon Business Central    "  00135000
+QUEUE "~DATA~                                                        "  00136000
+QUEUE "                                                              "  00137000
+QUEUE "                                                              "  00138000
+QUEUE " User ID:      V481358                                        "  00139000
+QUEUE " RequestDate:  04/14/2010                                     "  00139100
+QUEUE "                                                              "  00139200
+QUEUE " NOTE:  This email notification is automatically generated    "  00139300
+QUEUE " by computer.  Please do not reply to it.                     "  00139400
+QUEUE "                                                              "  00139500
+QUEUE " The download you requested recently has been processed. The  "  00139600
+QUEUE " file will be available in your Download Center within 2 hours"  00139700
+QUEUE " After that time,  you may click on the link below to access  "  00139800
+QUEUE " the Download Center and retrieve your data:                  "  00139900
+QUEUE "                                                              "  00140000
+QUEUE " URL : https://vweb.verizon.com/operations/download/          "  00141000
+QUEUE "       OpsDownloadFileAction.do?dispatch=executeSearch        "  00142000
+QUEUE "                                                              "  00143000
+QUEUE " Thank you for using the Verizon Business Central Portal.     "  00144000
+QUEUE "                                                              "  00145000
+QUEUE " Sincerely,                                                   "  00146000
+QUEUE "                                                              "  00147000
+QUEUE " Your Verizon Team                                            "  00148000
+QUEUE "                                                              "  00149000
+EXIT                                                                    00150000

@@ -1,0 +1,28 @@
+/*REXX*/                                                                00010000
+address TSO                                                             00033007
+"execio * diskr recfil (stem row. finis"                                00060000
+"free FI(recfil)"                                                       00070000
+do i=1 to row.0                                                         00080000
+row.i=strip(substr(row.i,27,44))                                        00090000
+/*** row.i should hold dsname of a part file ***/                       00090110
+    z = 1                                                               00090210
+    do x = 1 to 44                                                      00090310
+       if substr(row.i,x,1) = ' '                                       00090410
+          then                                                          00090510
+            do                                                          00090610
+               z = x - 10                                               00090711
+            end                                                         00090810
+    end                                                                 00090910
+    filelvl = substr(row.i,1,z)"FILELVL"                                00091010
+/*** row.i should hold dsname of a part file ***/                       00091110
+if row.i\=prevfil                                                       00091209
+then                                                                    00092009
+  do                                                                    00093009
+   SAY "RECALL DSNAME='"row.i"'"                                        00094010
+   "HRECALL '"row.i"'"                                                  00100009
+   SAY "RECALL DSNAME='"filelvl"'"                                      00100110
+   "HRECALL '"filelvl"'"                                                00100210
+   prevfil=row.i                                                        00101009
+  end                                                                   00102009
+else NOP                                                                00103009
+end                                                                     00110000

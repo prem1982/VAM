@@ -1,0 +1,3 @@
+SELECT TB1.MAN FROM CURR_CHAR_DAT_T TB1 WHERE TB1.MAN = ?                       
+AND TB1.MAN_BILL_DATE = ? AND TB1.CHG_CD = '1944'                               
+AND TB1.CHG_AMT > 0                                                             

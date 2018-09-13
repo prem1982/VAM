@@ -1,0 +1,15 @@
+/*REXX UNLDCRDS: REXX TO CREATE DB2 UNLOAD CARDS */                     00010000
+ARG TESTID TBLHILVL TBLNAME DB2SYS                                      00020000
+CALL GETNAMEL TBLNAME                                                   00021000
+LONGNAME = RESULT                                                       00022000
+"DELETE '"TESTID".UNLOAD."TBLNAME"."DB2SYS".DATA'"                      00080002
+/****************************************************/                  00140000
+/****       CREATE UNLOAD TABLE CARDS             *****/                00150000
+/****************************************************/                  00160000
+UNLDCDS = TESTID".UNLOAD."TBLNAME"."DB2SYS".CDS"                        00170002
+"FREE FI(UNLDCDS)"                                                      00180001
+"DELETE '"UNLDCDS"'"                                                    00190001
+"ALLOC FI(UNLDCDS) DA('"UNLDCDS"') NEW"                                 00200001
+QUEUE "  "TBLHILVL"."LONGNAME""                                         00220000
+"EXECIO * DISKW UNLDCDS (FINIS"                                         00230001
+"FREE FI(UNLDCDS)"                                                      00240001

@@ -1,0 +1,41 @@
+/**REXX************************************************************/            
+ PARSE UPPER ARG FILE_PATTERN                                                   
+/************************************************************/                  
+/************************************************************/                  
+  TRACE I                                                                       
+  /* TODAYFILE IS THE OUTPUT FILE NAME. */                                      
+  LONG_DATE = DATE('S')                                                         
+  THE_DATE  = SUBSTR(LONG_DATE,3)                                               
+  TODAYFILE = 'V275365.DATASET.LIST.D' || THE_DATE                              
+  SAY TODAYFILE                                                                 
+                                                                                
+  /* NOW PERFORM A LISTCAT COMMAND ON EACH OF THE HIGH LEVEL */                 
+  /* QUALIFIERS IN THE NOWREC ARRAY.  USE OUTTRAP TO GET THE */                 
+  /* RESULTS.                                                */                 
+                                                                                
+  FILE_IND = 'NONVSAM -----'                                                    
+  LIST1 =  "LISTC LVL('"STRIP(FILE_PATTERN)"')"                                 
+  X=OUTTRAP(LISTC.)                                                             
+  ADDRESS TSO LIST1                                                             
+  X=OUTTRAP('OFF')                                                              
+  DO I = 1 TO LISTC.0                                                           
+     IF POS(FILE_IND,LISTC.I) > 0  THEN DO                                      
+        DATASET_NAME = WORD(LISTC.I,3)                                          
+        SAY DATASET_NAME                                                        
+        QUEUE DATASET_NAME                                                      
+     END                                                                        
+  END                                                                           
+                                                                                
+  /* OPEN THE TODAYFILE, AND DUMP THE DSN LIST INTO IT */                       
+  "DELETE '"TODAYFILE"'"                                                        
+  "ALLOC FI(NOWFILE) DA('"TODAYFILE"') NEW CATALOG DATACLAS(PSFB80)",           
+   " LRECL(80)"                                                                 
+  "EXECIO * DISKW NOWFILE (FINIS"                                               
+  "FREE FI(NOWFILE)"                                                            
+                                                                                
+  /* ALWAYS SUCCEED */                                                          
+  RETURN 0                                                                      
+  /**/                                                                          
+                                                                                
+/*=============================== END ================================*/        
+/**********************************************************************/        

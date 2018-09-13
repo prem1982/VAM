@@ -1,0 +1,560 @@
+/******************************* REXX *********************************/        
+/******************************* REXX *********************************/        
+                                                                                
+ARG db2sys .                                                                    
+                                                                                
+ trace o                                                                        
+                                                                                
+ db2sys       = strip(db2sys)                                                   
+ x = "|"                                                                        
+                                                                                
+ SELECT                                                                         
+   WHEN DB2SYS  = 'D001'                                                        
+     then do                                                                    
+          TABPREF = 'BMGVZT'                                                    
+          end                                                                   
+   WHEN DB2SYS  = 'D009'                                                        
+     then do                                                                    
+          TABPREF = 'BMGVZP'                                                    
+          end                                                                   
+   WHEN DB2SYS  = 'D38X'                                                        
+     then do                                                                    
+          TABPREF = 'BMGVZS'                                                    
+          end                                                                   
+   OTHERWISE                                                                    
+          do                                                                    
+          TABPREF = 'BMGVZP'                                                    
+          end                                                                   
+ END                                                                            
+                                                                                
+ SIGNAL OFF ERROR /* TURN ERROR-TRAPPING OFF */                                 
+ "SUBCOM DSNREXX"                                                               
+ IF RC THEN                                                                     
+    S_RC = RXSUBCOM('ADD','DSNREXX','DSNREXX')                                  
+                                                                                
+ ADDRESS DSNREXX "CONNECT "DB2SYS                                               
+ IF SQLCODE ^= 0                                                                
+ then do                                                                        
+      SAY ' ERROR CONNECTING TO ' db2sys                                        
+      CALL SQLCA                                                                
+      SAY '  END EXECUTION'                                                     
+      exit 12                                                                   
+      END                                                                       
+                                                                                
+ more = 'Y'                                                                     
+ rptout. = ''                                                                   
+                                                                                
+ rptout.1 = 'Config Id,Service Type,Existing Account,System,',                  
+          ||'Contract,Waived,IBRS billpayer/Corp,In Configs'                    
+                                                                                
+ "EXECIO 1 DISKW REPORT (STEM rptout.)"                                         
+                                                                                
+ "EXECIO 1 DISKR ACCTS (STEM accts.)"                                           
+ if RC ^= 0                                                                     
+ then do                                                                        
+      say error reading ACCTS file                                              
+      if rc = 2                                                                 
+      then do                                                                   
+           say rc                                                               
+           say Empty input file                                                 
+           exit 0                                                               
+           end                                                                  
+      exit 12                                                                   
+      end                                                                       
+                                                                                
+ /* main loop, process each record in the ACCTS array */                        
+                                                                                
+ do while (more = 'Y')                                                          
+   parse var accts.1 rectype(x)oldacct(x)oldcorp(x)oldbillpayer(x),             
+             newcorp(x)newbillpayer(x)enterprise(x)                             
+                                                                                
+   rectype       = strip(rectype)                                               
+   oldacct       = strip(oldacct)                                               
+   oldcorp       = strip(oldcorp)                                               
+   oldbillpayer  = strip(oldbillpayer)                                          
+   newcorp       = strip(newcorp)                                               
+   newbillpayer  = strip(newbillpayer)                                          
+   enterprise    = strip(enterprise)                                            
+                                                                                
+   /* see if the old account is on the distr table */                           
+   profiles_found = 0                                                           
+   profiles.  = ''                                                              
+   call get_configs_for_old                                                     
+                                                                                
+   if profiles_found > 0                                                        
+   then do                                                                      
+   /*   say "rectype       = " rectype                                          
+        say "oldacct       = " oldacct                                          
+        say "oldcorp       = " oldcorp                                          
+        say "oldbillpayer  = " oldbillpayer                                     
+        say "newcorp       = " newcorp                                          
+        say "newbillpayer  = " newbillpayer                                     
+        say "enterprise    = " enterprise   */                                  
+                                                                                
+        if rectype = 'I'                                                        
+        then do                                                                 
+     /*      say 'found configs for accounts:' oldcorp oldacct */               
+             system = 'Ixplus'                                                  
+             acct_string = '"'oldacct','oldcorp'"'                              
+             end                                                                
+        else do                                                                 
+         /*  say 'found configs for accounts:' oldcorp oldbillpayer */          
+             system = 'Vision'                                                  
+             acct_string = '"'oldbillpayer','oldcorp'"'                         
+             end                                                                
+        ibrs_string = '"'newbillpayer','newcorp'"'                              
+                                                                                
+     /* say 'found:' profiles_found                                             
+        do i = 1 to profiles_found                                              
+          say profiles.i                                                        
+        end   */                                                                
+        new_profiles_found = 0                                                  
+        new_profiles. = ''                                                      
+        new_string = ''                                                         
+                                                                                
+        call get_configs_for_new                                                
+                                                                                
+                                                                                
+        do i = 1 to new_profiles_found                                          
+           if i = 1                                                             
+           then new_string = strip(new_profiles.i)                              
+           else new_string = new_string||","||strip(new_profiles.i)             
+        end                                                                     
+                                                                                
+        /* write the report line */                                             
+                                                                                
+        do i = 1 to profiles_found                                              
+           contract_id_string = ''                                              
+           waived_string = ''                                                   
+           if word(profiles.i,2) = 'BM'                                         
+           then do                                                              
+                waived_string = 'N'                                             
+                /* check the contract if there is one */                        
+                if words(profiles.i) = 3                                        
+                then do                                                         
+                     contract_id_string = strip(word(profiles.i,3))             
+                     call lookup_waiver_table                                   
+                     end                                                        
+                end                                                             
+                                                                                
+           rptout.1 = word(profiles.i,1)||',',                                  
+                   ||word(profiles.i,2)||',',                                   
+                   ||acct_string||',',                                          
+                   ||system||',',                                               
+                   ||contract_id_string||',',                                   
+                   ||waived_string||',',                                        
+                   ||ibrs_string||',',                                          
+                   ||'"'||new_string||'",'                                      
+           "EXECIO 1 DISKW REPORT (STEM rptout.)"                               
+        end                                                                     
+        end                                                                     
+                                                                                
+                                                                                
+   "EXECIO 1 DISKR ACCTS (STEM accts.)"                                         
+                                                                                
+   if rc ^= 0                                                                   
+   then more = 'N'                                                              
+                                                                                
+ end                                                                            
+                                                                                
+ "EXECIO 0 DISKW REPORT (FINIS)"                                                
+                                                                                
+                                                                                
+ return                                                                         
+                                                                                
+/************* get configs for old  *************/                              
+get_configs_for_old:                                                            
+                                                                                
+ if rectype = 'I'                                                               
+ then do                                                                        
+      if oldacct = oldcorp                                                      
+      then wherestring = " AND ACT.MAN = '"oldcorp"' "                          
+      else wherestring = " AND ACT.MAN = '"oldcorp"' "||,                       
+               " AND (ACT.BAN = '"oldacct"' "||,                                
+               " OR ACT.BAN = '' OR ACT.BAN = '"oldcorp"') "                    
+      end                                                                       
+ else do                                                                        
+      if oldcorp = oldbillpayer                                                 
+      then wherestring = " AND ACT.MAN = '"oldcorp"' "                          
+      else wherestring = " AND ACT.MAN = '"oldcorp"' "||,                       
+               " AND (ACT.BAN = '"oldbillpayer"' "||,                           
+               " OR ACT.BAN = '') "                                             
+      end                                                                       
+                                                                                
+ profile_sql =,                                                                 
+      "SELECT DISTINCT CFG.CONFIG_ID," ||,                                      
+             "CFG.SERVICE_TYPE," ||,                                            
+             "CFG.CUST_CONTRACT_ID " ||,                                        
+        "FROM "TABPREF".DISTR_CONFIG_T CFG " ||,                                
+         "INNER JOIN "TABPREF".DISTR_ACCTS_T ACT " ||,                          
+         "  ON CFG.CONFIG_SUBS_OID = ACT.CONFIG_SUBS_OID  " ||,                 
+        "WHERE ACT.ORIG_SYSTEM_ID IN ('M2','M3') "||,                           
+        wherestring||,                                                          
+          "AND CFG.END_DATE = '9999-12-31' " ||,                                
+          "AND ACT.END_DATE = '9999-12-31' " ||,                                
+          "AND CFG.PROFILE_COMPLETE = 'Y' " ||,                                 
+      "WITH UR "                                                                
+                                                                                
+/**** FETCH PARAMETERS *****/                                                   
+CPARMS= ":c_config_id,:c_service_type,:c_cust_contract_id"                      
+                                                                                
+                                                                                
+CSQL = "FETCH C52 INTO "CPARMS                                                  
+                                                                                
+/**** DECLARE CURSOR *****/                                                     
+DCLSQL2 = "DECLARE C52 CURSOR FOR S52"                                          
+ADDRESS DSNREXX "EXECSQL "DCLSQL2                                               
+IF SQLCODE ^= 0                                                                 
+then do                                                                         
+     SAY 'ERROR DECLARING CURSOR C52 - SQLCODE=' SQLCODE                        
+     CALL SQLCA                                                                 
+     exit 12                                                                    
+     END                                                                        
+                                                                                
+/**** PREPARE SELECT SQL ****/                                                  
+ADDRESS DSNREXX "EXECSQL PREPARE S52 FROM :PROFILE_SQL"                         
+IF SQLCODE ^= 0                                                                 
+then do                                                                         
+     SAY 'ERROR PREPARING 'PROFILE_SQL ' - SQLCODE=' SQLCODE                    
+     CALL SQLCA                                                                 
+     exit 12                                                                    
+     END                                                                        
+                                                                                
+/**** OPEN CURSOR ****/                                                         
+ADDRESS DSNREXX "EXECSQL OPEN C52"                                              
+IF SQLCODE ^= 0                                                                 
+then do                                                                         
+     SAY 'ERROR OPENING CURSOR C52 - SQLCODE=' SQLCODE                          
+     CALL SQLCA                                                                 
+     exit 12                                                                    
+     END                                                                        
+                                                                                
+ADDRESS DSNREXX "EXECSQL "CSQL                                                  
+                                                                                
+do while SQLCODE = 0                                                            
+                                                                                
+  config_id       = strip(c_config_id)                                          
+  service_type    = strip(c_service_type)                                       
+  cust_contract_id = strip(c_cust_contract_id)                                  
+                                                                                
+  profiles_found = profiles_found + 1                                           
+                                                                                
+  select                                                                        
+  when service_type = 'BM_CONFIG'    then s_type = 'BM'                         
+  when service_type = 'EDI_CONFIG'   then s_type = 'EDI'                        
+  when service_type = 'VZ450_CONFIG' then s_type = 'DD'                         
+  otherwise s_type = 'ERR'                                                      
+  end                                                                           
+                                                                                
+  profiles.profiles_found = config_id||' '||s_type||' 'cust_contract_id         
+                                                                                
+                                                                                
+  ADDRESS DSNREXX "EXECSQL "CSQL                                                
+end                                                                             
+                                                                                
+                                                                                
+ADDRESS DSNREXX "EXECSQL CLOSE C52"                                             
+IF SQLCODE ^= 0                                                                 
+then do                                                                         
+     SAY 'ERROR CLOSING CURSOR C52 - SQLCODE=' SQLCODE                          
+     CALL SQLCA                                                                 
+     exit 12                                                                    
+     END                                                                        
+                                                                                
+                                                                                
+return                                                                          
+                                                                                
+/************* get configs for new  *************/                              
+get_configs_for_new:                                                            
+                                                                                
+ wherestring = " AND ACT.MAN = '"newcorp"' "||,                                 
+               " AND (ACT.BAN = '"newbillpayer"' "||,                           
+               " OR ACT.BAN = '') "                                             
+                                                                                
+ profile_sql =,                                                                 
+      "SELECT DISTINCT CFG.CONFIG_ID," ||,                                      
+             "CFG.SERVICE_TYPE " ||,                                            
+        "FROM "TABPREF".DISTR_CONFIG_T CFG " ||,                                
+         "INNER JOIN "TABPREF".DISTR_ACCTS_T ACT " ||,                          
+         "  ON CFG.CONFIG_SUBS_OID = ACT.CONFIG_SUBS_OID  " ||,                 
+        "WHERE ACT.ORIG_SYSTEM_ID = 'M1' "||,                                   
+        wherestring||,                                                          
+          "AND CFG.END_DATE = '9999-12-31' " ||,                                
+          "AND ACT.END_DATE = '9999-12-31' " ||,                                
+          "AND CFG.PROFILE_COMPLETE = 'Y' " ||,                                 
+      "WITH UR "                                                                
+                                                                                
+/**** FETCH PARAMETERS *****/                                                   
+CPARMS= ":c_config_id,:c_service_type"                                          
+                                                                                
+                                                                                
+CSQL = "FETCH C53 INTO "CPARMS                                                  
+                                                                                
+/**** DECLARE CURSOR *****/                                                     
+DCLSQL2 = "DECLARE C53 CURSOR FOR S53"                                          
+ADDRESS DSNREXX "EXECSQL "DCLSQL2                                               
+IF SQLCODE ^= 0                                                                 
+then do                                                                         
+     SAY 'ERROR DECLARING CURSOR C53 - SQLCODE=' SQLCODE                        
+     CALL SQLCA                                                                 
+     exit 12                                                                    
+     END                                                                        
+                                                                                
+/**** PREPARE SELECT SQL ****/                                                  
+ADDRESS DSNREXX "EXECSQL PREPARE S53 FROM :PROFILE_SQL"                         
+IF SQLCODE ^= 0                                                                 
+then do                                                                         
+     SAY 'ERROR PREPARING 'PROFILE_SQL ' - SQLCODE=' SQLCODE                    
+     CALL SQLCA                                                                 
+     exit 12                                                                    
+     END                                                                        
+                                                                                
+/**** OPEN CURSOR ****/                                                         
+ADDRESS DSNREXX "EXECSQL OPEN C53"                                              
+IF SQLCODE ^= 0                                                                 
+then do                                                                         
+     SAY 'ERROR OPENING CURSOR C53 - SQLCODE=' SQLCODE                          
+     CALL SQLCA                                                                 
+     exit 12                                                                    
+     END                                                                        
+                                                                                
+ADDRESS DSNREXX "EXECSQL "CSQL                                                  
+                                                                                
+do while SQLCODE = 0                                                            
+                                                                                
+  config_id       = strip(c_config_id)                                          
+  service_type    = strip(c_service_type)                                       
+                                                                                
+  new_profiles_found = new_profiles_found + 1                                   
+  new_profiles.new_profiles_found = config_id                                   
+                                                                                
+                                                                                
+  ADDRESS DSNREXX "EXECSQL "CSQL                                                
+end                                                                             
+                                                                                
+                                                                                
+ADDRESS DSNREXX "EXECSQL CLOSE C53"                                             
+IF SQLCODE ^= 0                                                                 
+then do                                                                         
+     SAY 'ERROR CLOSING CURSOR C53 - SQLCODE=' SQLCODE                          
+     CALL SQLCA                                                                 
+     exit 12                                                                    
+     END                                                                        
+                                                                                
+                                                                                
+return                                                                          
+                                                                                
+/************* lookup_waiver_table  *************/                              
+lookup_waiver_table:                                                            
+                                                                                
+                                                                                
+ waiver_sql =,                                                                  
+      "SELECT 'Y' " ||,                                                         
+        "FROM "TABPREF".BM_CFG_WAIVER_T " ||,                                   
+        "WHERE CUST_CONTRACT_ID = '"strip(contract_id_string)"' ",              
+          "AND END_DATE >= CURRENT DATE "||,                                    
+      "WITH UR "                                                                
+                                                                                
+/**** FETCH PARAMETERS *****/                                                   
+CPARMS= ":c_waiver_ind"                                                         
+                                                                                
+                                                                                
+CSQL = "FETCH C54 INTO "CPARMS                                                  
+                                                                                
+/**** DECLARE CURSOR *****/                                                     
+DCLSQL2 = "DECLARE C54 CURSOR FOR S54"                                          
+ADDRESS DSNREXX "EXECSQL "DCLSQL2                                               
+IF SQLCODE ^= 0                                                                 
+then do                                                                         
+     SAY 'ERROR DECLARING CURSOR C54 - SQLCODE=' SQLCODE                        
+     CALL SQLCA                                                                 
+     exit 12                                                                    
+     END                                                                        
+                                                                                
+/**** PREPARE SELECT SQL ****/                                                  
+ADDRESS DSNREXX "EXECSQL PREPARE S54 FROM :WAIVER_SQL"                          
+IF SQLCODE ^= 0                                                                 
+then do                                                                         
+     SAY 'ERROR PREPARING 'WAIVER_SQL ' - SQLCODE=' SQLCODE                     
+     CALL SQLCA                                                                 
+     exit 12                                                                    
+     END                                                                        
+                                                                                
+/**** OPEN CURSOR ****/                                                         
+ADDRESS DSNREXX "EXECSQL OPEN C54"                                              
+IF SQLCODE ^= 0                                                                 
+then do                                                                         
+     SAY 'ERROR OPENING CURSOR C54 - SQLCODE=' SQLCODE                          
+     CALL SQLCA                                                                 
+     exit 12                                                                    
+     END                                                                        
+                                                                                
+ADDRESS DSNREXX "EXECSQL "CSQL                                                  
+                                                                                
+select                                                                          
+when SQLCODE = 0  then waived_string = strip(c_waiver_ind)                      
+when sqlcode = 100 then nop                                                     
+otherwise                                                                       
+   do                                                                           
+   SAY 'ERROR fetching CURSOR C54 - SQLCODE=' SQLCODE                           
+   CALL SQLCA                                                                   
+   exit 12                                                                      
+   end                                                                          
+end                                                                             
+                                                                                
+ADDRESS DSNREXX "EXECSQL CLOSE C54"                                             
+IF SQLCODE ^= 0                                                                 
+then do                                                                         
+     SAY 'ERROR CLOSING CURSOR C54 - SQLCODE=' SQLCODE                          
+     CALL SQLCA                                                                 
+     exit 12                                                                    
+     END                                                                        
+                                                                                
+                                                                                
+return                                                                          
+                                                                                
+                                                                                
+                                                                                
+/************* SQL ERROR ROUTINE *************/                                 
+SQLCA:                                                                          
+                                                                                
+if right(sqlerrmc,1) <> 'FF'x then sqlerrmc = sqlerrmc || 'FF'x                 
+if sqlwarna          <> 'W'   then sqlwarna = ' '                               
+                                                                                
+SQLCA = 'SQLCA   '||,                                                           
+        x2c(d2x(136,8))||,                                                      
+        X2C(D2X(SQLCODE,8))||,                                                  
+        x2c(d2x(length(sqlerrmc),4))||,                                         
+        left(sqlerrmc,70)||,                                                    
+        left(SQLERRP,8)||,                                                      
+        x2c(d2x(sqlerrd.1,8))||,                                                
+        x2c(d2x(sqlerrd.2,8))||,                                                
+        x2c(d2x(sqlerrd.3,8))||,                                                
+        x2c(d2x(sqlerrd.4,8))||,                                                
+        x2c(d2x(sqlerrd.5,8))||,                                                
+        x2c(d2x(sqlerrd.6,8))||,                                                
+        left(SQLWARN.1,1)||,                                                    
+        left(SQLWARN.2,1)||,                                                    
+        left(SQLWARN.3,1)||,                                                    
+        left(SQLWARN.4,1)||,                                                    
+        left(SQLWARN.5,1)||,                                                    
+        left(SQLWARN.6,1)||,                                                    
+        left(SQLWARN.7,1)||,                                                    
+        left(SQLWARN.8,1)||,                                                    
+        left(SQLWARN.9,1)||,                                                    
+        left(SQLWARN.10,1)||,                                                   
+        left(SQLWARNA,1)||,                                                     
+        left(SQLSTATE,5)                                                        
+                                                                                
+message_llen  = 79                                                              
+message_lines = 12                                                              
+message_area  = x2c(d2x(message_llen*message_lines,4))||,                       
+                copies(' ',message_llen*message_lines)                          
+message_lrecl = x2c(d2x(message_llen,8))                                        
+address linkpgm "DSNTIAR sqlca message_area message_lrecl"                      
+message_line_start = 3                                                          
+                                                                                
+do messagei = 1 to message_lines                                                
+  message_line = substr(message_area,message_line_start,message_llen)           
+  message_line_start = message_line_start + message_llen                        
+  if message_line = '' then ITERATE                                             
+  msgtext=strip(message_line)                                                   
+  rc= say_msg(0)                                                                
+end                                                                             
+                                                                                
+msgtext='SQLSTATE='SQLSTATE                                                     
+rc= say_msg(0)                                                                  
+msgtext='SQLWARN ='SQLWARN.0",",                                                
+            || SQLWARN.1",",                                                    
+            || SQLWARN.2",",                                                    
+            || SQLWARN.3",",                                                    
+            || SQLWARN.4",",                                                    
+            || SQLWARN.5",",                                                    
+            || SQLWARN.6",",                                                    
+            || SQLWARN.7",",                                                    
+            || SQLWARN.8",",                                                    
+            || SQLWARN.9",",                                                    
+            || SQLWARN.10                                                       
+rc= say_msg(0)                                                                  
+msgtext='SQLERRD ='SQLERRD.1",",                                                
+            || SQLERRD.2",",                                                    
+            || SQLERRD.3",",                                                    
+            || SQLERRD.4",",                                                    
+            || SQLERRD.5",",                                                    
+            || SQLERRD.6                                                        
+rc= say_msg(0)                                                                  
+msgtext='SQLERRP  ='SQLERRP                                                     
+rc= say_msg(0)                                                                  
+msgtext='SQLERRMC ='SQLERRMC                                                    
+rc= say_msg(0)                                                                  
+msgtext='SQLCODE  ='SQLCODE                                                     
+rc= say_msg(0)                                                                  
+                                                                                
+if sqlstmt <> '' & sqlerrd.5 > 0 then                                           
+  do                                                                            
+    do i_text_pos = 1 to length(sqlstmt) by 72                                  
+      msgtext=substr(sqlstmt,i_text_pos,72)                                     
+      rc= say_msg(0)                                                            
+      if (sqlerrd.5 >= i_text_pos) &,                                           
+         (sqlerrd.5 <= i_text_pos+71) then                                      
+        do                                                                      
+          i_syn_pos = sqlerrd.5 - i_text_pos + 1                                
+          select                                                                
+            when i_syn_pos = 1 then                                             
+              syn_err_message = '|<- ThereØs a syntax error here *****'         
+            when i_syn_pos < 5 then                                             
+              syn_err_message = copies('*',i_syn_pos-1)||,                      
+                                '|<- ThereØs a syntax error here *****'         
+            when i_syn_pos < 34 then                                            
+              syn_err_message = '****'copies(' ',i_syn_pos-5)||,                
+                                '|<- ThereØs a syntax error here *****'         
+            otherwise                                                           
+              syn_err_message = '****'copies(' ',i_syn_pos-30)||,               
+                                'ThereØs a syntax error here ->| *****'         
+          end                                                                   
+          msgtext=syn_err_message                                               
+           rc= say_msg(0)                                                       
+       end                                                                      
+     end                                                                        
+   end                                                                          
+                                                                                
+return                                                                          
+                                                                                
+pad_field:                                                                      
+arg fl,len                                                                      
+                                                                                
+pad_fl = "'"left(fl,len,' ')"'"                                                 
+                                                                                
+return pad_fl                                                                   
+                                                                                
+                                                                                
+SAY_MSG:                                                                        
+arg bl                                                                          
+if datatype(msgtext.0) = 'NUM' then ,                                           
+   do m=1 to msgtext.0                                                          
+      m=right(m,2,0)                                                            
+      say msgtext.m                                                             
+   end                                                                          
+else ,                                                                          
+   do                                                                           
+      say msgtext                                                               
+   end                                                                          
+do bl                                                                           
+   say ' '                                                                      
+end                                                                             
+drop msgtext.                                                                   
+RETURN 1                                                                        
+                                                                                
+/*************  SYNTAX ERROR HANDLER **********/                                
+CRAPCODE:                                                                       
+SAY 'YOU HAVE CRAP CODE AT LINE' SIGL                                           
+SAY SOURCELINE(SIGL)                                                            
+SAY 'REXX GAVE A RETURN CODE OF' RC ', WHICH MEANS :'                           
+SAY ERRORTEXT(RC)                                                               
+EXIT                                                                            
+/************* EXTERNAL ERROR HANDLER **********/                               
+BADDIES:                                                                        
+SAY 'YOU HAVE BEEN LET DOWN BY FACTORS BEYOND YOUR CONTROL AT LINE' SIGL        
+SAY SOURCELINE(SIGL)                                                            
+SAY 'RC =' RC                                                                   
+EXIT                                                                            

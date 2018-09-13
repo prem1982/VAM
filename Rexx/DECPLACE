@@ -1,0 +1,22 @@
+/*** DECPLACE: REXX TO FORCE GIVEN NUMBER OF DECIMAL PLACES****/                
+  ARG NBR NBR_DEC                                                               
+  IF NBR_DEC > 6 THEN NBR_DEC = 6                                               
+  WK_ZEROS = '000000000000000'                                                  
+  LNG = LENGTH(NBR)                                                             
+  DEC_BEG = 0                                                                   
+  BEG = LNG                                                                     
+  DO WHILE DEC_BEG = 0                                                          
+     IF SUBSTR(NBR,BEG,1) = '.' THEN DEC_BEG = BEG                              
+     BEG = BEG - 1                                                              
+     IF BEG = 0 THEN DEC_BEG = LNG + 1                                          
+  END                                                                           
+  IF DEC_BEG > LNG THEN NBR = NBR'.'                                            
+  NBR = NBR'000000'                                                             
+  LNG = DEC_BEG                                                                 
+  XDEC = 0                                                                      
+  DO WHILE XDEC < NBR_DEC                                                       
+     LNG = LNG + 1                                                              
+     XDEC = XDEC + 1                                                            
+  END                                                                           
+  NEW_NBR = SUBSTR(NBR,1,LNG)                                                   
+  RETURN NEW_NBR                                                                

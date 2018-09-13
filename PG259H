@@ -1,0 +1,123 @@
+    SELECT HDR233.ACCT_NBR                                                      
+          ,HDR233.ACCT_NBR ACCT_NBR20                                           
+          ,HDR233.ACCT_ALIAS                                                    
+          ,HDR233.ACCT_ALIAS ACCT_ALIAS20                                       
+          ,' ' GBR                                                              
+          ,HDR233.COST_CNTR                                                     
+          ,HDR233.WTN                                                           
+          ,HDR233.WTN WTN2                                                      
+          ,HDR233.CUST_ID_CD                                                    
+          ,HDR233.BILL_DATE                                                     
+          ,HDR233.INV_NBR                                                       
+          ,HDR233.BILL_CYCLE                                                    
+          ,HDR233.DATE_CREATED                                                  
+          ,HDR233.USER_ID                                                       
+          ,HDR233.PLAN_DESC                                                     
+       FROM (                                                                   
+       SELECT IN1.ACCT_NBR                                                      
+             ,IN1.ACCT_ALIAS                                                    
+             ,IN1.BILL_DATE                                                     
+             ,IN1.INV_NBR                                                       
+             ,IN1.BILL_CYCLE                                                    
+             ,IN1.COST_CNTR                                                     
+             ,IN1.WORKING_TEL_NBR WTN                                           
+             ,IN1.CUST_ID_CD                                                    
+             ,IN1.PLAN_DESC                                                     
+             ,IN1.DATE_CREATED                                                  
+             ,IN1.USER_ID                                                       
+             ,SUM(IN1.CHG_AMT) CHG_AMT                                          
+          FROM (                                                                
+         SELECT TB1.WIRELESS_DAN ACCT_NBR                                       
+               ,CB.ACCT_ALIAS                                                   
+               ,TB1.BILL_DATE                                                   
+               ,TB1.INVOICE_NBR INV_NBR                                         
+               ,CASE SUBSTR(CHAR(TBX.FROM_DATE),6,2)                            
+                 WHEN '01' THEN 'Jan'                                           
+                 WHEN '02' THEN 'Feb'                                           
+                 WHEN '03' THEN 'Mar'                                           
+                 WHEN '04' THEN 'Apr'                                           
+                 WHEN '05' THEN 'May'                                           
+                 WHEN '06' THEN 'Jun'                                           
+                 WHEN '07' THEN 'Jul'                                           
+                 WHEN '08' THEN 'Aug'                                           
+                 WHEN '09' THEN 'Sep'                                           
+                 WHEN '10' THEN 'Oct'                                           
+                 WHEN '11' THEN 'Nov'                                           
+                 WHEN '12' THEN 'Dec'                                           
+                 ELSE ' ' END                                                   
+               || ' ' || SUBSTR(CHAR(TBX.FROM_DATE),9,2) || ' - ' ||            
+                CASE SUBSTR(CHAR(TBX.THRU_DATE),6,2)                            
+                 WHEN '01' THEN 'Jan'                                           
+                 WHEN '02' THEN 'Feb'                                           
+                 WHEN '03' THEN 'Mar'                                           
+                 WHEN '04' THEN 'Apr'                                           
+                 WHEN '05' THEN 'May'                                           
+                 WHEN '06' THEN 'Jun'                                           
+                 WHEN '07' THEN 'Jul'                                           
+                 WHEN '08' THEN 'Aug'                                           
+                 WHEN '09' THEN 'Sep'                                           
+                 WHEN '10' THEN 'Oct'                                           
+                 WHEN '11' THEN 'Nov'                                           
+                 WHEN '12' THEN 'Dec'                                           
+                 ELSE ' ' END                                                   
+               || ' ' || SUBSTR(CHAR(TBX.THRU_DATE),9,2)                        
+                  AS BILL_CYCLE                                                 
+               ,' ' CURR_CHGS_LIT                                               
+               ,' ' USAGE_LIT                                                   
+               ,TB3.WORKING_TEL_NBR                                             
+               ,COALESCE(WMTN.USER_ID,' ') USER_ID                              
+               ,(CURRENT DATE) DATE_CREATED                                     
+               ,SUBSTR(TB3.USER_NAME,1,28) CUST_ID_CD                           
+               ,SUBSTR(TB3.PLAN_DESC,1,175) PLAN_DESC                           
+               ,TB3.COST_CNTR                                                   
+               ,TB3.CHARGE_CD CHG_CD                                            
+               ,TB3.CHARGE_AMt CHG_AMT                                          
+      FROM ACCT_SUM_T TB1                                                       
+          LEFT OUTER JOIN CURR_CHAR_T TBX                                       
+            ON TB1.MAN = TBX.MAN                                                
+           AND TB1.MAN_BILL_DATE = TBX.MAN_BILL_DATE                            
+           AND TB1.ORIG_SYSTEM_ID = TBX.ORIG_SYSTEM_ID                          
+           AND TB1.BAN = TBX.BAN                                                
+           AND TB1.BILL_DATE = TBX.BILL_DATE                                    
+           AND TB1.ABAN = TBX.ABAN                                              
+          LEFT OUTER JOIN VZ450_VMT50200_T TB3                                  
+            ON TBX.MAN = TB3.MAN                                                
+           AND TBX.MAN_BILL_DATE = TB3.MAN_BILL_DATE                            
+           AND TBX.ORIG_SYSTEM_ID = TB3.ORIG_SYSTEM_ID                          
+           AND TBX.VZ450_SEQ_NBR = TB3.VZ450_BASE_REC_SEQ                       
+          INNER JOIN CURRENT_BAN_T CB                                           
+            ON TB1.BAN = CB.BAN                                                 
+           AND TB1.MAN = CB.MAN                                                 
+           AND TB1.ORIG_SYSTEM_ID = CB.ORIG_SYSTEM_ID                           
+       LEFT OUTER JOIN (                                                        
+           SELECT 1 LINE_NO                                                     
+                 ,MAX(COALESCE(MTNE.MTN_USER_ID,' ')) USER_ID                   
+             FROM SUBSCRIPTION SPW                                              
+             LEFT OUTER JOIN VZW_MTN_ECP MTNE                                   
+               ON SPW.SUBSCRIPTION_OID = MTNE.SUBSCRIPTION_OID                  
+              AND MTNE.MTN_USER_ID <> ' '                                       
+            WHERE SPW.CUSTOMER_ACCT_NUM = WTN%                                  
+              AND SPW.ORIG_SYSTEM_ID = 'VW'                                     
+              AND SPW.SERVICE_TYPE = 'MTN'                                      
+                ) WMTN                                                          
+              ON WMTN.LINE_NO = 1                                               
+          WHERE TB1.MAN = ?                                                     
+            AND TB1.MAN_BILL_DATE = ?                                           
+            AND TB1.ORIG_SYSTEM_ID = ?                                          
+            AND TB1.BAN = ?                                                     
+            AND TB1.BILL_DATE = ?                                               
+            AND TB3.WORKING_TEL_NBR = ?                                         
+            AND TB3.CHARGE_CD = '0100'                                          
+           ) IN1                                                                
+       GROUP BY IN1.ACCT_NBR                                                    
+             ,IN1.ACCT_ALIAS                                                    
+             ,IN1.BILL_DATE                                                     
+             ,IN1.INV_NBR                                                       
+             ,IN1.BILL_CYCLE                                                    
+             ,IN1.COST_CNTR                                                     
+             ,IN1.WORKING_TEL_NBR                                               
+             ,IN1.CUST_ID_CD                                                    
+             ,IN1.PLAN_DESC                                                     
+             ,IN1.DATE_CREATED                                                  
+             ,IN1.USER_ID                                                       
+            ) HDR233                                                            

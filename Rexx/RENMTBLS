@@ -1,0 +1,38 @@
+/*REXX RENMTBLS: REXX TO RENAME PRELOAD FILES*/                         00010000
+ARG BMGNS0CN TBLNAME1 TBLNAME2                                          00020000
+"RENAME '"BMGNS0CN".TABLE."TBLNAME1".NEC036'",                          00030000
+      " '"BMGNS0CN".TABLE."TBLNAME2".NEC036'"                           00040000
+"RENAME '"BMGNS0CN".TABLE."TBLNAME1".NEC038'",                          00050000
+      " '"BMGNS0CN".TABLE."TBLNAME2".NEC038'"                           00060000
+"RENAME '"BMGNS0CN".TABLE."TBLNAME1".NEC065'",                          00070000
+      " '"BMGNS0CN".TABLE."TBLNAME2".NEC065'"                           00080000
+"RENAME '"BMGNS0CN".TABLE."TBLNAME1".NEC066'",                          00090000
+      " '"BMGNS0CN".TABLE."TBLNAME2".NEC066'"                           00100000
+"RENAME '"BMGNS0CN".TABLE."TBLNAME1".NEC095'",                          00110000
+      " '"BMGNS0CN".TABLE."TBLNAME2".NEC095'"                           00120000
+"RENAME '"BMGNS0CN".TABLE."TBLNAME1".NEC096'",                          00130000
+      " '"BMGNS0CN".TABLE."TBLNAME2".NEC096'"                           00140000
+"RENAME '"BMGNS0CN".TABLE."TBLNAME1".NEC126'",                          00150000
+      " '"BMGNS0CN".TABLE."TBLNAME2".NEC126'"                           00160000
+"RENAME '"BMGNS0CN".TABLE."TBLNAME1".NEC127'",                          00170000
+      " '"BMGNS0CN".TABLE."TBLNAME2".NEC127'"                           00180000
+"RENAME '"BMGNS0CN".TABLE."TBLNAME1".NEC128'",                          00190000
+      " '"BMGNS0CN".TABLE."TBLNAME2".NEC128'"                           00200000
+"RENAME '"BMGNS0CN".TABLE."TBLNAME1".NEC157'",                          00210000
+      " '"BMGNS0CN".TABLE."TBLNAME2".NEC157'"                           00220000
+"RENAME '"BMGNS0CN".TABLE."TBLNAME1".NYC003'",                          00230000
+      " '"BMGNS0CN".TABLE."TBLNAME2".NYC003'"                           00240000
+"RENAME '"BMGNS0CN".TABLE."TBLNAME1".NYC025'",                          00250000
+      " '"BMGNS0CN".TABLE."TBLNAME2".NYC025'"                           00260000
+"RENAME '"BMGNS0CN".TABLE."TBLNAME1".NYC043'",                          00270000
+      " '"BMGNS0CN".TABLE."TBLNAME2".NYC043'"                           00280000
+"RENAME '"BMGNS0CN".TABLE."TBLNAME1".NYC050'",                          00290000
+      " '"BMGNS0CN".TABLE."TBLNAME2".NYC050'"                           00300000
+"RENAME '"BMGNS0CN".TABLE."TBLNAME1".NYC055'",                          00310000
+      " '"BMGNS0CN".TABLE."TBLNAME2".NYC055'"                           00320000
+"RENAME '"BMGNS0CN".TABLE."TBLNAME1".NYC065'",                          00330000
+      " '"BMGNS0CN".TABLE."TBLNAME2".NYC065'"                           00340000
+"RENAME '"BMGNS0CN".TABLE."TBLNAME1".NYC086'",                          00350000
+      " '"BMGNS0CN".TABLE."TBLNAME2".NYC086'"                           00360000
+"RENAME '"BMGNS0CN".TABLE."TBLNAME1".NYC108'",                          00370000
+      " '"BMGNS0CN".TABLE."TBLNAME2".NYC108'"                           00380000

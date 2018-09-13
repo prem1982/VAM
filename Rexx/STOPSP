@@ -1,0 +1,17 @@
+/*REXX STOPSP: REXX TO STOP DB2 STORED PROCEDURE */                             
+ARG TESTID DB2SYS OWNER MEMBER                                                  
+CALL GETPROCL MEMBER                                                            
+PROCNAME = RESULT                                                               
+DB2CNTL = TESTID".STOPSP."MEMBER"."DB2SYS                                       
+/****************************************************/                          
+"FREE FI(DB2CNTL)"                                                              
+"DELETE '"DB2CNTL"'"                                                            
+"ALLOC FI(DB2CNTL) DA('"DB2CNTL"') NEW"                                         
+QUEUE "  DSN SYSTEM("DB2SYS")"                                                  
+IF OWNER = 'BMGNSP' THEN                                                        
+   QUEUE "  -STOP PROCEDURE("PROCNAME")"                                        
+ELSE                                                                            
+   QUEUE "  -STOP PROCEDURE("OWNER"."PROCNAME")"                                
+QUEUE "  END"                                                                   
+"EXECIO * DISKW DB2CNTL (FINIS"                                                 
+"FREE FI(DB2CNTL)"                                                              

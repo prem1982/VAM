@@ -1,0 +1,179 @@
+/**REXX************************************************************/            
+ PARSE UPPER ARG FILE_HLQ,USER_ID,CONFIG_ID,BTN,DATE_IN                         
+/************************************************************/                  
+/* THIS IS THE MAIN SECTION.                                */                  
+/************************************************************/                  
+/*race R  */                                                                    
+ PGM_MAINLINE:                                                                  
+  "CLS"   /* CLEAR THE SCREEN */                                                
+  CALL PGM_INIT                                                                 
+  /* This SAY statement is for testing only */                                  
+  say '* Hlq=' FILE_HLQ ' User=' USER_ID ' Cnfig=' CONFIG_ID,                   
+      ' BTN=' BTN ' Date_IN=' DATE_IN  ' *'                                     
+  /* End - Testing only Say statements */                                       
+  CALL PROCESS_LISTCAT_FILELIST   /* PROCESS THE LISTC COMMAND */               
+  CALL EXIT_PGM                                                                 
+ RETURN 0                                                                       
+ PGM_INIT:                                                                      
+  PGM_NAME   = 'LISTCREX'           /* THE NAME OF THIS REXX EXEC   */          
+  FILELIST   = ''                                                               
+  OUT_STRING = ''                                                               
+  OUT_STRING_ALL = ''                                                           
+ RETURN 0                                                                       
+/*--------------------------------------------------------*/                    
+/* Use OUTTRAP() to get the Dataset names from LISTCAT,   */                    
+/* Then, we use Rexx to interogate the resulting list of  */                    
+/* files and filter out those Not matching the input parm */                    
+/* criteria (UserId, ConfigID,BTN, and/or creation Date). */                    
+/*========================================================*/                    
+ PROCESS_LISTCAT_FILELIST:                                                      
+  FILE_CNT = 0                                                                  
+  FILE_IND = 'VSAM -----'                                                       
+  DATE_IND = 'CREATION'                                                         
+  IF FILE_HLQ  <> ''  THEN  FILELIST = FILE_HLQ                                 
+  IF USER_ID   <> ''  THEN  FILELIST = FILELIST||.||USER_ID                     
+  IF CONFIG_ID <> ''  THEN  FILELIST = FILELIST||.||CONFIG_ID                   
+  IF BTN       <> ''  THEN  FILELIST = FILELIST||.||BTN                         
+  X=OUTTRAP(LISTC.)                                                             
+/*ADDRESS TSO "LISTC HISTORY ENTRIES ('"filelist||".*') " */                    
+  list6 = (LISTC HISTORY ENTRIES (filelist))                                    
+  ADDRESS TSO  LIST6                                                            
+/*ADDRESS TSO "LISTC ALL ENT ('"filelist".*') " */                              
+  X=OUTTRAP('OFF')                                                              
+  DO I = 1 TO LISTC.0                                                           
+     OUT_STRING = ''                                                            
+     IF POS(FILE_IND,LISTC.I) > 0  THEN DO                                      
+        DATASET_NAME = WORD(LISTC.I,3)                                          
+        FILE_CNT = FILE_CNT +1                                                  
+     END                                                                        
+     IF POS(DATE_IND,LISTC.I) > 0  THEN DO                                      
+        DATASET_DATE = RIGHT(WORD(LISTC.I,2),8)                                 
+        IF DATASET_NAME <> ''  &  DATASET_DATE >= DATE_IN  THEN DO              
+           OUT_STRING = DATASET_NAME                                            
+           SAY ' ' OUT_STRING" - "DATASET_DATE /* For testing only */           
+        END                                                                     
+     END                                                                        
+     IF OUT_STRING  <> '' THEN                                                  
+        OUT_STRING_ALL = OUT_STRING_ALL||OUT_STRING||" ; "                      
+  END  /* End of LISTC Do Loop */                                               
+  /* -------------------------------------------------------------- */          
+  /* These SAY statements are for testing only...                               
+     After Testing Please comment out this If-Then-Else block */                
+  IF FILE_CNT = 0 | OUT_STRING_ALL = ''  THEN DO                                
+     say '*********************************************************'            
+     say '* NO VALID DATASETS FOUND WITH THESE NODE NAMES   !!!   *'            
+     say '***   ' FILELIST '  ***'                                              
+     IF FILELIST = '' | FILELIST = '.'  THEN                                    
+     say '* An Empty list was returned from the file name search  *'            
+     IF DATA_IN <> '' THEN                                                      
+     say '* AND/OR... The Input Date Not match (>) creation dates *'            
+     say '*********************************************************'            
+  END                                                                           
+  ELSE  SAY 'The File list ==> ' OUT_STRING_ALL                                 
+/****************************************************************/              
+/*  Set up the host command environment for SQL calls.          */              
+/****************************************************************/              
+"SUBCOM DSNREXX"                       /* Host cmd env available?  */           
+IF RC THEN                             /* No--add host cmd env     */           
+   S_RC = RXSUBCOM('ADD','DSNREXX','DSNREXX')                                   
+/****************************************************************/              
+/*  Set up SQL statements to insert command output messages     */              
+/*  into a temporary table.                                     */              
+/****************************************************************/              
+SQLSTMT='INSERT INTO SYSIBM.SYSPRINT(SEQNO,TEXT) VALUES(?,?)'                   
+ADDRESS DSNREXX "EXECSQL DECLARE C1 CURSOR FOR S1"                              
+IF SQLCODE ^= 0 THEN CALL SQLCA                                                 
+ADDRESS DSNREXX "EXECSQL PREPARE S1 FROM :SQLSTMT"                              
+IF SQLCODE ^= 0 THEN CALL SQLCA                                                 
+/****************************************************************/              
+/*  Extract messages from the return area and insert them into  */              
+/*  the temporary table.                                        */              
+/****************************************************************/              
+SEQNO = 0                                                                       
+OFFSET = 4+1                                                                    
+DO WHILE ( OFFSET < TOTLEN )                                                    
+  LEN = C2D(SUBSTR(RTRNAREA,OFFSET,2))                                          
+  SEQNO = SEQNO + 1                                                             
+  TEXT = SUBSTR(RTRNAREA,OFFSET+4,LEN-4-1)                                      
+  ADDRESS DSNREXX "EXECSQL EXECUTE S1 USING :SEQNO,:TEXT"                       
+  IF SQLCODE ^= 0 THEN CALL SQLCA                                               
+  OFFSET = OFFSET + LEN                                                         
+END                                                                             
+/****************************************************************/              
+/*  Set up a cursor for a result set that contains the command  */              
+/*  output messages from the temporary table.                   */              
+/****************************************************************/              
+SQLSTMT='SELECT SEQNO,TEXT FROM SYSIBM.SYSPRINT ORDER BY SEQNO'                 
+ADDRESS DSNREXX "EXECSQL DECLARE C2 CURSOR FOR S2"                              
+IF SQLCODE ^= 0 THEN CALL SQLCA                                                 
+                                                                                
+ADDRESS DSNREXX "EXECSQL PREPARE S2 FROM :SQLSTMT"                              
+IF SQLCODE ^= 0 THEN CALL SQLCA                                                 
+/****************************************************************/              
+/*  Open the cursor to return the message output result set to  */              
+/*  the caller.                                                 */              
+/****************************************************************/              
+ADDRESS DSNREXX "EXECSQL OPEN C2"                                               
+IF SQLCODE ^= 0 THEN CALL SQLCA                                                 
+                                                                                
+S_RC = RXSUBCOM('DELETE','DSNREXX','DSNREXX') /* REMOVE CMD ENV  */             
+                                                                                
+EXIT SUBSTR(RTRNAREA,1,TOTLEN+4)                                                
+                                                                                
+/****************************************************************/              
+/*  Routine to display the SQLCA                                */              
+/****************************************************************/              
+SQLCA:                                                                          
+SAY 'SQLCODE ='SQLCODE                                                          
+SAY 'SQLERRMC ='SQLERRMC                                                        
+SAY 'SQLERRP ='SQLERRP                                                          
+SAY 'SQLERRD ='SQLERRD.1',',                                                    
+            || SQLERRD.2',',                                                    
+            || SQLERRD.3',',                                                    
+            || SQLERRD.4',',                                                    
+            || SQLERRD.5',',                                                    
+            || SQLERRD.6                                                        
+                                                                                
+SAY 'SQLWARN ='SQLWARN.0',',                                                    
+            || SQLWARN.1',',                                                    
+            || SQLWARN.2',',                                                    
+            || SQLWARN.3',',                                                    
+            || SQLWARN.4',',                                                    
+            || SQLWARN.5',',                                                    
+            || SQLWARN.6',',                                                    
+            || SQLWARN.7',',                                                    
+            || SQLWARN.8',',                                                    
+            || SQLWARN.9',',                                                    
+            || SQLWARN.10                                                       
+SAY 'SQLSTATE='SQLSTATE                                                         
+SAY 'SQLCODE ='SQLCODE                                                          
+EXIT 'SQLERRMC ='SQLERRMC';' ,                                                  
+||  'SQLERRP ='SQLERRP';' ,                                                     
+||  'SQLERRD ='SQLERRD.1',',                                                    
+            || SQLERRD.2',',                                                    
+            || SQLERRD.3',',                                                    
+            || SQLERRD.4',',                                                    
+            || SQLERRD.5',',                                                    
+            || SQLERRD.6';' ,                                                   
+                                                                                
+||  'SQLWARN ='SQLWARN.0',',                                                    
+            || SQLWARN.1',',                                                    
+            || SQLWARN.2',',                                                    
+            || SQLWARN.3',',                                                    
+            || SQLWARN.4',',                                                    
+            || SQLWARN.5',',                                                    
+            || SQLWARN.6',',                                                    
+            || SQLWARN.7',',                                                    
+            || SQLWARN.8',',                                                    
+            || SQLWARN.9',',                                                    
+            || SQLWARN.10';' ,                                                  
+||  'SQLSTATE='SQLSTATE';'                                                      
+  /* End testing only statements */                                             
+  /* -------------------------------------------------------------- */          
+ RETURN 0                                                                       
+/*====================================================================*/        
+ EXIT_PGM:                                                                      
+  EXIT 0                                                                        
+ RETURN 0                                                                       
+/*=============================== END ================================*/        
+/**********************************************************************/        

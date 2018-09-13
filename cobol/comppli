@@ -1,0 +1,121 @@
+//COMPSPLI JOB (T,JZDD,JKSD0033),'COMPILE DB2 PGM',TIME=2,              00010000
+//  REGION=0K,CLASS=Q,MSGCLASS=Z,NOTIFY=&SYSUID                         00020000
+/*JOBPARM SYSAFF=200A                                                   00030000
+//*=============================================================        00040000
+//*  DB2 PRECOMPILER                                                    00050000
+//*=============================================================        00060000
+//*                                                                     00070000
+//DB2PC   EXEC PGM=DSNHPC,                                              00080000
+//        PARM=('HOST(PLI),SOURCE,TWOPASS,',                            00090000
+//        'XREF,APOST,VERSION(AUTO)')                                   00100000
+//STEPLIB  DD DSN=DSND009.SDSNLOAD,DISP=SHR                             00110000
+//         DD DSN=DSND009.SDSNEXIT,DISP=SHR                             00120000
+//SYSIN    DD DSN=BMGVZ0CN.R11OCT.PLI(BMGB985),DISP=SHR                 00130000
+//DBRMLIB  DD DSN=BMGVZ0CN.UNIT.DBRMLIB(BMGB985),DISP=SHR               00140000
+//SYSLIB   DD DSN=BMGVZ0CN.R11OCT.COPYPLI,DISP=SHR                      00150000
+//         DD DSN=BMGNS0EN.INT.COPYPLI,DISP=SHR                         00160000
+//         DD DSN=BMGNS0EN.ACC.COPYPLI,DISP=SHR                         00170000
+//         DD DSN=BMGNS0EN.SHIP.COPYPLI,DISP=SHR                        00180000
+//         DD DSN=BMGNS0EN.PROD.COPYPLI,DISP=SHR                        00190000
+//         DD DSN=SYS1.SCSQPLIC,DISP=SHR                                00200000
+//         DD DSN=SYS1.MACLIB,DISP=SHR                                  00210000
+//SYSCIN   DD DSN=&&DB2PC,DISP=(NEW,PASS),                              00220000
+//            UNIT=SORTS,SPACE=(CYL,(1,1),RLSE)                         00230000
+//SYSPRINT DD SYSOUT=*                                                  00240000
+//SYSTERM  DD SYSOUT=*                                                  00250000
+//SYSUT1   DD SPACE=(CYL,(1,1),,,ROUND),UNIT=SORTS                      00260000
+//SYSUT2   DD SPACE=(CYL,(1,1),,,ROUND),UNIT=SORTS                      00270000
+//SYSOUT   DD SYSOUT=*                                                  00280000
+//*                                                                     00290000
+//*=============================================================        00300000
+//*  PLI COMPILER                                                       00310000
+//*=============================================================        00320000
+//*                                                                     00330000
+//COMP   EXEC PGM=IBMZPLI,PARM=('OBJECT,OPTIONS,SOURCE,AGGREGATE,',     00340000
+//       'ATTRIBUTES(FULL),MAP,XREF,OFFSET,STMT,NORENT,NOWRITABLE')     00350000
+//STEPLIB  DD DSN=SYS1.SIELCOMP,DISP=SHR                                00360000
+//SYSLIB   DD DSN=BMGVZ0CN.UNIT.COPYPLI,DISP=SHR                        00370000
+//         DD DSN=BMGNS0EN.INT.COPYPLI,DISP=SHR                         00380000
+//         DD DSN=BMGNS0EN.ACC.COPYPLI,DISP=SHR                         00390000
+//         DD DSN=BMGNS0EN.SHIP.COPYPLI,DISP=SHR                        00400000
+//         DD DSN=BMGNS0EN.PROD.COPYPLI,DISP=SHR                        00410000
+//         DD DSN=SYS1.SCSQPLIC,DISP=SHR                                00420000
+//         DD DSN=SYS1.MACLIB,DISP=SHR                                  00430000
+//SYSIN    DD DSN=&&DB2PC,DISP=(OLD,DELETE)                             00440000
+//SYSLIN   DD DSN=&&LINK,DISP=(NEW,PASS),UNIT=SORTS,                    00450000
+//            SPACE=(CYL,(1,2),RLSE),                                   00460000
+//            DCB=(LRECL=80,BLKSIZE=2000,RECFM=FB)                      00470000
+//SYSUT1   DD UNIT=SORTS,SPACE=(CYL,(5,5))                              00480000
+//SYSOUT   DD SYSOUT=*                                                  00490000
+//SYSPRINT DD SYSOUT=*                                                  00500000
+//SYSTERM  DD SYSOUT=*                                                  00510000
+//*                                                                     00520000
+//*=============================================================        00530000
+//*  NCAL LINK STEP                                                     00540000
+//*=============================================================        00550000
+//*                                                                     00560000
+//NCALLNK EXEC PGM=IEWL,                                                00570000
+//        PARM=('XREF,MAP,LIST,RMODE=ANY,AMODE=31,NORENT,REUS,NCAL')    00580000
+//SYSLIB   DD DUMMY                                                     00590000
+//SYSUT1   DD UNIT=SORTS,SPACE=(CYL,(1,1))                              00600000
+//SYSPRINT DD SYSOUT=*                                                  00610000
+//SYSLIN   DD DSN=&&LINK,DISP=(OLD,DELETE)                              00620000
+//SYSLMOD  DD DSN=BMGVZ0CN.UNIT.LNKLIB(BMGB985),DISP=SHR                00630000
+//*                                                                     00640000
+//*                                                                     00650000
+//*=============================================================        00660000
+//*  BIND STEP                                                          00670000
+//*=============================================================        00680000
+//*                                                                     00690000
+//DB2BIND EXEC PGM=IKJEFT01,DYNAMNBR=20,COND=(12,LT)                    00700000
+//STEPLIB  DD DSN=DSND009.SDSNEXIT,DISP=SHR                             00710000
+//         DD DSN=DSND009.SDSNLOAD,DISP=SHR                             00720000
+//DBRMLIB  DD DSN=BMGVZ0CN.UNIT.DBRMLIB,DISP=SHR                        00730000
+//         DD DSN=DSND009.DBRMLIB.DATA,DISP=SHR                         00740000
+//SYSTSPRT DD SYSOUT=*                                                  00750000
+//SYSPRINT DD SYSOUT=*                                                  00760000
+//SYSUDUMP DD SYSOUT=*                                                  00770000
+//SYSOUT   DD SYSOUT=*                                                  00780000
+//REPORT   DD SYSOUT=*                                                  00790000
+//ABENDAID DD SYSOUT=*                                                  00800000
+//SYSTSIN  DD *,DCB=BLKSIZE=32000                                       00810000
+DSN SYSTEM(D009)                                                        00820000
+BIND PACKAGE(BMGVZCOL)                                     -            00830000
+     MEMBER(BMGB985)                                        -           00840000
+     ACTION(REPLACE)                                       -            00850000
+     OWNER(#DB2BMG)                                        -            00860000
+     QUALIFIER(BMGVZP)                                     -            00870000
+     ISOLATION(CS)                                         -            00880000
+     CURRENTDATA(NO)                                       -            00890000
+     KEEPDYNAMIC(YES)                                      -            00900000
+     RELEASE(COMMIT)                                       -            00910000
+     EXPLAIN(YES)                                          -            00920000
+     VALIDATE(BIND)                                        -            00930000
+     DYNAMICRULES(BIND) -                                               00940000
+ PATH(BMGVZP)                                                           00950000
+/*                                                                      00960000
+//*=============================================================        00970000
+//*  LINK EDIT STEP                                                     00980000
+//*=============================================================        00990000
+//*                                                                     01000000
+//LKED    EXEC PGM=IEWL,                                                01010000
+//        PARM='XREF,MAP,LIST,RMODE=ANY,AMODE=31,NORENT,REUS'           01020000
+//SYSLIB   DD DSN=BMGVZ0CN.UNIT.LNKLIB,DISP=SHR                         01030000
+//         DD DSN=BMGVZ0CN.UNIT.LNKLIB,DISP=SHR                         01040000
+//         DD DSN=BMGNS0EN.INT.LNKLIB,DISP=SHR                          01050000
+//         DD DSN=BMGNS0EN.ACC.LNKLIB,DISP=SHR                          01060000
+//         DD DSN=BMGNS0EN.SHIP.LNKLIB,DISP=SHR                         01070000
+//         DD DSN=BMGNS0EN.PROD.LNKLIB,DISP=SHR                         01080000
+//         DD DSN=METNS0EN.IREP.LE.LOADAPF,DISP=SHR                     01090000
+//*        DD DSN=METNS0EN.LE.LOADAPF,DISP=SHR                          01100000
+//         DD DSN=DSND009.SDSNEXIT,DISP=SHR                             01110000
+//         DD DSN=DSND009.SDSNLOAD,DISP=SHR                             01120000
+//         DD DSN=IMSBUB2.RESLIB,DISP=SHR                               01130000
+//         DD DSN=SYS1.SCSQLOAD,DISP=SHR                                01140000
+//         DD DSN=SYS1.SCEELKED,DISP=SHR                                01150000
+//         DD DSN=SYS1.SIBMTASK,DISP=SHR                                01160000
+//         DD DSN=SYS1.SEZATCP,DISP=SHR     *** TCP/IP LIB REQD BY BMG  01170000
+//SYSPRINT DD SYSOUT=*                                                  01180000
+//SYSUT1   DD UNIT=SYSDA,SPACE=(1024,(50,50))                           01190000
+//SYSLMOD  DD DSN=BMGVZ0CN.UNIT.BPGMLIB,DISP=SHR                        01200000
+//SYSLIN   DD DSN=BMGVZ0CN.UNIT.LINKCNTL(BMGB985),DISP=SHR              01210000

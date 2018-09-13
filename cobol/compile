@@ -1,0 +1,14 @@
+//COMPILE JOB (T,JZDD,JKSD0033),'COMPILE DB2 PGM',                      00010000
+//  REGION=0K,CLASS=Q,MSGCLASS=Z,NOTIFY=&SYSUID,TIME=1                  00020000
+//****************************************************************      00030000
+//MYPROCS  JCLLIB ORDER=(BMGVZ0CN.UNIT.PROCLIB)                         00040000
+//****************************************************************      00050000
+//COMPILE1 EXEC COMPILE,                                                00060000
+//* COBPARMS='OPT,NOSEQ,LIST,LIB,RENT,MAP,DATA(31),TRUNC(BIN)',         00070000
+//* LNKPARMS='XREF,MAP,LIST,AMODE=31,RENT,REUS',                        00080000
+//*        LINKCNTL=BMGVZ0CN.UNIT.LINKCNTL(CICINFO4),                   00090000
+//         MODULE=BMGMRG12,PROJECT=R11OCT,TESTID=BMGVZ0CN,              00100000
+//         LINKLIB1=BMGVZ0CN.UNIT.BPGMLIB,                              00110000
+//         COPYLIB1=BMGVZ0CN.R11OCT.COPYCOB,                            00120000
+//         COPYLIB2=NECNE0EN.PROD.COPYCOB,                              00130000
+//         COPYLIB3=BMGNS0EN.PROD.COPYCOB                               00140000

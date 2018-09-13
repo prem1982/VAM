@@ -1,0 +1,11 @@
+/****  REXX                                                                     
+ ***/                                                                           
+CALL CONCATF SYSEXEC NECNE0PN.REXX.EXEC SHR                                     
+CALL CONCATF SYSEXEC BMGVZ0CN.UNIT.REXXLIB SHR                                  
+"EXECUTIL SEARCHDD(YES)"                                                        
+USERREXX = "'" || SYSVAR(SYSUID)|| ".REXX.EXEC'"                                
+IF  SYSDSN(USERREXX) = OK                                                       
+THEN "CONCATF SYSEXEC "USERREXX" SHR"                                           
+/***                                                                            
+"CONCAT FILE(SYSEXEC) DA('ENDEVOR.EPROD.ISRCLIB')"                              
+ ***/                                                                           

@@ -1,0 +1,149 @@
+/*REXX EXTRCNTL:REXX TO GET IPS THAT HAVE BILL CYCLES TODAY */                  
+ARG                                                                             
+SIGNAL ON SYNTAX NAME CRAPCODE /* ROUTINE FOR CODE ERRORS */                    
+MSGS = MSG(ON) /* TSO/E MESSAGE SWITCH  - C.F. CONTROL MSG IN CLIST */          
+/****** READ THE LISTDSN DD INTO MEMORY USING STEM DMPREC ******/               
+ADDRESS TSO                                                                     
+O_RECS=0                                                                        
+"EXECIO 0 DISKW "LISTOUT"(OPEN"                                                 
+/****** ESTABLISH THE DB2 CONNECTION ******/                                    
+SIGNAL OFF ERROR /* TURN ERROR-TRAPPING OFF */                                  
+"SUBCOM DSNREXX"                                                                
+SIGNAL ON ERROR NAME BADDIES /* ROUTINE FOR EXTERNAL ERRORS */                  
+IF RC THEN                                                                      
+   S_RC = RXSUBCOM('ADD','DSNREXX','DSNREXX')                                   
+ADDRESS DSNREXX "CONNECT D019"                                                  
+IF SQLCODE ^= 0 THEN CALL SQLCA                                                 
+SIGNAL OFF ERROR                                                                
+/****** CREATE THE EXTRACT FILE ******/                                         
+CALL READIPS                                                                    
+ADDRESS DSNREXX "DISCONNECT"                                                    
+IF SQLCODE ^= 0 THEN CALL SQLCA                                                 
+IF O_RECS > 0 THEN                                                              
+   DO                                                                           
+      OFIL.= "  ) ;"                                                            
+      "EXECIO 1 DISKW "LISTOUT"(STEM OFIL."                                     
+      "EXECIO 0 DISKW "LISTOUT"(FINIS"                                          
+      SAY '***********************'                                             
+      SAY 'NO OF IPS FOUND' O_RECS                                              
+      SAY '***********************'                                             
+      EXIT 0                                                                    
+   END                                                                          
+ELSE                                                                            
+   DO                                                                           
+      SAY '***********************'                                             
+      SAY 'NO OF IPS FOUND' O_RECS                                              
+      SAY '***********************'                                             
+      EXIT 4                                                                    
+   END                                                                          
+READIPS:                                                                        
+/**** CREATE SELECT STRING *****/                                               
+S51_STRING = "SELECT CHAR(CCT.NBBE_IP),"            ||,                         
+                   " CHAR(CURRENT_DATE-8  DAYS)"    ||,                         
+                   " FROM PFLVZP.PFLV0CCT CCT"      ||,                         
+                   " WHERE CCT.CONFIG_CYCLE"        ||,                         
+                   " = SUBSTR(CHAR(CURRENT_DATE-8  DAYS),9,2)" ||,              
+                   " AND CCT.NBBE_IP > 0"           ||,                         
+                   " FOR READ ONLY"                                             
+/**** FETCH PARAMETERS *****/                                                   
+FPARMS = ":XNBBE_IP, :XCYC_DT"                                                  
+FSQL = "FETCH C51 INTO "FPARMS                                                  
+/**** DECLARE CURSOR *****/                                                     
+DCLSQL = "DECLARE C51 CURSOR WITH HOLD FOR S51"                                 
+ADDRESS DSNREXX "EXECSQL "DCLSQL                                                
+IF SQLCODE ^= 0 THEN                                                            
+   DO                                                                           
+      SAY 'ERROR DECLARING CURSOR C51 - SQLCODE=' SQLCODE                       
+      RETURN 'DECLARERR'                                                        
+   END                                                                          
+/**** PREPARE SELECT SQL ****/                                                  
+ADDRESS DSNREXX "EXECSQL PREPARE S51 FROM :S51_STRING"                          
+IF SQLCODE ^= 0 THEN                                                            
+   DO                                                                           
+      SAY 'ERROR PREPARING 'S51_STRING ' - SQLCODE=' SQLCODE                    
+      RETURN 'PREPARERR'                                                        
+   END                                                                          
+/**** OPEN CURSOR ****/                                                         
+ADDRESS DSNREXX "EXECSQL OPEN C51"                                              
+IF SQLCODE ^= 0 THEN                                                            
+   DO                                                                           
+      SAY 'ERROR OPENING CURSOR C51 - SQLCODE=' SQLCODE                         
+      RETURN 'OPENERROR'                                                        
+   END                                                                          
+/****** FETCH ALL CURSOR ROW ******/                                            
+DO WHILE SQLCODE = 0                                                            
+ADDRESS DSNREXX "EXECSQL "FSQL                                                  
+SELECT                                                                          
+  WHEN SQLCODE = 0 THEN                                                         
+       DO                                                                       
+           O_RECS=O_RECS + 1                                                    
+           IF O_RECS = 1 THEN                                                   
+              DO                                                                
+                 OFIL.="AND BILL_RND_DT >= '" || XCYC_DT ||,                    
+                       "' AND"                                                  
+                 "EXECIO 1 DISKW "LISTOUT"(STEM OFIL."                          
+                 LINE_PRE = "  ( "                                              
+              END                                                               
+           ELSE                                                                 
+              DO                                                                
+                 LINE_PRE = " OR "                                              
+              END                                                               
+           OFIL.= LINE_PRE || "CONFG_BLACT_F = " ||,                            
+                  XNBBE_IP                                                      
+           "EXECIO 1 DISKW "LISTOUT"(STEM OFIL."                                
+       END                                                                      
+  WHEN SQLCODE = 100 THEN                                                       
+       DO                                                                       
+           ADDRESS DSNREXX "EXECSQL CLOSE C51"                                  
+          IF SQLCODE ^= 0 THEN                                                  
+          DO                                                                    
+            SAY 'ERROR CLOSING CURSOR C51 - SQLCODE=' SQLCODE                   
+            CALL SQLCA                                                          
+          END                                                                   
+          SQLCODE = 100                                                         
+       END                                                                      
+  OTHERWISE                                                                     
+       DO                                                                       
+          SAY 'ERROR FETCHING FROM CURSOR C51 - SQLCODE='SQLCODE                
+          RETURN 'FETCHERR'                                                     
+       END                                                                      
+END                                                                             
+END                                                                             
+RETURN                                                                          
+/************* SYNTAX ERROR HANDLER **********/                                 
+CRAPCODE:                                                                       
+SAY 'YOU HAVE CRAP CODE IN DISCYCLE AT LINE' SIGL                               
+SAY SOURCELINE(SIGL)                                                            
+SAY 'REXX GAVE A RETURN CODE OF' RC ', WHICH MEANS :'                           
+SAY ERRORTEXT(RC)                                                               
+RETURN 'CRAPCODE'                                                               
+/************* EXTERNAL ERROR HANDLER **********/                               
+BADDIES:                                                                        
+SAY 'EXTERNAL ERROR FOUND IN DISCYCLE AT LINE' SIGL                             
+SAY SOURCELINE(SIGL)                                                            
+SAY 'RC =' RC                                                                   
+RETURN 'BADDIES'                                                                
+/************* SQL ERROR ROUTINE *************/                                 
+SQLCA:                                                                          
+  SAY "SQLSTATE =" SQLSTATE                                                     
+  SAY "SQLWARN =" SQLWARN.0",",                                                 
+              || SQLWARN.1",",                                                  
+              || SQLWARN.2",",                                                  
+              || SQLWARN.3",",                                                  
+              || SQLWARN.4",",                                                  
+              || SQLWARN.5",",                                                  
+              || SQLWARN.6",",                                                  
+              || SQLWARN.7",",                                                  
+              || SQLWARN.8",",                                                  
+              || SQLWARN.9",",                                                  
+              || SQLWARN.10""                                                   
+  SAY "SQLERRD =" SQLERRD.1",",                                                 
+              || SQLERRD.2",",                                                  
+              || SQLERRD.3",",                                                  
+              || SQLERRD.4",",                                                  
+              || SQLERRD.5",",                                                  
+              || SQLERRD.6                                                      
+  SAY "SQLERRP  =" SQLERRP                                                      
+  SAY "SQLERRMC =" SQLERRMC                                                     
+  SAY "SQLCODE  =" SQLCODE                                                      
+  EXIT 16                                                                       

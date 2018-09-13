@@ -1,0 +1,299 @@
+/* rexx */                                                              00010000
+/*-------------------------------------------------------*/             00020000
+/*          sql tool that formats sql and writes to pds  */             00030000
+/*-------------------------------------------------------*/             00040000
+parse external db2_sysid                                                00060001
+parse external pds                                                      00070009
+pdsnm = strip(pds)||'('                                                 00071009
+"execio * diskr ibrsfile (stem ibr. finis"                              00080001
+"free FI(ibrsfile)"                                                     00090001
+                                                                        00091001
+"execio * diskr rptfile  (stem rpt. finis"                              00100001
+"free FI(rptfile)"                                                      00110001
+                                                                        00111001
+"execio * diskr adjfile  (stem adj. finis"                              00120001
+"free FI(adjfile)"                                                      00121001
+ibrssql = ' '                                                           00121101
+rptsql = ' '                                                            00121201
+adjsql = ' '                                                            00121301
+ do i = 1 to ibr.0                                                      00122001
+   ibrssql = ibrssql||' '||strip(substr(ibr.i,1,72))                    00122107
+ end                                                                    00123001
+ do j = 1 to rpt.0                                                      00124001
+   rptsql = rptsql||' ' ||strip(substr(rpt.j,1,72))                     00125007
+ end                                                                    00127001
+ do k = 1 to adj.0                                                      00128001
+   adjsql = adjsql||' ' ||strip(substr(adj.k,1,72))                     00129007
+ end                                                                    00129201
+ say ibrssql                                                            00129301
+ say rptsql                                                             00129401
+ say adjsql                                                             00129501
+/*-------------------------------------------------------*/             00130000
+/*          print stats                                  */             00140000
+/*-------------------------------------------------------*/             00150000
+say 'DB2 Subsystem ' db2_sysid                                          00160000
+ address TSO "SUBCOM DSNREXX"                                           00361000
+  IF RC THEN                                                            00362000
+     S_RC = RXSUBCOM('ADD','DSNREXX','DSNREXX')                         00363000
+  ADDRESS DSNREXX                                                       00364000
+  "CONNECT" db2_sysid                                                   00365000
+IF SQLCODE ^=0 THEN SAY "connection error " SQLCODE                     00366000
+ELSE                                                                    00367000
+ do                                                                     00368000
+ call process_ibrs                                                      00368507
+ call process_adj                                                       00368610
+ call process_rpt                                                       00368710
+end                                                                     00368801
+"DISCONNECT"                                                            00368901
+EXIT                                                                    00369001
+                                                                        00369101
+/*-----------------------------------*/                                 00369201
+process_ibrs:                                                           00370001
+outsqlda.sqld = 5                                                       00420001
+outsqlda.1.sqldata = 0                                                  00430001
+outsqlda.2.sqldata = 0                                                  00431001
+outsqlda.3.sqldata = 0                                                  00432001
+outsqlda.4.sqldata = 0                                                  00433001
+outsqlda.5.sqldata = 0                                                  00434001
+EXECSQL 'DECLARE C1 CURSOR FOR S1'                                      00450000
+EXECSQL 'PREPARE S1 FROM :IBRSSQL'                                      00460001
+ctr = 0                                                                 00461001
+say sqlcode                                                             00470001
+EXECSQL open c1                                                         00480000
+Do until(sqlcode ^= 0)                                                  00490000
+  EXECSQL 'FETCH C1 USING DESCRIPTOR :OUTSQLDA'                         00500000
+  if sqlcode = 0 then                                                   00510000
+    do                                                                  00520000
+      pageid = outsqlda.1.sqldata                                       00550001
+      rsid =  outsqlda.2.sqldata                                        00560001
+      sqltyp = outsqlda.3.sqldata                                       00560101
+      refnam = strip(outsqlda.4.sqldata)                                00560201
+      sqltxt = outsqlda.5.sqldata                                       00561001
+      ctr = ctr + 1                                                     00561101
+      say 'total sqls : ' ctr                                           00561201
+      say pageid ' ' rsid ' ' sqltyp ' ' refnam                         00561301
+      call getmemname                                                   00561404
+      call prepcomments_ibrs                                            00561510
+      call format_sql                                                   00562001
+      call writetopds                                                   00564001
+    end                                                                 00580000
+end                                                                     00590000
+EXECSQL 'CLOSE C1'                                                      00600000
+return                                                                  00610001
+/*-------------------------------------------------------------------*/ 01520001
+ getmemname:                                                            01520101
+   decval = 0                                                           01520201
+   len = length(strip(refnam))                                          01520301
+   say len refnam                                                       01520411
+   do z = 1 to len                                                      01520512
+     decval = decval + c2d(substr(refnam,z,1))                          01520612
+    end                                                                 01520712
+   say decval 'p ' pageid 'r ' rsid 's ' sqltyp                         01520812
+  if (pageid < 100) then                                                01520912
+   do                                                                   01521012
+    if rsid < 300 then                                                  01521112
+     do                                                                 01521212
+      hx = d2x(pageid) || d2x(rsid + sqltyp)                            01521312
+      memname = '#'||strip(hx)||strip(d2x(decval))                      01521412
+     end                                                                01521512
+    else                                                                01521612
+    do                                                                  01521712
+    say 'total : ' decval+pageid+rsid+sqltyp                            01521812
+    tothex = d2x( pageid + rsid + sqltyp + decval)                      01521912
+    memname = '#'||strip(tothex)                                        01522012
+    end                                                                 01522112
+   end                                                                  01522212
+  else                                                                  01522312
+    do                                                                  01522412
+    say 'total : ' decval+pageid+rsid+sqltyp                            01522512
+    tothex = d2x( pageid + rsid + sqltyp + decval)                      01522612
+    memname = '#'||strip(tothex)                                        01522712
+    end                                                                 01522812
+    say 'memname: ' memname                                             01523001
+ return                                                                 01523101
+/*-------------------------------------------------------------------*/ 01523201
+ writetopds:                                                            01523301
+   say 'write pds ' memname                                             01523401
+ ADDRESS   TSO                                                          01523501
+"ALLOC F(OUT) DS('"pdsnm||memname")') SHR REUSE"                        01523609
+"EXECIO * DISKW OUT (STEM Q. FINIS"                                     01523701
+"FREE FILE(OUT)"                                                        01523801
+                                                                        01523901
+ return                                                                 01524001
+/*-------------------------------------------------------------------*/ 01524107
+prepcomments_ibrs:                                                      01524207
+ drop q.                                                                01524307
+L = 1                                                                   01524407
+N = 1                                                                   01524507
+M = 8                                                                   01524607
+R = 1                                                                   01524707
+B = 1                                                                   01524807
+Q.L = '--********************************************************'      01524907
+L = 2                                                                   01525007
+Q.L = '--'||'PAGE_ID........................' pageid                    01525107
+L = 3                                                                   01525207
+Q.J = '--'||'RESULTSET_ID...................' Rsid                      01525307
+L = 4                                                                   01525407
+Q.L = '--'||'SQL_TYPE.......................' SQLTyp                    01525507
+L = 5                                                                   01525607
+Q.L = '--'||'REF_NAME.......................' Refnam                    01525707
+L = 6                                                                   01525807
+Q.L = '--'||'MEMBER NAME IS ................ '||memname                 01525907
+L = 7                                                                   01526007
+Q.L = '--********************************************************'      01526107
+return                                                                  01526207
+/*-------------------------------------------------------------------*/ 01526307
+/*-------------------------------------------------------------------*/ 01526407
+prepcomments_rpt:                                                       01526507
+ drop q.                                                                01526607
+L = 1                                                                   01526707
+N = 1                                                                   01526807
+M = 4                                                                   01526907
+R = 1                                                                   01527007
+B = 1                                                                   01527107
+Q.L = '--********************************************************'      01527207
+L = 2                                                                   01527307
+Q.L = '--'||'sqlno..........................' rptnbr                    01527407
+L = 3                                                                   01527507
+Q.L = '--********************************************************'      01527607
+return                                                                  01527707
+/*-------------------------------------------------------------------*/ 01527807
+/*-------------------------------------------------------------------*/ 01527907
+prepcomments_adj:                                                       01528007
+ drop q.                                                                01528107
+L = 1                                                                   01528207
+N = 1                                                                   01528307
+M = 5                                                                   01528407
+R = 1                                                                   01528507
+B = 1                                                                   01528607
+Q.L = '--********************************************************'      01528707
+L = 2                                                                   01528807
+Q.L = '--'||'page_id .......................' pageid                    01528907
+L = 3                                                                   01529007
+Q.L = '--'||'sql_id.........................' sqlid                     01529107
+L = 4                                                                   01529207
+Q.L = '--********************************************************'      01529307
+return                                                                  01529407
+/*-------------------------------------------------------------------*/ 01529507
+/*******format sql        ********************************************/ 01529607
+ format_sql:                                                            01529707
+DO FOREVER                                                              01529807
+   DATA1 = STRIP(SUBSTR(sqltxt,B,72))                                   01529907
+IF  WORDS(DATA1) = 0  THEN LEAVE                                        01530007
+IF  WORDS(DATA1) = 1  THEN                                              01530107
+     DO                                                                 01530207
+            SELECT                                                      01530307
+               WHEN LENGTH(DATA1) <>'72' THEN                           01530407
+                DO                                                      01530504
+                Q.M = DATA1                                             01531004
+                LEAVE                                                   01532004
+                END                                                     01532104
+               OTHERWISE                                                01532204
+                DO                                                      01532304
+                   L_POS = LASTPOS('(',DATA1)                           01532404
+                   PART2 = SUBSTR(DATA1,1,L_POS)                        01532504
+                   Q.M = PART2                                          01532604
+                   M = M+1                                              01532704
+                   B = B+L_POS                                          01532804
+                END                                                     01532904
+               END                                                      01533004
+               END                                                      01533104
+       ELSE                                                             01533204
+    DO                                                                  01533304
+     R = WORDINDEX(DATA1,WORDS(DATA1))                                  01533404
+     PART1 = SUBSTR(DATA1,1,R-1)                                        01533504
+     Q.M = PART1                                                        01533604
+     B = B+R-1                                                          01533704
+     M = M+1                                                            01533804
+    END                                                                 01533904
+END /*  FOREVER */                                                      01534004
+ Q.0 = M                                                                01534102
+ return                                                                 01534202
+/*-----------------------------------*/                                 01534307
+process_rpt:                                                            01534407
+outsqlda.sqld = 2                                                       01534507
+outsqlda.1.sqldata = 0                                                  01534607
+outsqlda.2.sqldata = 0                                                  01534707
+EXECSQL 'DECLARE C1 CURSOR FOR S1'                                      01535107
+EXECSQL 'PREPARE S1 FROM :RPTSQL'                                       01535207
+ctr = 0                                                                 01535307
+say sqlcode                                                             01535407
+EXECSQL open c1                                                         01535507
+Do until(sqlcode ^= 0)                                                  01535607
+  EXECSQL 'FETCH C1 USING DESCRIPTOR :OUTSQLDA'                         01535707
+  if sqlcode = 0 then                                                   01535807
+    do                                                                  01535907
+      rptnbr = outsqlda.1.sqldata                                       01536007
+      sqltxt = outsqlda.2.sqldata                                       01536407
+      ctr = ctr + 1                                                     01536507
+      say 'total sqls : ' ctr                                           01536607
+      say 'rptnbr '   rptnbr                                            01536707
+      memname = 'R'||strip(rptnbr)                                      01536808
+      call prepcomments_rpt                                             01536907
+      call format_sql                                                   01537007
+      call writetopds                                                   01537107
+    end                                                                 01537207
+end                                                                     01537307
+EXECSQL 'CLOSE C1'                                                      01537407
+return                                                                  01537507
+/*---------------------------------*/                                   01537607
+process_adj:                                                            01537707
+outsqlda.sqld = 3                                                       01537807
+outsqlda.1.sqldata = 0                                                  01537907
+outsqlda.2.sqldata = 0                                                  01538007
+outsqlda.3.sqldata = 0                                                  01538107
+EXECSQL 'DECLARE C1 CURSOR FOR S1'                                      01538207
+EXECSQL 'PREPARE S1 FROM :adjsql'                                       01538308
+ctr = 0                                                                 01538407
+say sqlcode                                                             01538507
+EXECSQL open c1                                                         01538607
+Do until(sqlcode ^= 0)                                                  01538707
+  EXECSQL 'FETCH C1 USING DESCRIPTOR :OUTSQLDA'                         01538807
+  if sqlcode = 0 then                                                   01538907
+    do                                                                  01539007
+      pageid = outsqlda.1.sqldata                                       01539107
+      sqlid  = outsqlda.2.sqldata                                       01539207
+      sqltxt = outsqlda.3.sqldata                                       01539307
+      ctr = ctr + 1                                                     01539407
+      say 'total sqls : ' ctr                                           01539507
+      say 'pageid '   pageid 'sqlid ' sqlid                             01539607
+      memname = 'AD'||strip(pageid)||strip(sqlid)                       01539707
+      call prepcomments_adj                                             01539807
+      call format_sql                                                   01539907
+      call writetopds                                                   01540007
+    end                                                                 01540107
+end                                                                     01540207
+EXECSQL 'CLOSE C1'                                                      01540307
+return                                                                  01540407
+/*******SQL ERROR ROUTINE ********************************************/ 01540507
+ sqlca:                                                                 01540607
+                                                                        01541007
+ trace O                                                                01550000
+                                                                        01560000
+ say "sqlcode  :" sqlcode                                               01570000
+                                                                        01580000
+ say "sqlerrmc :" sqlerrmc                                              01590000
+                                                                        01600000
+ say "sqlerrp  :" sqlerrp                                               01610000
+                                                                        01620000
+ say "sqlerrd  :" sqlerrd.1",",                                         01630000
+               || sqlerrd.2",",                                         01640000
+               || sqlerrd.3",",                                         01650000
+               || sqlerrd.4",",                                         01660000
+               || sqlerrd.5",",                                         01670000
+               || sqlerrd.6                                             01680000
+                                                                        01690000
+ say "sqlwarn  :" sqlwarn.0",",                                         01700000
+               || sqlwarn.1",",                                         01710000
+               || sqlwarn.2",",                                         01720000
+               || sqlwarn.3",",                                         01730000
+               || sqlwarn.4",",                                         01740000
+               || sqlwarn.5",",                                         01750000
+               || sqlwarn.6",",                                         01760000
+               || sqlwarn.7",",                                         01770000
+               || sqlwarn.8",",                                         01780000
+               || sqlwarn.9",",                                         01790000
+               || sqlwarn.10                                            01800000
+                                                                        01810000
+ say "sqlstate :" sqlstate                                              01820000
+ return                                                                 01830000

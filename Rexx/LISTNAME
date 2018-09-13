@@ -1,0 +1,5 @@
+/*REXX*/                                                                        
+ARG LISTDSN LISTDD                                                              
+"LISTCAT ENT('"LISTDSN"') OUTFILE(LISTDD) NAME"                                 
+"LISTCAT ENT('"LISTDSN".*') OUTFILE(LISTDD) NAME"                               
+RETURN RC                                                                       

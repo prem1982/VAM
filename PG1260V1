@@ -1,0 +1,45 @@
+SELECT SC1.COL0                                                                 
+--    ,CASE WHEN SC1.COL0 = 'Total Used' THEN 'TBL_TL'                          
+--          WHEN SC1.COL0 = 'Shared Allowance' THEN 'TBL_TL'                    
+--          WHEN SC1.COL0 = 'Overage' THEN 'TBL_TL'                             
+--          WHEN SC1.COL0 = 'Total Shared Usage Charges' THEN 'TBL_TL'          
+--         ELSE 'CHAR' END TARGET_FMT                                           
+      ,SC1.COL1                                                                 
+      ,CASE WHEN SC1.COL1 = ' ' THEN 'NODISPLAY'                                
+            ELSE 'CHAR' END TARGET_FMT                                          
+--    ,CASE WHEN SC1.COL0 = 'Total Used' THEN 'TBL_TL'                          
+--          WHEN SC1.COL0 = 'Shared Allowance' THEN 'TBL_TL'                    
+--          WHEN SC1.COL0 = 'Overage' THEN 'TBL_TL'                             
+--          WHEN SC1.COL0 = 'Total Shared Usage Charges' THEN 'TBL_TL'          
+--         ELSE 'CHAR' END TARGET_FMT                                           
+      ,SC1.COL2                                                                 
+--   ,CASE WHEN SC1.COL0 = 'Total Used' THEN 'TBL_TL'                           
+--         WHEN SC1.COL0 = 'Shared Allowance' THEN 'TBL_TL'                     
+--         WHEN SC1.COL0 = 'Overage' THEN 'TBL_TL'                              
+--         WHEN SC1.COL0 = 'Total Shared Usage Charges' THEN 'TBL_TL'           
+--        ELSE 'CHAR' END TARGET_FMT                                            
+      ,SC1.COL3                                                                 
+--   ,CASE WHEN SC1.COL0 = 'Total Used' THEN 'TBL_TL'                           
+--         WHEN SC1.COL0 = 'Shared Allowance' THEN 'TBL_TL'                     
+--         WHEN SC1.COL0 = 'Overage' THEN 'TBL_TL'                              
+--         WHEN SC1.COL0 = 'Total Shared Usage Charges' THEN 'TBL_TL'           
+--        ELSE 'CHAR' END TARGET_FMT                                            
+      ,SC1.COL4                                                                 
+--   ,CASE WHEN SC1.COL0 = 'Total Used' THEN 'TBL_TL'                           
+--         WHEN SC1.COL0 = 'Shared Allowance' THEN 'TBL_TL'                     
+--         WHEN SC1.COL0 = 'Overage' THEN 'TBL_TL'                              
+--         WHEN SC1.COL0 = 'Total Shared Usage Charges' THEN 'TBL_TL'           
+--        ELSE 'CHAR' END TARGET_FMT                                            
+FROM (SELECT TB1.COLUMN_1 COL0                                                  
+      ,TB1.COLUMN_2       COL1                                                  
+      ,TB1.COLUMN_3       COL2                                                  
+      ,TB1.COLUMN_4       COL3                                                  
+      ,TB1.COLUMN_5       COL4                                                  
+FROM BMGVZP.VZ450_VMT50204_T  TB1                                               
+WHERE TB1.MAN = '7CLTZBNPE'                                                     
+  AND TB1.MAN_BILL_DATE = '2012-08-01'                                          
+  AND TB1.ORIG_SYSTEM_ID = 'VW'                                                 
+  AND TB1.SEQ_CD IN ('DD')                                                      
+  AND TB1.SYSTEM_ID = 'OSU'                                                     
+  ) SC1                                                                         
+-- WFILTER = ?                                                                  

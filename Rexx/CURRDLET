@@ -1,0 +1,21 @@
+/*REXX CURRDLET:REXX TO DELETE CURR_CHAR_DAT_T ROW*/                            
+ARG CURRCHDT                                                                    
+MAN              = SUBSTR(CURRCHDT,1,13)                                        
+MAN_BILL_DATE    = SUBSTR(CURRCHDT,14,10)                                       
+BAN              = SUBSTR(CURRCHDT,24,13)                                       
+BILL_DATE        = SUBSTR(CURRCHDT,37,10)                                       
+INV_BILL_IND     = SUBSTR(CURRCHDT,60,1)                                        
+ENTITY_CD        = SUBSTR(CURRCHDT,61,5)                                        
+ORIG_SYSTEM_ID   = SUBSTR(CURRCHDT,68,2)                                        
+CHG_CD           = SUBSTR(CURRCHDT,94,4)                                        
+/**** CREATE SELECT STRING *****/                                               
+SQLX = " DELETE FROM BMGVZP.CURR_CHAR_DAT_T" ||,                                
+        " WHERE MAN = '"MAN"'" ||,                                              
+          " AND MAN_BILL_DATE = '"MAN_BILL_DATE"'" ||,                          
+          " AND BAN = '"BAN"'" ||,                                              
+          " AND BILL_DATE = '"BILL_DATE"'" ||,                                  
+          " AND INV_BILL_IND = '"INV_BILL_IND"'" ||,                            
+          " AND ENTITY_CD = '"ENTITY_CD"'" ||,                                  
+          " AND ORIG_SYSTEM_ID = '"ORIG_SYSTEM_ID"'" ||,                        
+          " AND CHG_CD = '"CHG_CD"'"                                            
+RETURN SQLX                                                                     

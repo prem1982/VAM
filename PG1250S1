@@ -1,0 +1,32 @@
+  SELECT SC1.ECPD_BUS_NM                                                        
+        ,SC1.CONTRACT_EFF_DT                                                    
+        ,SC1.CONTRACT_END_DT                                                    
+        ,SC1.ALLOWED_WAIVER_CNT                                                 
+        ,SC1.WAIVER_SHARE_ID                                                    
+        ,SC1.WAIVER_USED_CNT                                                    
+        ,SC1.WAIVER_REM_CNT                                                     
+    FROM (                                                                      
+         SELECT WV.ECPD_BUS_NM                                                  
+               ,WV.ECPD_PROFILE_ID                                              
+               ,WV.CONTRACT_EFF_DT                                              
+               ,WV.CONTRACT_END_DT                                              
+               ,CASE WHEN WV.WAIVER_SHARE_ID = 'C'                              
+                     THEN 'Y'                                                   
+                     WHEN WV.WAIVER_SHARE_ID = 'P'                              
+                     THEN 'N'                                                   
+                     ELSE ' '                                                   
+                     END  WAIVER_SHARE_ID                                       
+               ,WV.ALLOWED_WAIVER_CNT                                           
+               ,WV.WAIVER_USED_CNT                                              
+               ,WV.WAIVER_REM_CNT                                               
+               ,WV.MANUAL_WAIVER_CNT                                            
+               ,WV.UPDATE_TIMESTAMP                                             
+           FROM STRUCTURES_T STR                                                
+     INNER JOIN VZW_DW_WAIV_SUMM_T WV                                           
+        ON STR.ELEMENT_OID    = WV.SUBSCRIBER_OID                               
+      WHERE STR.REPORT_ID_TS  = STRUCTURE_TS%                                   
+        AND STR.ELEMENT_TYPE  = 'SB'                                            
+--      AND STR.POSITION_TYPE = ?                                               
+--      AND STR.POSITION_OID  = ?                                               
+      ) SC1                                                                     
+   WFILTER = ?                                                                  

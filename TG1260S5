@@ -1,0 +1,141 @@
+SELECT SC1.DESCRIPTION                                                          
+,CASE SC1.DISPLAY_TYPE WHEN 1 THEN 'PAGE_FOOTER_BB'                             
+WHEN 2 THEN 'PAGE_FOOTER_LEFT_B'                                                
+ELSE 'PAGE_FOOTER_LEFT'                                                         
+END TARGET_FMT                                                                  
+FROM                                                                            
+( SELECT 'ACCOUNTS  PLAN FOR SHARED USAGE' DESCRIPTION                          
+,0 VZ450_SEQ_NBR                                                                
+,0 LINE_NBR                                                                     
+,0 DUM_NBR                                                                      
+,1 AS DISPLAY_TYPE                                                              
+FROM                                                                            
+BMGVZP.MASTER_ACCT_NO_T TB1                                                     
+WHERE TB1.MAN = '9L9I0OQYP    '                                                 
+   AND  (TB1.MAN_BILL_DATE = '2012-03-23'                                       
+  OR ('2012-03-23' = '9999-12-31'                                               
+AND TB1.MAN_BILL_DATE                                                           
+=                                                                               
+( SELECT MAX(ACT.MAN_BILL_DATE)                                                 
+FROM  BMGVZP.ACCT_SUM_T ACT                                                     
+WHERE ACT.MAN = '9L9I0OQYP    '                                                 
+AND ACT.ORIG_SYSTEM_ID = 'VW' )))                                               
+AND TB1.ORIG_SYSTEM_ID = 'VW'                                                   
+UNION ALL                                                                       
+SELECT IN1.TEXT_1 DESCRIPTION                                                   
+,IN1.TEXT1_SEQ_NBR VZ450_SEQ_NBR                                                
+,IN1.LINE_NBR                                                                   
+,SUM(IN1.DUM_NBR) DUM_NBR                                                       
+,3 AS DISPLAY_TYPE                                                              
+FROM                                                                            
+( SELECT  TB2A.TEXT_STRING AS TEXT_1                                            
+,TB1.TEXT1_SEQ_NBR                                                              
+,1 AS LINE_NBR                                                                  
+,1 AS DUM_NBR                                                                   
+,3 AS DISPLAY_TYPE                                                              
+,TB2A.TEXT_TYPE                                                                 
+,TB2A.TEXT_LOCATION_CD                                                          
+FROM                                                                            
+BMGVZP.CURR_CHAR_T TB1                                                          
+INNER JOIN                                                                      
+BMGVZP.REF_TEXT_T TB2A                                                          
+ON TB1.TEXT1_SEQ_NBR = TB2A.TEXT_SEQ_NBR                                        
+LEFT OUTER JOIN                                                                 
+BMGVZP.REF_TEXT_T TB2B                                                          
+ON TB1.TEXT2_SEQ_NBR = TB2B.TEXT_SEQ_NBR                                        
+WHERE TB1.MAN = '9L9I0OQYP    '                                                 
+  AND (TB1.MAN_BILL_DATE = '2012-03-23'                                         
+  OR ('2012-03-23' = '9999-12-31'                                               
+AND TB1.MAN_BILL_DATE =                                                         
+( SELECT MAX(ACT.MAN_BILL_DATE)                                                 
+FROM                                                                            
+BMGVZP.ACCT_SUM_T ACT                                                           
+WHERE ACT.MAN = '9L9I0OQYP    '                                                 
+AND ACT.ORIG_SYSTEM_ID = 'VW' )))                                               
+AND TB1.ORIG_SYSTEM_ID = 'VW'                                                   
+AND TB1.BAN = '9L9I0OQYP    '                                                   
+UNION ALL                                                                       
+SELECT COALESCE(TB2B.TEXT_STRING,' ') AS TEXT_1                                 
+,TB1.TEXT1_SEQ_NBR                                                              
+,2 AS LINE_NBR                                                                  
+,1 AS DUM_NBR                                                                   
+,3 AS DISPLAY_TYPE                                                              
+,TB2A.TEXT_TYPE                                                                 
+,TB2A.TEXT_LOCATION_CD FROM                                                     
+BMGVZP.CURR_CHAR_T TB1                                                          
+INNER JOIN                                                                      
+BMGVZP.REF_TEXT_T TB2A                                                          
+ON TB1.TEXT1_SEQ_NBR = TB2A.TEXT_SEQ_NBR                                        
+LEFT OUTER JOIN                                                                 
+BMGVZP.REF_TEXT_T TB2B                                                          
+ON TB1.TEXT2_SEQ_NBR = TB2B.TEXT_SEQ_NBR                                        
+WHERE TB1.MAN = '9L9I0OQYP    '                                                 
+  AND (TB1.MAN_BILL_DATE = '2012-03-23'                                         
+  OR ('2012-03-23' = '9999-12-31'                                               
+AND TB1.MAN_BILL_DATE =                                                         
+( SELECT MAX(ACT.MAN_BILL_DATE)                                                 
+FROM BMGVZP.ACCT_SUM_T ACT                                                      
+WHERE ACT.MAN = '9L9I0OQYP    '                                                 
+AND ACT.ORIG_SYSTEM_ID = 'VW' )))                                               
+AND TB1.ORIG_SYSTEM_ID = 'VW'                                                   
+AND TB1.BAN = '9L9I0OQYP    '                                                   
+UNION ALL                                                                       
+SELECT  TB2A.TEXT_STRING AS TEXT_1                                              
+,TB2.TEXT1_SEQ_NBR                                                              
+,3 AS LINE_NBR                                                                  
+,1 AS DUM_NBR                                                                   
+,3 AS DISPLAY_TYPE                                                              
+,TB2A.TEXT_TYPE                                                                 
+,TB2A.TEXT_LOCATION_CD                                                          
+FROM  BMGVZP.CURR_CHAR_T TB1                                                    
+INNER JOIN                                                                      
+BMGVZP.ADDL_TEXT_T TB2                                                          
+ON TB1.MAN = TB2.MAN                                                            
+AND TB1.MAN_BILL_DATE = TB2.MAN_BILL_DATE                                       
+AND TB1.ORIG_SYSTEM_ID = TB2.ORIG_SYSTEM_ID                                     
+AND TB1.VZ450_SEQ_NBR = TB2.BASE_SEQ_NBR                                        
+INNER JOIN                                                                      
+BMGVZP.REF_TEXT_T TB2A                                                          
+ON TB2.TEXT1_SEQ_NBR = TB2A.TEXT_SEQ_NBR                                        
+LEFT OUTER JOIN                                                                 
+BMGVZP.REF_TEXT_T TB2B                                                          
+ON TB2.TEXT2_SEQ_NBR = TB2B.TEXT_SEQ_NBR                                        
+WHERE TB1.MAN = '9L9I0OQYP    '                                                 
+  AND (TB1.MAN_BILL_DATE = '2012-03-23'                                         
+  OR ('2012-03-23' = '9999-12-31'                                               
+AND TB1.MAN_BILL_DATE = ( SELECT MAX(ACT.MAN_BILL_DATE)                         
+FROM BMGVZP.ACCT_SUM_T ACT                                                      
+WHERE ACT.MAN = '9L9I0OQYP    '                                                 
+AND ACT.ORIG_SYSTEM_ID = 'VW' )))                                               
+AND TB1.ORIG_SYSTEM_ID = 'VW'                                                   
+AND TB1.BAN = '9L9I0OQYP    '                                                   
+UNION ALL                                                                       
+SELECT  COALESCE(TB2B.TEXT_STRING,' ') AS TEXT_1                                
+,TB2.TEXT1_SEQ_NBR                                                              
+,4 AS LINE_NBR                                                                  
+,1 AS DUM_NBR                                                                   
+,3 AS DISPLAY_TYPE                                                              
+,TB2A.TEXT_TYPE                                                                 
+,TB2A.TEXT_LOCATION_CD                                                          
+FROM  BMGVZP.CURR_CHAR_T TB1 INNER JOIN  BMGVZP.ADDL_TEXT_T TB2                 
+ON TB1.MAN = TB2.MAN                                                            
+AND TB1.MAN_BILL_DATE = TB2.MAN_BILL_DATE                                       
+AND TB1.ORIG_SYSTEM_ID = TB2.ORIG_SYSTEM_ID                                     
+AND TB1.VZ450_SEQ_NBR = TB2.BASE_SEQ_NBR                                        
+INNER JOIN  BMGVZP.REF_TEXT_T TB2A                                              
+ON TB2.TEXT1_SEQ_NBR = TB2A.TEXT_SEQ_NBR                                        
+LEFT OUTER JOIN  BMGVZP.REF_TEXT_T TB2B                                         
+ON TB2.TEXT2_SEQ_NBR = TB2B.TEXT_SEQ_NBR                                        
+WHERE TB1.MAN = '9L9I0OQYP    '                                                 
+--AND (TB1.MAN_BILL_DATE = '2012-03-23'                                         
+--OR ('2012-03-23' = '9999-12-31'                                               
+AND TB1.MAN_BILL_DATE =                                                         
+( SELECT MAX(ACT.MAN_BILL_DATE) FROM BMGVZP.ACCT_SUM_T ACT                      
+WHERE ACT.MAN = '9L9I0OQYP    ' AND ACT.ORIG_SYSTEM_ID = 'VW' )                 
+AND TB1.ORIG_SYSTEM_ID = 'VW'                                                   
+AND TB1.BAN = '9L9I0OQYP    ' )                                                 
+IN1                                                                             
+GROUP BY                                                                        
+IN1.TEXT1_SEQ_NBR                                                               
+,IN1.LINE_NBR                                                                   
+,IN1.TEXT_1 ) SC1                                                               

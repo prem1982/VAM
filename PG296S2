@@ -1,0 +1,415 @@
+ SELECT SC1.WTN                                                                 
+    ,'S' SELECT_LINK                                                            
+    ,'244' TARGET_PAGE_ID                                                       
+    ,'ALL' TARGET_SUBSET                                                        
+    ,'CONSTANT1 = ^' || X'7D' || RTRIM(SC1.ACCT_NBR) || X'7D' || '^'            
+       || ' AND CONSTANT2 = ^'                                                  
+           || X'7D' || RTRIM(SC1.COST_CNTR) || X'7D' || '^'                     
+       || ' AND CONSTANT3 = ^'                                                  
+           || X'7D' || RTRIM(SC1.CUST_ID_CD) || X'7D' || '^'                    
+        || ' AND FROM_DATE = ' || X'7D' || FROM_DATE% || X'7D'                  
+        || ' AND THRU_DATE = ' || X'7D' || THRU_DATE% || X'7D'                  
+        || ' AND WTN =  ' || X'7D' || RTRIM(SC1.WTN) || X'7D'                   
+        || ' AND MAN =  ' || X'7D' || SC1.MAN || X'7D'                          
+       AS TARGET_PARMS                                                          
+    ,SC1.CUST_ID_CD                                                             
+    ,SC1.USER_ID                                                                
+    ,SC1.LAST_BILL_DATE                                                         
+    ,SC1.PLAN_DESC                                                              
+    ,SC1.COST_CNTR                                                              
+    ,SC1.EMAIL_ID                                                               
+    ,CHAR(SC1.ACCT_CHGS) ACCT_CHGS                                              
+    ,CHAR(SC1.AIRTIME_MIN) AIRTIME_MIN                                          
+    ,CHAR(SC1.FF_MIN)      FF_MIN                                               
+    ,CHAR(SC1.AIRTIME_BILLABLE) AIRTIME_BILLABLE                                
+    ,CHAR(SC1.MONTHLY_CHGS) MONTHLY_CHGS                                        
+    ,CHAR(SC1.EQUIP_CHGS) EQUIP_CHGS                                            
+    ,CHAR(SC1.VOICE_CHGS) VOICE_CHGS                                            
+    ,CHAR(SC1.MSG_CHGS)   MSG_CHGS                                              
+    ,CHAR(SC1.DATA_USAGE_CHGS) DATA_USAGE_CHGS                                  
+    ,CHAR(SC1.ROAMER_CHGS) ROAMER_CHGS                                          
+    ,CHAR(SC1.OTHER_CHGS) OTHER_CHGS                                            
+    ,CHAR(SC1.TAX_SURCHGS) TAX_SURCHGS                                          
+    ,CHAR(SC1.TOT_CURR_CHGS) TOT_CURR_CHGS                                      
+    ,'Memo Bill' MEMO_BILL                                                      
+    ,'S' SELECT_LINK                                                            
+    ,'226' TARGET_PAGE_ID                                                       
+    ,'ALL' TARGET_SUBSET                                                        
+    ,'MAN = ' || X'7D' || SC1.MAN  || X'7D'                                     
+        || ' AND MAN_BILL_DATE = ' || X'7D'                                     
+                   || CHAR(SC1.WTN_BILL_DATE)   || X'7D'                        
+        || ' AND ORIG_SYSTEM_ID = ' || X'7D'                                    
+                        || 'VW'  || X'7D'                                       
+        || ' AND BAN = ' || X'7D' || SC1.MAN || X'7D'                           
+        || ' AND BILL_DATE = ' || X'7D'                                         
+                        || CHAR(SC1.WTN_BILL_DATE) || X'7D'                     
+        || ' AND WTN =  ' || X'7D' || RTRIM(SC1.WTN) || X'7D'                   
+        || ' AND FROM_DATE = ' || X'7D' || FROM_DATE% || X'7D'                  
+        || ' AND THRU_DATE = ' || X'7D' || THRU_DATE% || X'7D'                  
+       AS TARGET_PARMS                                                          
+   FROM (                                                                       
+      SELECT LST.WORKING_TEL_NBR WTN                                            
+            ,LST.MAN                                                            
+            ,LST.WTN_BILL_DATE                                                  
+            ,COALESCE(NODES2.STRUCT_NODE,NODES1.STRUCT_NODE)                    
+                        STRUCT_NODE                                             
+            ,LST.USER_NAME CUST_ID_CD                                           
+            ,' ' USER_ID                                                        
+            ,LST.LAST_BILL_DATE                                                 
+            ,LST.PLAN_DESC                                                      
+            ,LST.COST_CNTR                                                      
+            ,COALESCE(WMTN.EMAIL_ADDR,' ') EMAIL_ID                             
+            ,LST.ACCT_NBR                                                       
+            ,LST.DATA_USAGE_CHGS                                                
+            ,LST.VOICE_CHGS                                                     
+            ,LST.ROAMER_CHGS                                                    
+            ,LST.MSG_CHGS                                                       
+            ,LST.FF_MIN                                                         
+            ,CASE WHEN LST.WORKING_TEL_NBR = ACCLVL.MAX_WTN                     
+                    THEN ACCLVL.DIST_MAX_AMT                                    
+                    ELSE COALESCE(ACCLVL.DIST_AMT,0.00)                         
+               END ACCT_CHGS                                                    
+            ,INTEGER(PLN.INCLUDED_NBR) AIRTIME_MIN                              
+            ,INTEGER(PLN.BILLABLE_NBR) AIRTIME_BILLABLE                         
+            ,CHGS.MONTHLY_CHGS                                                  
+            ,CHGS.EQUIP_CHGS                                                    
+            ,CHGS.OTHER_CHGS                                                    
+            ,CHGS.TAX_SURCHGS                                                   
+            ,CASE WHEN LST.WORKING_TEL_NBR = ACCLVL.MAX_WTN                     
+                    THEN ACCLVL.DIST_MAX_AMT                                    
+                      + CHGS.MONTHLY_CHGS                                       
+                      + CHGS.EQUIP_CHGS                                         
+                      + LST.DATA_USAGE_CHGS                                     
+                      + LST.VOICE_CHGS                                          
+                      + LST.ROAMER_CHGS                                         
+                      + CHGS.OTHER_CHGS                                         
+                      + CHGS.TAX_SURCHGS                                        
+                    ELSE COALESCE(ACCLVL.DIST_AMT,0.00)                         
+                      + CHGS.MONTHLY_CHGS                                       
+                      + CHGS.EQUIP_CHGS                                         
+                      + LST.DATA_USAGE_CHGS                                     
+                      + LST.VOICE_CHGS                                          
+                      + LST.ROAMER_CHGS                                         
+                      + CHGS.OTHER_CHGS                                         
+                      + CHGS.TAX_SURCHGS                                        
+               END TOT_CURR_CHGS                                                
+       FROM (                                                                   
+       SELECT V50S.MAN                                                          
+             ,V50S.WORKING_TEL_NBR                                              
+             ,SUM(WT.FF_MIN) FF_MIN                                             
+             ,MAX(V50S.MAN_BILL_DATE) WTN_BILL_DATE                             
+             ,CASE WHEN V50S.USER_NAME = ' ' THEN 'No User Name'                
+                   ELSE V50S.USER_NAME END USER_NAME                            
+             ,INV.DISP_ACCT_NUM ACCT_NBR                                        
+             ,INV.MAN_BILL_DATE LAST_BILL_DATE                                  
+             ,MAX(SUBSTR(V50S.PLAN_DESC,1,175)) PLAN_DESC                       
+             ,CASE WHEN V50S.COST_CNTR = ' ' THEN 'No Cost Center'              
+                   ELSE V50S.COST_CNTR END COST_CNTR                            
+             ,SUM(CASE WHEN V50S.CHARGE_CD = '1935'                             
+                        THEN V50S.CHARGE_AMT ELSE 0 END)                        
+                 VOICE_CHGS                                                     
+             ,SUM(CASE WHEN V50S.CHARGE_CD = '1936'                             
+                        THEN V50S.CHARGE_AMT ELSE 0 END)                        
+                 DATA_USAGE_CHGS                                                
+             ,SUM(CASE WHEN V50S.CHARGE_CD = '1942'                             
+                        THEN V50S.CHARGE_AMT ELSE 0 END)                        
+                 ROAMER_CHGS                                                    
+             ,SUM(CASE WHEN V50S.CHARGE_CD = '1944'                             
+                        THEN V50S.CHARGE_AMT ELSE 0 END)                        
+                 MSG_CHGS                                                       
+             ,SUM(1) NBR_ROWS                                                   
+        FROM INVOICE_LIST_T INV                                                 
+        INNER JOIN (                                                            
+              SELECT 1 LINE_NO                                                  
+               ,DATE(CASE WHEN FROM_DATE% = ' ' THEN                            
+                 SUBSTR(CHAR(CURRENT DATE),1,8)                                 
+                      || '01'                                                   
+                ELSE FROM_DATE% END) FROM_DATE                                  
+               ,CASE WHEN THRU_DATE% = ' ' THEN                                 
+                 DATE(SUBSTR(CHAR(CURRENT DATE),1,8)                            
+                      || '01') + 1 MONTH - 1 DAY                                
+                ELSE DATE(THRU_DATE%) END THRU_DATE                             
+                FROM SYSIBM.SYSDUMMY1                                           
+              ) DTS                                                             
+           ON DTS.LINE_NO = 1                                                   
+        INNER JOIN VZ450_VMT50200_T V50S                                        
+           ON INV.MAN = V50S.MAN                                                
+          AND INV.ORIG_SYSTEM_ID = V50S.ORIG_SYSTEM_ID                          
+          AND DTS.FROM_DATE <= V50S.MAN_BILL_DATE                               
+          AND DTS.THRU_DATE >= V50S.MAN_BILL_DATE                               
+          AND V50S.WORKING_TEL_NBR <> ' '                                       
+          AND (V50S.CHARGE_CD = '0100'                                          
+                OR V50S.CHARGE_CD = '1935'                                      
+                OR V50S.CHARGE_CD = '1936'                                      
+                OR V50S.CHARGE_CD = '1944'                                      
+                OR V50S.CHARGE_CD = '1942')                                     
+        INNER JOIN WTN_T WT                                                     
+           ON V50S.MAN = WT.MAN                                                 
+          AND V50S.ORIG_SYSTEM_ID = WT.ORIG_SYSTEM_ID                           
+          AND V50S.MAN_BILL_DATE = WT.BILL_DATE                                 
+       WHERE INV.REPORT_ID_TS = STRUCTURE_TS%                                   
+         AND INV.ORIG_SYSTEM_ID = 'VW'                                          
+         AND INV.MAN_BILL_DATE <> '9999-12-31'                                  
+         AND INV.DISP_ACCT_NUM <> ' '                                           
+       GROUP BY V50S.MAN                                                        
+             ,V50S.WORKING_TEL_NBR                                              
+             ,V50S.USER_NAME                                                    
+             ,INV.DISP_ACCT_NUM                                                 
+             ,INV.MAN_BILL_DATE                                                 
+             ,V50S.COST_CNTR                                                    
+         ) LST                                                                  
+  --- DIVISION                                                                  
+  LEFT OUTER JOIN (                                                             
+     SELECT DIS.MAN                                                             
+           ,DIS.MAX_WTN                                                         
+           ,DIS.ACCT_LVL_CHGS                                                   
+           ,DIS.NBR_PHONES                                                      
+           ,DECIMAL(CASE WHEN DIS.NBR_PHONES > 0                                
+                THEN (DIS.ACCT_LVL_CHGS / DIS.NBR_PHONES)                       
+                ELSE 0.00 END,11,2) DIST_AMT                                    
+           ,DECIMAL(CASE WHEN DIS.NBR_PHONES > 0                                
+                THEN DIS.ACCT_LVL_CHGS  - (                                     
+                 DECIMAL((DIS.ACCT_LVL_CHGS / DIS.NBR_PHONES),11,2)             
+                        * (DIS.NBR_PHONES - 1))                                 
+                ELSE 0.00 END,11,2) DIST_MAX_AMT                                
+       FROM (                                                                   
+      SELECT WT.MAN                                                             
+            ,MAX(WT.MAX_WTN) MAX_WTN                                            
+            ,MAX(WT.NBR_PHONES) NBR_PHONES                                      
+            ,SUM(WT.ACCT_LVL_CHGS) ACCT_LVL_CHGS                                
+        FROM (                                                                  
+        SELECT V50S.MAN                                                         
+              ,V50S.MAN_BILL_DATE                                               
+              ,MAX(V50S.WORKING_TEL_NBR) MAX_WTN                                
+              ,SUM(CASE WHEN (V50S.CHARGE_CD = '0100'                           
+                               AND V50S.WORKING_TEL_NBR = ' ')                  
+                        THEN V50S.CHARGE_AMT ELSE 0                             
+                    END) ACCT_LVL_CHGS                                          
+              ,SUM(CASE WHEN (V50S.CHARGE_CD = '0100'                           
+                               AND V50S.WORKING_TEL_NBR <> ' ')                 
+                        THEN 1 ELSE 0                                           
+                    END) NBR_PHONES                                             
+        FROM INVOICE_LIST_T INV                                                 
+        INNER JOIN (                                                            
+              SELECT 1 LINE_NO                                                  
+               ,DATE(CASE WHEN FROM_DATE% = ' ' THEN                            
+                 SUBSTR(CHAR(CURRENT DATE),1,8)                                 
+                      || '01'                                                   
+                ELSE FROM_DATE% END) FROM_DATE                                  
+               ,CASE WHEN THRU_DATE% = ' ' THEN                                 
+                 DATE(SUBSTR(CHAR(CURRENT DATE),1,8)                            
+                      || '01') + 1 MONTH - 1 DAY                                
+                ELSE DATE(THRU_DATE%) END THRU_DATE                             
+                FROM SYSIBM.SYSDUMMY1                                           
+              ) DTS                                                             
+           ON DTS.LINE_NO = 1                                                   
+        INNER JOIN VZ450_VMT50200_T V50S                                        
+           ON INV.MAN = V50S.MAN                                                
+          AND INV.ORIG_SYSTEM_ID = V50S.ORIG_SYSTEM_ID                          
+          AND DTS.FROM_DATE <= V50S.MAN_BILL_DATE                               
+          AND DTS.THRU_DATE >= V50S.MAN_BILL_DATE                               
+          AND V50S.CHARGE_CD = '0100'                                           
+       WHERE INV.REPORT_ID_TS = STRUCTURE_TS%                                   
+         AND INV.ORIG_SYSTEM_ID = 'VW'                                          
+         AND INV.MAN_BILL_DATE <> '9999-12-31'                                  
+         AND INV.DISP_ACCT_NUM <> ' '                                           
+        GROUP BY V50S.MAN                                                       
+             ,V50S.MAN_BILL_DATE                                                
+       ) WT                                                                     
+      GROUP BY WT.MAN                                                           
+     ) DIS                                                                      
+    WHERE DIS.ACCT_LVL_CHGS <> 0                                                
+           ) ACCLVL                                                             
+    ON LST.MAN = ACCLVL.MAN                                                     
+  --- DIVISION                                                                  
+  LEFT OUTER JOIN (                                                             
+       SELECT V63.WORKING_TEL_NBR                                               
+             ,V63.MAN                                                           
+             ,MAX(CASE WHEN V63.ASSOC_CHG_CD <> '1935' THEN ' '                 
+                         WHEN V63.USG_DIS_PROP = 0                              
+                        THEN V63.USG_COL_TXT                                    
+                         WHEN V63.USG_DIS_PROP = 1                              
+                        THEN CHAR(INTEGER(V63.GRD_ALLOWANCE))                   
+                     ELSE ' '                                                   
+                 END) ALLOWANCE_MIN                                             
+             ,SUM(CASE WHEN UPPER(V63.USG_TYP_DESC) = 'MINUTES'                 
+                       THEN (V63.GRD_USED - V63.GRD_BILLABLE)                   
+                       ELSE 0 END) INCLUDED_NBR                                 
+             ,SUM(CASE WHEN UPPER(V63.USG_TYP_DESC) = 'MINUTES'                 
+                       THEN (V63.GRD_BILLABLE)                                  
+                       ELSE 0 END) BILLABLE_NBR                                 
+        FROM INVOICE_LIST_T INV                                                 
+        INNER JOIN (                                                            
+              SELECT 1 LINE_NO                                                  
+               ,DATE(CASE WHEN FROM_DATE% = ' ' THEN                            
+                 SUBSTR(CHAR(CURRENT DATE),1,8)                                 
+                      || '01'                                                   
+                ELSE FROM_DATE% END) FROM_DATE                                  
+               ,CASE WHEN THRU_DATE% = ' ' THEN                                 
+                 DATE(SUBSTR(CHAR(CURRENT DATE),1,8)                            
+                      || '01') + 1 MONTH - 1 DAY                                
+                ELSE DATE(THRU_DATE%) END THRU_DATE                             
+                FROM SYSIBM.SYSDUMMY1                                           
+              ) DTS                                                             
+           ON DTS.LINE_NO = 1                                                   
+        INNER JOIN VZ450_6300_T V63                                             
+           ON INV.MAN = V63.MAN                                                 
+          AND INV.ORIG_SYSTEM_ID = V63.ORIG_SYSTEM_ID                           
+          AND DTS.FROM_DATE <= V63.MAN_BILL_DATE                                
+          AND DTS.THRU_DATE >= V63.MAN_BILL_DATE                                
+          AND V63.WORKING_TEL_NBR <> ' '                                        
+       WHERE INV.REPORT_ID_TS = STRUCTURE_TS%                                   
+         AND INV.ORIG_SYSTEM_ID = 'VW'                                          
+         AND INV.MAN_BILL_DATE <> '9999-12-31'                                  
+         AND INV.DISP_ACCT_NUM <> ' '                                           
+      GROUP BY V63.MAN                                                          
+            ,V63.WORKING_TEL_NBR                                                
+           ) PLN                                                                
+     ON LST.MAN = PLN.MAN                                                       
+    AND LST.WORKING_TEL_NBR  = PLN.WORKING_TEL_NBR                              
+  --- DIVISION                                                                  
+  LEFT OUTER JOIN (                                                             
+          SELECT V72.MAN                                                        
+                ,V72.WORKING_TEL_NBR                                            
+                ,SUM(CASE WHEN V72.ASSOC_CHG_CD = '1931'                        
+                    THEN (V72.CHARGE + V72.DISCOUNT)                            
+                    ELSE 0 END) MONTHLY_CHGS                                    
+                ,SUM(CASE WHEN V72.ASSOC_CHG_CD = '1940'                        
+                    THEN (V72.CHARGE + V72.DISCOUNT)                            
+                    ELSE 0 END) EQUIP_CHGS                                      
+                ,SUM(CASE WHEN (V72.ASSOC_CHG_CD = '1937'                       
+                        AND V72.OC_C_TYP <> 'V')                                
+                    THEN (V72.CHARGE + V72.DISCOUNT)                            
+                    ELSE 0 END) OTHER_CHGS                                      
+                ,SUM(CASE WHEN V72.ASSOC_CHG_CD = '1938'                        
+                    THEN (V72.CHARGE + V72.DISCOUNT)                            
+                    WHEN (V72.ASSOC_CHG_CD = '1937'                             
+                           AND V72.OC_C_TYP = 'V')                              
+                    THEN (V72.CHARGE + V72.DISCOUNT)                            
+                    ELSE 0 END) TAX_SURCHGS                                     
+           FROM INVOICE_LIST_T INV                                              
+           INNER JOIN (                                                         
+                 SELECT 1 LINE_NO                                               
+                  ,DATE(CASE WHEN FROM_DATE% = ' ' THEN                         
+                    SUBSTR(CHAR(CURRENT DATE),1,8)                              
+                         || '01'                                                
+                   ELSE FROM_DATE% END) FROM_DATE                               
+                  ,CASE WHEN THRU_DATE% = ' ' THEN                              
+                    DATE(SUBSTR(CHAR(CURRENT DATE),1,8)                         
+                         || '01') + 1 MONTH - 1 DAY                             
+                   ELSE DATE(THRU_DATE%) END THRU_DATE                          
+                   FROM SYSIBM.SYSDUMMY1                                        
+                 ) DTS                                                          
+              ON DTS.LINE_NO = 1                                                
+           INNER JOIN VZ450_7200_T V72                                          
+              ON INV.MAN = V72.MAN                                              
+             AND INV.ORIG_SYSTEM_ID = V72.ORIG_SYSTEM_ID                        
+             AND DTS.FROM_DATE <= V72.MAN_BILL_DATE                             
+             AND DTS.THRU_DATE >= V72.MAN_BILL_DATE                             
+             AND V72.WORKING_TEL_NBR <> ' '                                     
+       WHERE INV.REPORT_ID_TS = STRUCTURE_TS%                                   
+         AND INV.ORIG_SYSTEM_ID = 'VW'                                          
+         AND INV.MAN_BILL_DATE <> '9999-12-31'                                  
+         AND INV.DISP_ACCT_NUM <> ' '                                           
+       GROUP BY V72.MAN                                                         
+                ,V72.WORKING_TEL_NBR                                            
+           ) CHGS                                                               
+     ON LST.MAN = CHGS.MAN                                                      
+    AND LST.WORKING_TEL_NBR  = CHGS.WORKING_TEL_NBR                             
+    ----- DIVISION                                                              
+     INNER JOIN (                                                               
+        SELECT X.MAN                                                            
+              ,MIN('Level ' || RTRIM(CHAR(X.ELEMENT_LVL))                       
+                        || ' - ' || X.ELEMENT_NAME)                             
+                  AS STRUCT_NODE                                                
+              ,SUM(1) NBR_LINES                                                 
+             FROM STRUCTURES_T X                                                
+            WHERE X.REPORT_ID_TS = STRUCTURE_TS%                                
+              AND X.POSITION_TYPE = ?                                           
+              AND X.POSITION_OID = ?                                            
+              AND X.OSID = 'VW'                                                 
+              AND X.MAN <> ' '                                                  
+            GROUP BY X.MAN                                                      
+             ) NODES1                                                           
+        ON LST.MAN = NODES1.MAN                                                 
+     LEFT OUTER JOIN (                                                          
+        SELECT X.MAN                                                            
+              ,X.WTN                                                            
+              ,MIN('Level ' || RTRIM(CHAR(X.ELEMENT_LVL))                       
+                        || ' - ' || X.ELEMENT_NAME)                             
+                  AS STRUCT_NODE                                                
+              ,SUM(1) NBR_LINES                                                 
+             FROM STRUCTURES_T X                                                
+            WHERE X.REPORT_ID_TS = STRUCTURE_TS%                                
+              AND X.POSITION_TYPE = ?                                           
+              AND X.POSITION_OID = ?                                            
+              AND X.OSID = 'VW'                                                 
+              AND X.WTN <> ' '                                                  
+              AND X.WTN <> 'SHELLACCT'                                          
+              AND X.MAN <> ' '                                                  
+            GROUP BY X.MAN                                                      
+                ,X.WTN                                                          
+             ) NODES2                                                           
+        ON LST.MAN = NODES2.MAN                                                 
+       AND LST.WORKING_TEL_NBR = NODES2.WTN                                     
+    ----- DIVISION                                                              
+     LEFT OUTER JOIN (                                                          
+       SELECT WMTN.MAN                                                          
+             ,WMTN.MTN                                                          
+             ,MAX(WMTN.EMAIL_ADDR) EMAIL_ADDR                                   
+        FROM INVOICE_LIST_T INV                                                 
+        INNER JOIN VZW_MTN_T WMTN                                               
+          ON INV.MAN = WMTN.MAN                                                 
+         AND INV.MAN = WMTN.BAN                                                 
+         AND INV.ORIG_SYSTEM_ID = WMTN.ORIG_SYSTEM_ID                           
+       WHERE INV.REPORT_ID_TS = STRUCTURE_TS%                                   
+         AND INV.ORIG_SYSTEM_ID = 'VW'                                          
+         AND INV.MAN_BILL_DATE <> '9999-12-31'                                  
+         AND INV.DISP_ACCT_NUM <> ' '                                           
+         AND WMTN.ACTIVE_END_DATE = '9999-12-31'                                
+         AND WMTN.EMAIL_ADDR <> ' '                                             
+        GROUP BY WMTN.MAN                                                       
+                ,WMTN.MTN                                                       
+                ) WMTN                                                          
+     ON LST.MAN = WMTN.MAN                                                      
+    AND LST.WORKING_TEL_NBR = WMTN.MTN                                          
+    ----- DIVISION                                                              
+       LEFT OUTER JOIN (                                                        
+            SELECT STA.MAN                                                      
+                  ,STA.OSID                                                     
+                  ,SUM(1) NBR_ROWS                                              
+              FROM STRUCTURES_T STA                                             
+             WHERE STA.REPORT_ID_TS = STRUCTURE_TS%                             
+               AND STA.POSITION_TYPE = ?                                        
+               AND STA.POSITION_OID = ?                                         
+               AND STA.OSID = 'VW'                                              
+               AND STA.WTN = ' '                                                
+            GROUP BY STA.MAN                                                    
+                  ,STA.OSID                                                     
+                  ) MTNM                                                        
+             ON LST.MAN = MTNM.MAN                                              
+            AND 'VW' = MTNM.OSID                                                
+       LEFT OUTER JOIN (                                                        
+            SELECT STB.MAN                                                      
+                  ,STB.OSID                                                     
+                  ,STB.WTN                                                      
+                  ,SUM(1) NBR_ROWS                                              
+              FROM STRUCTURES_T STB                                             
+             WHERE STB.REPORT_ID_TS = STRUCTURE_TS%                             
+               AND STB.POSITION_TYPE = ?                                        
+               AND STB.POSITION_OID = ?                                         
+               AND STB.OSID = 'VW'                                              
+               AND STB.WTN <> ' '                                               
+               AND STB.WTN <> 'SHELLACCT'                                       
+            GROUP BY STB.MAN                                                    
+                  ,STB.OSID                                                     
+                  ,STB.WTN                                                      
+               ) MTNW                                                           
+          ON LST.MAN = MTNW.MAN                                                 
+         AND 'VW' = MTNW.OSID                                                   
+         AND LST.WORKING_TEL_NBR = MTNW.WTN                                     
+     WHERE MTNM.MAN IS NOT NULL                                                 
+        OR MTNW.MAN IS NOT NULL                                                 
+    ) SC1                                                                       
+  WHERE SC1.STRUCT_NODE = %CONSTANT1%                                           
+    AND FILTER = ?                                                              

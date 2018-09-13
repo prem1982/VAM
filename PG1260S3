@@ -1,0 +1,88 @@
+ SELECT SC1.DESCRIPTION                                                         
+       ,SC1.TARGET_FMT                                                          
+    FROM (                                                                      
+     SELECT VZ2520.TEXT_STRING DESCRIPTION                                      
+        ,VZ2520.SEQ1                                                            
+        ,VZ2520.SEQ2                                                            
+        ,VZ2520.PART_NBR                                                        
+        ,CASE WHEN VZ2520.PART_NBR = 0 THEN 'PAGE_FOOTER_BB'                    
+              ELSE 'PAGE_FOOTER_LEFT'                                           
+          END TARGET_FMT                                                        
+      FROM (                                                                    
+      SELECT 0 SEQ1                                                             
+            ,0 SEQ2                                                             
+            ,0 PART_NBR                                                         
+            ,'ACCOUNTS PLAN FOR SHARED USAGE' TEXT_STRING                       
+        FROM BMGVZP.MASTER_ACCT_NO_T MST                                        
+       WHERE MST.MAN = ?                                                        
+         AND MST.MAN_BILL_DATE = ?                                              
+         AND MST.ORIG_SYSTEM_ID = 'VW'                                          
+                                                                                
+       UNION ALL                                                                
+                                                                                
+      SELECT TB1.VZ450_SEQ_NBR SEQ1                                             
+            ,TB1.VZ450_SEQ_NBR SEQ2                                             
+            ,1 PART_NBR                                                         
+            ,TB2A.TEXT_STRING                                                   
+        FROM BMGVZP.CURR_CHAR_T TB1                                             
+       INNER JOIN BMGVZP.REF_TEXT_T TB2A                                        
+          ON TB1.TEXT1_SEQ_NBR = TB2A.TEXT_SEQ_NBR                              
+       WHERE TB1.MAN = ?                                                        
+         AND TB1.MAN_BILL_DATE = ?                                              
+         AND TB1.ORIG_SYSTEM_ID = 'VW'                                          
+                                                                                
+        UNION ALL                                                               
+                                                                                
+      SELECT TB1.VZ450_SEQ_NBR SEQ1                                             
+            ,TB1.VZ450_SEQ_NBR SEQ2                                             
+            ,2 PART_NBR                                                         
+            ,TB2B.TEXT_STRING                                                   
+        FROM BMGVZP.CURR_CHAR_T TB1                                             
+       INNER JOIN BMGVZP.REF_TEXT_T TB2B                                        
+          ON TB1.TEXT2_SEQ_NBR = TB2B.TEXT_SEQ_NBR                              
+       WHERE TB1.MAN = ?                                                        
+         AND TB1.MAN_BILL_DATE = ?                                              
+         AND TB1.ORIG_SYSTEM_ID = 'VW'                                          
+                                                                                
+        UNION ALL                                                               
+                                                                                
+      SELECT TB2.BASE_SEQ_NBR SEQ1                                              
+            ,TB2.VZ450_SEQ_NBR SEQ2                                             
+            ,1 PART_NBR                                                         
+            ,TB2A.TEXT_STRING                                                   
+        FROM BMGVZP.CURR_CHAR_T TB1                                             
+       INNER JOIN BMGVZP.ADDL_TEXT_T TB2                                        
+          ON TB1.MAN = TB2.MAN                                                  
+         AND TB1.MAN_BILL_DATE = TB2.MAN_BILL_DATE                              
+         AND TB1.ORIG_SYSTEM_ID = TB2.ORIG_SYSTEM_ID                            
+         AND TB1.VZ450_SEQ_NBR = TB2.BASE_SEQ_NBR                               
+       INNER JOIN BMGVZP.REF_TEXT_T TB2A                                        
+          ON TB2.TEXT1_SEQ_NBR = TB2A.TEXT_SEQ_NBR                              
+       WHERE TB1.MAN = ?                                                        
+         AND TB1.MAN_BILL_DATE = ?                                              
+         AND TB1.ORIG_SYSTEM_ID = 'VW'                                          
+                                                                                
+        UNION ALL                                                               
+                                                                                
+      SELECT TB2.BASE_SEQ_NBR SEQ1                                              
+            ,TB2.VZ450_SEQ_NBR SEQ2                                             
+            ,2 PART_NBR                                                         
+            ,TB2B.TEXT_STRING                                                   
+        FROM BMGVZP.CURR_CHAR_T TB1                                             
+       INNER JOIN BMGVZP.ADDL_TEXT_T TB2                                        
+          ON TB1.MAN = TB2.MAN                                                  
+         AND TB1.MAN_BILL_DATE = TB2.MAN_BILL_DATE                              
+         AND TB1.ORIG_SYSTEM_ID = TB2.ORIG_SYSTEM_ID                            
+         AND TB1.VZ450_SEQ_NBR = TB2.BASE_SEQ_NBR                               
+       INNER JOIN BMGVZP.REF_TEXT_T TB2B                                        
+          ON TB2.TEXT2_SEQ_NBR = TB2B.TEXT_SEQ_NBR                              
+       WHERE TB1.MAN = ?                                                        
+         AND TB1.MAN_BILL_DATE = ?                                              
+         AND TB1.ORIG_SYSTEM_ID = 'VW'                                          
+        ) VZ2520                                                                
+     GROUP BY VZ2520.SEQ1                                                       
+             ,VZ2520.SEQ2                                                       
+             ,VZ2520.PART_NBR                                                   
+             ,VZ2520.TEXT_STRING                                                
+         ) SC1                                                                  
+   WFILTER = ?                                                                  

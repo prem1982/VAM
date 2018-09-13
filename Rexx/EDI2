@@ -1,0 +1,158 @@
+/*REXX ED1:REXX TO CALCULATE EDI AND MAGTAPE STATS*/                    00010009
+ARG FILEIN HILVL YYYY MM                                                00020033
+ARRY.0 = 2310                                                           00030009
+DO TX = 1 TO ARRY.0                                                     00040009
+   ARRY.TX = 0                                                          00050009
+END                                                                     00060009
+BPMON  = YYYY'-'MM                                                      00070033
+SAY 'MATCH BPMON='BPMON                                                 00080033
+MMM    = GETMMM(MM)                                                     00090033
+DTLSE1 = HILVL"."MMM||YYYY".E1.DETAILX"                                 00100042
+STATSE1 = HILVL"."MMM||YYYY".E1.STATX"                                  00110042
+DTLSM1 = HILVL"."MMM||YYYY".M1.DETAILX"                                 00120042
+STATSM1 = HILVL"."MMM||YYYY".M1.STATX"                                  00130042
+"DELETE '"DTLSE1"'"                                                     00140033
+"DELETE '"STATSE1"'"                                                    00150033
+"DELETE '"DTLSM1"'"                                                     00160033
+"DELETE '"STATSM1"'"                                                    00170033
+"FREE FI(STATSE1)"                                                      00180033
+"FREE FI(DTLSE1)"                                                       00190033
+"FREE FI(STATSM1)"                                                      00200033
+"FREE FI(DTLSM1)"                                                       00210033
+"ALLOC FI(STATSE1) DA('"STATSE1"') NEW CATALOG DATACLAS(PSFB80)"        00220033
+"ALLOC FI(DTLSE1) DA('"DTLSE1"') NEW CATALOG DATACLAS(PSVB) LRECL(4096)"00230035
+"ALLOC FI(STATSM1) DA('"STATSM1"') NEW CATALOG DATACLAS(PSFB80)"        00240033
+"ALLOC FI(DTLSM1) DA('"DTLSM1"') NEW CATALOG DATACLAS(PSVB) LRECL(4096)"00251035
+"FREE FI(LISTIN)"                                                       00260009
+"ALLOC FI(LISTIN) DA('"FILEIN"')"                                       00270009
+"EXECIO 100000 DISKR LISTIN (STEM LISTREC."                             00280032
+INCNT = 0                                                               00290009
+DO WHILE LISTREC.0 > 0                                                  00300009
+   DO TX = 1 TO LISTREC.0                                               00310009
+      INCNT = INCNT + 1                                                 00320009
+      BPMM = SUBSTR(LISTREC.TX,15,7)                                    00330033
+      OSYS = SUBSTR(LISTREC.TX,26,2)                                    00340033
+      ODIS = SUBSTR(LISTREC.TX,29,2)                                    00350024
+      GOGO = 'N'                                                        00360024
+      IF ODIS = 'E1' THEN GOGO = 'Y'                                    00370024
+      IF ODIS = 'M1' THEN GOGO = 'Y'                                    00380024
+      IF BPMM ^= BPMON THEN GOGO = 'N'                                  00390033
+      IF GOGO = 'Y' THEN                                                00400024
+        DO                                                              00410024
+         QUEUE LISTREC.TX                                               00420033
+         QUEUE                                                          00421034
+         SELECT                                                         00430033
+           WHEN ODIS = 'E1' THEN "EXECIO * DISKW DTLSE1"                00440033
+           OTHERWISE "EXECIO * DISKW DTLSM1"                            00450033
+         END                                                            00460033
+         LNG = LENGTH(LISTREC.TX) - 38                                  00470024
+         INSTR = SUBSTR(LISTREC.TX,39,LNG)                              00480024
+         XARR.0 = 0                                                     00490024
+         BEG = 1                                                        00500024
+         XSTR = ''                                                      00510024
+         DO WHILE BEG <= LNG                                            00520024
+             XCH = SUBSTR(INSTR,BEG,1)                                  00530024
+             IF XCH = '|' THEN                                          00540024
+                DO                                                      00550024
+                   XARR.0 = XARR.0 + 1                                  00560024
+                   VV = XARR.0                                          00570024
+                   XARR.VV = XSTR                                       00580024
+                   XSTR = ''                                            00590024
+                   IF VV = 8 THEN BEG = LNG                             00600024
+               END                                                      00610024
+             ELSE                                                       00620024
+               DO                                                       00630024
+                   XSTR = XSTR||XCH                                     00640024
+               END                                                      00650024
+             BEG = BEG + 1                                              00660024
+         END                                                            00670024
+         XARR.0 = XARR.0 + 1                                            00680024
+         VV = XARR.0                                                    00690024
+         XARR.VV = XSTR                                                 00700024
+         Z1 = 0                                                         00710024
+         IF ODIS = 'E1' THEN Z1 = (OSYS * 10) + 1                       00720024
+         IF ODIS = 'M1' THEN Z1 = (OSYS * 10) + 6                       00730024
+         IF Z1 ^= 0 THEN                                                00740024
+            DO                                                          00750024
+                Z2 = Z1 + 1                                             00760024
+                Z3 = Z1 + 2                                             00770024
+                Z4 = Z1 + 3                                             00780024
+                Z5 = Z1 + 4                                             00790024
+                ARRY.Z1 = ARRY.Z1 + 1                                   00800024
+                ONTIME = 'Y'                                            00810024
+                IF XARR.4 > 5 THEN ONTIME = 'N'                         00820024
+                IF XARR.6 > 7 THEN ONTIME = 'N'                         00830024
+                IF XARR.8 > 9 THEN ONTIME = 'N'                         00840024
+                IF ONTIME = 'Y' THEN ARRY.Z2 = ARRY.Z2 + 1              00850024
+                IF XARR.6 > 7 THEN ARRY.Z3 = ARRY.Z3 + 1                00860024
+                IF XARR.8 > 9 THEN ARRY.Z4 = ARRY.Z4 + 1                00870024
+            END                                                         00880024
+        END                                                             00890024
+   END                                                                  00900009
+   SAY 'READ MORE - UP TO 'INCNT                                        00910009
+   "EXECIO 100000 DISKR LISTIN (STEM LISTREC."                          00920032
+END                                                                     00930009
+"EXECIO 0 DISKR LISTIN (STEM LISTREC. FINIS"                            00940009
+"FREE FI(LISTIN)"                                                       00950009
+QUEUE                                                                   00960033
+"EXECIO * DISKW DTLSE1 (FINIS"                                          00970033
+QUEUE                                                                   00980033
+"EXECIO * DISKW DTLSM1 (FINIS"                                          00990033
+DO VSYS = 1 TO 23                                                       01000027
+   Z1 = (VSYS * 10) + 1                                                 01010009
+   XSYS = VSYS                                                          01020028
+   IF VSYS < 10 THEN XSYS = '0'VSYS                                     01030028
+   SAY 'E1-'XSYS' TOT='ARRY.Z1                                          01040029
+   Z2 = Z1 + 1                                                          01050028
+   Z3 = Z1 + 2                                                          01060028
+   Z4 = Z1 + 3                                                          01070028
+   IF ARRY.Z1 = 0 THEN                                                  01080030
+      DO                                                                01090030
+         PCTX = 0.00                                                    01100030
+      END                                                               01110030
+   ELSE                                                                 01120030
+      DO                                                                01130030
+         PCTX = (ARRY.Z2/ARRY.Z1) * 100                                 01140030
+      END                                                               01150030
+      X1 = LEADZERO(ARRY.Z1 9)                                          01151038
+      X2 = LEADZERO(ARRY.Z2 9)                                          01152038
+      X3 = LEADZERO(ARRY.Z3 9)                                          01153038
+      X4 = LEADZERO(ARRY.Z4 9)                                          01154038
+      PCTY = DECPLACE(PCTX 2)                                           01155038
+      PCTZ = LEADZERO(PCTY 6)                                           01156038
+   QUEUE BPMON'|'XSYS'|'X1'|'X2'|'X3'|'X4'|'PCTZ                        01160043
+END                                                                     01170009
+QUEUE                                                                   01180009
+"EXECIO * DISKW STATSE1 (FINIS"                                         01190033
+TX = 1                                                                  01200009
+DO VSYS = 1 TO 23                                                       01210027
+   Z1 = (VSYS * 10) + 6                                                 01220009
+   XSYS = VSYS                                                          01230028
+   IF VSYS < 10 THEN XSYS = '0'VSYS                                     01240028
+   SAY 'M1-'XSYS' TOT='ARRY.Z1                                          01250029
+   Z2 = Z1 + 1                                                          01260028
+   Z3 = Z1 + 2                                                          01270028
+   Z4 = Z1 + 3                                                          01280028
+   IF ARRY.Z1 = 0 THEN                                                  01290031
+      DO                                                                01300031
+         PCTX = 0.00                                                    01310031
+      END                                                               01320031
+   ELSE                                                                 01330031
+      DO                                                                01340031
+         PCTX = (ARRY.Z2/ARRY.Z1) * 100                                 01350031
+      END                                                               01360031
+      X1 = LEADZERO(ARRY.Z1 9)                                          01361038
+      X2 = LEADZERO(ARRY.Z2 9)                                          01362038
+      X3 = LEADZERO(ARRY.Z3 9)                                          01363038
+      X4 = LEADZERO(ARRY.Z4 9)                                          01364038
+      PCTY = DECPLACE(PCTX 2)                                           01365038
+      PCTZ = LEADZERO(PCTY 6)                                           01366038
+   QUEUE BPMON'|'XSYS'|'X1'|'X2'|'X3'|'X4'|'PCTZ                        01368043
+END                                                                     01380009
+QUEUE                                                                   01390033
+"EXECIO * DISKW STATSM1 (FINIS"                                         01400033
+"FREE FI(STATSE1)"                                                      01420033
+"FREE FI(DTLSE1)"                                                       01430033
+"FREE FI(STATSM1)"                                                      01440033
+"FREE FI(DTLSM1)"                                                       01450033
+EXIT                                                                    01460009

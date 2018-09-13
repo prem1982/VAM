@@ -1,0 +1,770 @@
+/******************************* REXX *********************************/        
+/* REXX EXEC ftpusas                                                  */        
+/*                                                                    */        
+/*  FTP FILES FOR ETS LOCATION                                        */        
+/*                                                                    */        
+/*                                                                    */        
+/* reads a LOGRECF file of dataset and destination file names.        */        
+/* reads a seperate ftpaddr file containing the ip, directory and     */        
+/* connection id/password information.                                */        
+/* will then attempt to connect and FTP each one of the files         */        
+/* individually. For files that fail the FTP process it will retry    */        
+/* those up to 5 times (or until it is successful).                   */        
+/* If at the end of all this there are still files that have not been */        
+/* ftp'd then it sets a RC = 2                                        */        
+/*                                                                    */        
+/******************************* REXX *********************************/        
+                                                                                
+ARG db2sys ds_hlq cycle doftp .                                                 
+                                                                                
+ trace o                                                                        
+                                                                                
+ db2sys = strip(db2sys)                                                         
+ if doftp = 'N'                                                                 
+ then say 'ftp is disabled...'                                                  
+ else do                                                                        
+      say 'ftp is enabled....'                                                  
+      doftp = 'Y'                                                               
+      end                                                                       
+                                                                                
+ SELECT                                                                         
+   WHEN DB2SYS  = 'D001'   THEN                                                 
+        TABPREF = 'BMGVZT'                                                      
+   WHEN DB2SYS  = 'D009'   THEN                                                 
+        TABPREF = 'BMGVZP'                                                      
+   WHEN DB2SYS  = 'D38X'   THEN                                                 
+        TABPREF = 'BMGVZS'                                                      
+   OTHERWISE                                                                    
+        TABPREF = 'BMGVZP'                                                      
+ END                                                                            
+                                                                                
+ say 'hlq     = ' ds_hlq                                                        
+ say 'cycle   = ' cycle                                                         
+ say 'db2sys  = ' db2sys                                                        
+ say 'tabpref = ' tabpref                                                       
+                                                                                
+ SIGNAL OFF ERROR /* TURN ERROR-TRAPPING OFF */                                 
+ "SUBCOM DSNREXX"                                                               
+ IF RC THEN                                                                     
+    S_RC = RXSUBCOM('ADD','DSNREXX','DSNREXX')                                  
+                                                                                
+ ADDRESS DSNREXX "CONNECT "DB2SYS                                               
+ IF SQLCODE ^= 0                                                                
+ then do                                                                        
+      SAY ' ERROR CONNECTING TO ' db2sys                                        
+      CALL SQLCA                                                                
+      SAY '  END EXECUTION'                                                     
+      exit 12                                                                   
+      END                                                                       
+                                                                                
+ /* read the PARM_TABLE to pick up the override to the DOFTP parm */            
+ /* to diable ftp insert a row to PARM_TABLE with a value of NOFTP*/            
+                                                                                
+ /* call read_parm_table */                                                     
+                                                                                
+ odsname      = ds_hlq || '.BMGUSAS.OUTPUT2.J' || cycle                         
+ mgmtclass    = 'NOBK35'                                                        
+ dataclass    = 'COMPRESS'                                                      
+ storage_type = 'CYLINDERS'                                                     
+ p_storage    = 1                                                               
+ s_storage    = 1                                                               
+                                                                                
+ tmpftpds     = ds_hlq || '.BMGUSAS.WORK.FTP2'                                  
+                                                                                
+ ftpcrd_name  = ds_hlq || '.BMGUSAS.FTPCRDS2.J' || cycle                        
+                                                                                
+ call read_ftp_address                                                          
+                                                                                
+ /* read all the files to ftp into variables */                                 
+                                                                                
+ call get_files_to_ftp                                                          
+                                                                                
+ /*                                                                             
+ "EXECIO * DISKR FILELST (STEM filelst.)"                                       
+ if RC ^= 0                                                                     
+ then do                                                                        
+      say error reading FILELST file                                            
+      exit 12                                                                   
+      end   */                                                                  
+                                                                                
+ say 'there are ' filelst.0 ' files to send'                                    
+ do this_file = 1 to filelst.0                                                  
+   say filelst.this_file                                                        
+ end                                                                            
+                                                                                
+ /* build one ftp card containing all the files, this will not be               
+    used here as each file will be sent individually. THe single card           
+    may be used later for re-runs etc...                       */               
+                                                                                
+ call build_single_ftp_card                                                     
+                                                                                
+ /****************************************************************/             
+ /* now send the files                                           */             
+ /****************************************************************/             
+                                                                                
+ do this_file = 1 to filelst.0                                                  
+   file_sent.this_file   = 'N'                                                  
+   send_attempts.this_file = 0                                                  
+   /* does the file still exist ? */                                            
+   dsname = strip(word(filelst.this_file,2))                                    
+   ADDRESS TSO "LISTCAT ENT('"dsname"')"                                        
+   IF RC = 0                                                                    
+   then file_exists.this_file = 'Y'                                             
+   else do                                                                      
+        file_exists.this_file = 'N'                                             
+        send_attempts.this_file = 5   /* max */                                 
+        end                                                                     
+                                                                                
+ end                                                                            
+                                                                                
+ keep_trying = 'Y'                                                              
+                                                                                
+ do while (keep_trying = 'Y')                                                   
+                                                                                
+   do this_file = 1 to filelst.0                                                
+                                                                                
+      if file_sent.this_file = 'N' & file_exists.this_file = 'Y'                
+      then do                                                                   
+           fname  = strip(word(filelst.this_file,1))                            
+           dsname = strip(word(filelst.this_file,2))                            
+           say 'attemping to send ' fname                                       
+                                                                                
+           call build_ftp_card                                                  
+                                                                                
+           call alloc_input                                                     
+           call alloc_output                                                    
+                                                                                
+           if doftp = 'Y'                                                       
+           then do                                                              
+                ADDRESS TSO FTP '(EXIT'                                         
+                end                                                             
+           else do                                                              
+                rc = 2                                                          
+                send_attempts.this_file = 5                                     
+                end                                                             
+                                                                                
+           if rc = 0                                                            
+           then do                                                              
+                say 'good return code from FTP'                                 
+                file_sent.this_file = 'Y'                                       
+            /*  ftp_rc = 0   */                                                 
+                end                                                             
+           else do                                                              
+                say 'Bad return code from FTP'                                  
+                send_attempts.this_file = send_attempts.this_file + 1           
+             /* say rc                                                          
+                ftp_rc = rc  */                                                 
+                end                                                             
+                                                                                
+           ADDRESS TSO  "FREE  FI(INPUT)"                                       
+           ADDRESS TSO  "FREE  FI(OUTPUT)"                                      
+           end                                                                  
+   end                                                                          
+                                                                                
+   /* check to see if we need to go around again */                             
+                                                                                
+   keep_trying = 'N'                                                            
+   do this_file = 1 to filelst.0                                                
+     if file_sent.this_file = 'N' & send_attempts.this_file < 5                 
+     then keep_trying = 'Y'                                                     
+   end                                                                          
+                                                                                
+ end                                                                            
+                                                                                
+ ftp_rc = 0                                                                     
+                                                                                
+ /* update the USAS_FILE_CNTL table for those that worked */                    
+ call update_usas_file_cntl                                                     
+                                                                                
+ if ftp_rc = 0                                                                  
+ then do                                                                        
+      say 'All files processed successfully'                                    
+      exit(0)                                                                   
+      end                                                                       
+ else do                                                                        
+      say 'Some files failed'                                                   
+      exit(2)                                                                   
+      end                                                                       
+                                                                                
+return                                                                          
+                                                                                
+/*********************************************************************/         
+/* NAME:     read_parm_table                                         */         
+/*                                                                   */         
+/*********************************************************************/         
+read_parm_table:                                                                
+                                                                                
+sel_sql = "SELECT PARM_NAME," ||,                                               
+                 "PARM_VALUE " ||,                                              
+          "FROM "TABPREF".PARM_TABLE " ||,                                      
+          "WHERE PARM_NAME = 'BMGUSAS' "                                        
+                                                                                
+                                                                                
+/**** FETCH PARAMETERS *****/                                                   
+PARMT = ":XPN,:XPV"                                                             
+FSQL = "FETCH C99 INTO "PARMT                                                   
+                                                                                
+/**** DECLARE CURSOR *****/                                                     
+DCLSQL = "DECLARE C99 CURSOR FOR S99"                                           
+ADDRESS DSNREXX "EXECSQL "DCLSQL                                                
+IF SQLCODE ^= 0                                                                 
+then do                                                                         
+     SAY 'ERROR DECLARING CURSOR C99 - SQLCODE=' SQLCODE                        
+     CALL SQLCA                                                                 
+     exit 12                                                                    
+     END                                                                        
+                                                                                
+/**** PREPARE SELECT SQL ****/                                                  
+ADDRESS DSNREXX "EXECSQL PREPARE S99 FROM :SEL_SQL"                             
+IF SQLCODE ^= 0                                                                 
+then do                                                                         
+     SAY 'ERROR PREPARING 'SEL_SQL ' - SQLCODE=' SQLCODE                        
+     CALL SQLCA                                                                 
+     exit 12                                                                    
+     END                                                                        
+                                                                                
+                                                                                
+/**** OPEN CURSOR ****/                                                         
+ADDRESS DSNREXX "EXECSQL OPEN C99"                                              
+IF SQLCODE ^= 0                                                                 
+then do                                                                         
+     SAY 'ERROR OPENING CURSOR C99 - SQLCODE=' SQLCODE                          
+     CALL SQLCA                                                                 
+     exit 12                                                                    
+     END                                                                        
+                                                                                
+ADDRESS DSNREXX "EXECSQL "FSQL                                                  
+                                                                                
+if SQLCODE = 0                                                                  
+then do                                                                         
+     say "parm_table entry found for FTPUSAS"                                   
+     parms = strip(xpv)                                                         
+     say "value of parms = " parms                                              
+     if parms = 'NOFTP'                                                         
+     then do                                                                    
+          say "Wait a minute, ftp is to be disabled..."                         
+          doftp = 'N'                                                           
+          end                                                                   
+     end                                                                        
+else say "Parm_table entry not found "                                          
+                                                                                
+                                                                                
+ ADDRESS DSNREXX "EXECSQL CLOSE C99"                                            
+ IF SQLCODE ^= 0                                                                
+ then do                                                                        
+      SAY 'ERROR CLOSING CURSOR C99 - SQLCODE=' SQLCODE                         
+      CALL SQLCA                                                                
+      exit 12                                                                   
+      END                                                                       
+                                                                                
+ return                                                                         
+                                                                                
+/*********************************************************************/         
+/* NAME:     get_files_to-ftp                                        */         
+/*                                                                   */         
+/*********************************************************************/         
+get_files_to_ftp:                                                               
+                                                                                
+sel_sql = "SELECT FILE_TS," ||,                                                 
+                 "LOCAL_FILE," ||,                                              
+                 "REMOTE_FILE," ||,                                             
+                 "RESEND_IND2," ||,                                             
+                 "RESEND_COUNT2 " ||,                                           
+          "FROM "TABPREF".USAS_FILE_CNTL " ||,                                  
+          "WHERE RESEND_IND2 = " ||"'"||'Y'||"'",                               
+          "OR SENT_TS2 = " ||"'"||'9999-12-31-00.00.00.000000'||,               
+          "'"||"AND ERROR_CODE = "||"' "||" '",                                 
+          "ORDER BY FILE_TS"                                                    
+                                                                                
+                                                                                
+/**** FETCH PARAMETERS *****/                                                   
+FPARMS = ":XRTS,:XDS,:XSF,:RSI1,:RSC1"                                          
+FSQL = "FETCH C51 INTO "FPARMS                                                  
+                                                                                
+/**** DECLARE CURSOR *****/                                                     
+DCLSQL = "DECLARE C51 CURSOR FOR S51"                                           
+ADDRESS DSNREXX "EXECSQL "DCLSQL                                                
+IF SQLCODE ^= 0                                                                 
+then do                                                                         
+     SAY 'ERROR DECLARING CURSOR C51 - SQLCODE=' SQLCODE                        
+     CALL SQLCA                                                                 
+     exit 12                                                                    
+     END                                                                        
+                                                                                
+/**** PREPARE SELECT SQL ****/                                                  
+ADDRESS DSNREXX "EXECSQL PREPARE S51 FROM :SEL_SQL"                             
+IF SQLCODE ^= 0                                                                 
+then do                                                                         
+     SAY 'ERROR PREPARING 'SEL_SQL ' - SQLCODE=' SQLCODE                        
+     CALL SQLCA                                                                 
+     exit 12                                                                    
+     END                                                                        
+                                                                                
+                                                                                
+/**** OPEN CURSOR ****/                                                         
+ADDRESS DSNREXX "EXECSQL OPEN C51"                                              
+IF SQLCODE ^= 0                                                                 
+then do                                                                         
+     SAY 'ERROR OPENING CURSOR C51 - SQLCODE=' SQLCODE                          
+     CALL SQLCA                                                                 
+     exit 12                                                                    
+     END                                                                        
+                                                                                
+filelst.0 = 0                                                                   
+filelst.  = ''                                                                  
+                                                                                
+fetched = 0                                                                     
+                                                                                
+ADDRESS DSNREXX "EXECSQL "FSQL                                                  
+                                                                                
+do while SQLCODE = 0                                                            
+                                                                                
+ fetched = fetched + 1                                                          
+ filelst.fetched = strip(xsf)||' '||strip(xds)||' '||strip(xrts)||,             
+                  ' '||strip(rsi1)||' '||strip(rsc1)                            
+                                                                                
+ ADDRESS DSNREXX "EXECSQL "FSQL                                                 
+                                                                                
+end                                                                             
+                                                                                
+if SQLCODE ^= 100                                                               
+then do                                                                         
+     SAY 'ERROR FETCHING CURSOR C51 - SQLCODE=' SQLCODE                         
+     CALL SQLCA                                                                 
+     exit 12                                                                    
+     END                                                                        
+                                                                                
+ ADDRESS DSNREXX "EXECSQL CLOSE C51"                                            
+ IF SQLCODE ^= 0                                                                
+ then do                                                                        
+      SAY 'ERROR CLOSING CURSOR C51 - SQLCODE=' SQLCODE                         
+      CALL SQLCA                                                                
+      exit 12                                                                   
+      END                                                                       
+                                                                                
+ filelst.0 = fetched                                                            
+                                                                                
+ return                                                                         
+                                                                                
+/*********************************************************************/         
+/* NAME:     update_usas_file_cntl                                   */         
+/*                                                                   */         
+/*********************************************************************/         
+update_usas_file_cntl:                                                          
+                                                                                
+ say 'Summary of processing'                                                    
+                                                                                
+do this_file = 1 to filelst.0                                                   
+                                                                                
+  fname         = strip(word(filelst.this_file,1))                              
+  dsname        = strip(word(filelst.this_file,2))                              
+  key_ts        = strip(word(filelst.this_file,3))                              
+  resend_ind2   = strip(word(filelst.this_file,4))                              
+  resend_count2 = strip(word(filelst.this_file,5))                              
+/* say 'file_sent.this_file=' file_sent.this_file */                            
+/* say 'resend_ind=' resend_ind  */                                             
+/* say 'resend_count=' resend_count  */                                         
+  if file_sent.this_file = 'Y'                                                  
+  then do                                                                       
+       say fname ' Successful ' send_attempts.this_file key_ts                  
+ /*    say 'resend_ind=' resend_ind  */                                         
+     if resend_ind2 = 'Y' then                                                  
+        do                                                                      
+            RESEND_COUNT2 = RESEND_COUNT2 + 1                                   
+           UPD_SQL = "UPDATE "TABPREF".USAS_FILE_CNTL " ||,                     
+                  "SET RESEND_TS2 = CURRENT TIMESTAMP," ||,                     
+                  "RESEND_COUNT2 = " ||RESEND_COUNT2||","||,                    
+                  "RESEND_IND2 = " ||"'"||'N'||"'"||,                           
+                     "WHERE FILE_TS = '"key_ts"'"                               
+       end                                                                      
+                                                                                
+     if resend_ind2 = 'N' then                                                  
+        do                                                                      
+           UPD_SQL = "UPDATE "TABPREF".USAS_FILE_CNTL " ||,                     
+                   "SET SENT_TS2 = CURRENT TIMESTAMP "||,                       
+                     "WHERE FILE_TS = '"key_ts"'"                               
+       end                                                                      
+                                                                                
+                                                                                
+       ADDRESS DSNREXX "EXECSQL "upd_sql                                        
+       say 'upd_sql=' upd_sql                                                   
+       IF SQLCODE ^= 0                                                          
+       then do                                                                  
+            say 'error during update'                                           
+            call SQLCA                                                          
+            SAY '  END EXECUTION'                                               
+            exit 12                                                             
+            end                                                                 
+       end                                                                      
+  else do                                                                       
+       if file_exists.this_file = 'N'                                           
+       then say dsname ' does not exist any longer'                             
+       else say fname ' failed ' send_attempts.this_file                        
+       ftp_rc = 2                                                               
+       end                                                                      
+end                                                                             
+                                                                                
+return                                                                          
+                                                                                
+/*********************************************************************/         
+/* NAME:     read_ftp_address                                        */         
+/*                                                                   */         
+/*********************************************************************/         
+read_ftp_address:                                                               
+                                                                                
+ "EXECIO * DISKR FTPADDR (STEM ftpadd.)"                                        
+ if RC ^= 0                                                                     
+ then do                                                                        
+      say error reading FTPADDR file                                            
+      exit 12                                                                   
+      end                                                                       
+                                                                                
+ if ftpadd.0 ^= 2                                                               
+ then do                                                                        
+      say error with FTPADDR file                                               
+      exit 12                                                                   
+      end                                                                       
+                                                                                
+ /* ftpaddr must be of the format                                               
+    INTERNAL 1 ip    id   p/w                                                   
+    INTERNAL 2 dir              */                                              
+                                                                                
+ int_num = 1                                                                    
+ int_dest     = word(ftpadd.int_num,3)                                          
+ int_user     = word(ftpadd.int_num,4)                                          
+ int_passw    = word(ftpadd.int_num,5)                                          
+ int_num      = int_num + 1                                                     
+ int_direct   = word(ftpadd.int_num,3)                                          
+ say 'Internal ip info'                                                         
+ say 'Ip address    :' int_dest                                                 
+ say 'Id            :' int_user                                                 
+ say 'p/w           :' int_passw                                                
+ say 'dir           :' int_direct                                               
+                                                                                
+ return                                                                         
+                                                                                
+/*********************************************************************/         
+/* NAME:     build_ftp_card                                          */         
+/*                                                                   */         
+/*********************************************************************/         
+build_ftp_card:                                                                 
+                                                                                
+ ADDRESS  TSO "LISTCAT ENT('"tmpftpds"')"                                       
+ IF RC = 0                                                                      
+ then do                                                                        
+      ADDRESS TSO "ALLOC F(FTPW) DA('"tmpftpds"') OLD"                          
+      if rc = 0                                                                 
+      then do                                                                   
+           say 'ftp work file allocated with disp of OLD'                       
+           end                                                                  
+      else do                                                                   
+           say 'Error allocating ftp work file'                                 
+           say rc                                                               
+           exit(12)                                                             
+           end                                                                  
+      end                                                                       
+ else do                                                                        
+      ADDRESS TSO "ALLOC F(FTPW) DA('"tmpftpds"')",                             
+      "mgmtclas("mgmtclass") lrecl(80) dataclas("dataclass")",                  
+      storage_type" space("p_storage","s_storage") NEW"                         
+                                                                                
+      if rc = 0                                                                 
+      then do                                                                   
+           say 'ftp work file allocated NEW'                                    
+           end                                                                  
+      else do                                                                   
+           say 'Error allocating ftp work file'                                 
+           say rc                                                               
+           exit(12)                                                             
+           end                                                                  
+      end                                                                       
+                                                                                
+                                                                                
+ dest   = int_dest                                                              
+ user   = int_user                                                              
+ passw  = int_passw                                                             
+ direct = int_direct                                                            
+                                                                                
+ ftpwork_cnt = 0                                                                
+ ftpwork.0   = 0                                                                
+ ftpwork.    = ''                                                               
+                                                                                
+ /*  say 'dest   = ' dest */                                                    
+                                                                                
+ if (ftpwork_cnt = 0) THEN DO                                                   
+    /* ftp destination */                                                       
+    ftpwork_cnt = ftpwork_cnt + 1                                               
+    ftpwork.ftpwork_cnt = dest                                                  
+                                                                                
+    /* user            */                                                       
+    ftpwork_cnt = ftpwork_cnt + 1                                               
+    ftpwork.ftpwork_cnt = user                                                  
+ end                                                                            
+ else do                                                                        
+    /* ftp destination */                                                       
+    ftpwork_cnt = ftpwork_cnt + 1                                               
+    ftpwork.ftpwork_cnt = "OPEN " || dest                                       
+                                                                                
+    /* user            */                                                       
+    ftpwork_cnt = ftpwork_cnt + 1                                               
+    ftpwork.ftpwork_cnt = "USER " || user                                       
+ end                                                                            
+                                                                                
+ /* password        */                                                          
+ ftpwork_cnt = ftpwork_cnt + 1                                                  
+ ftpwork.ftpwork_cnt = passw                                                    
+                                                                                
+ /* debug           */                                                          
+ if (debug > 0 & debug <= 9) | debug = 'Y' then do                              
+    ftpwork_cnt = ftpwork_cnt + 1                                               
+    ftpwork.ftpwork_cnt = "LOCSTAT"                                             
+    ftpwork_cnt = ftpwork_cnt + 1                                               
+    ftpwork.ftpwork_cnt = "DEBUG ALL TIME"                                      
+ end                                                                            
+                                                                                
+ /* directory       */                                                          
+ ftpwork_cnt = ftpwork_cnt + 1                                                  
+ ftpwork.ftpwork_cnt = 'CD ' direct                                             
+                                                                                
+                                                                                
+ /* put             */                                                          
+ ftpwork_cnt = ftpwork_cnt + 1                                                  
+ ftpwork.ftpwork_cnt = "PUT '"dsname"' +"                                       
+                                                                                
+ /* dest file name  */                                                          
+ ftpwork_cnt = ftpwork_cnt + 1                                                  
+ ftpwork.ftpwork_cnt = "     " fname                                            
+                                                                                
+ /* CLOSE           */                                                          
+ ftpwork_cnt = ftpwork_cnt + 1                                                  
+ ftpwork.ftpwork_cnt = 'CLOSE'                                                  
+                                                                                
+ /* QUIT           */                                                           
+ ftpwork_cnt = ftpwork_cnt + 1                                                  
+ ftpwork.ftpwork_cnt = 'QUIT'                                                   
+                                                                                
+ if ftpwork_cnt > 0                                                             
+ then do                                                                        
+    "MAKEBUF"                                                                   
+    "EXECIO * DISKW FTPW (STEM ftpwork. FINIS)"                                 
+    "DROPBUF"                                                                   
+ end                                                                            
+                                                                                
+ ADDRESS TSO  "FREE  FI(FTPW)"                                                  
+                                                                                
+return                                                                          
+                                                                                
+                                                                                
+/*********************************************************************/         
+/* NAME:     build_single_ftp_card                                   */         
+/*                                                                   */         
+/*********************************************************************/         
+build_single_ftp_card:                                                          
+                                                                                
+ ADDRESS  TSO "LISTCAT ENT('"ftpcrd_name"')"                                    
+ IF RC = 0                                                                      
+ then do                                                                        
+      ADDRESS TSO "ALLOC F(FTPC) DA('"ftpcrd_name"') OLD"                       
+      if rc = 0                                                                 
+      then do                                                                   
+           say 'ftpcrd file allocated with disp of OLD'                         
+           end                                                                  
+      else do                                                                   
+           say 'Error allocating ftpcrd file'                                   
+           say rc                                                               
+           exit(12)                                                             
+           end                                                                  
+      end                                                                       
+ else do                                                                        
+      ADDRESS TSO "ALLOC F(FTPC) DA('"ftpcrd_name"')",                          
+      "mgmtclas("mgmtclass") lrecl(80) dataclas("dataclass")",                  
+      storage_type" space("p_storage","s_storage") NEW"                         
+                                                                                
+      if rc = 0                                                                 
+      then do                                                                   
+           say 'ftpcrd file allocated NEW'                                      
+           end                                                                  
+      else do                                                                   
+           say 'Error allocating ftpcrd file'                                   
+           say rc                                                               
+           exit(12)                                                             
+           end                                                                  
+      end                                                                       
+                                                                                
+                                                                                
+ dest   = int_dest                                                              
+ user   = int_user                                                              
+ passw  = int_passw                                                             
+ direct = int_direct                                                            
+                                                                                
+ ftpcrds_cnt = 0                                                                
+                                                                                
+ /*  say 'dest   = ' dest */                                                    
+                                                                                
+ if (ftpcrds_cnt = 0) THEN DO                                                   
+    /* ftp destination */                                                       
+    ftpcrds_cnt = ftpcrds_cnt + 1                                               
+    ftpcrds.ftpcrds_cnt = dest                                                  
+                                                                                
+    /* user            */                                                       
+    ftpcrds_cnt = ftpcrds_cnt + 1                                               
+    ftpcrds.ftpcrds_cnt = user                                                  
+ end                                                                            
+ else do                                                                        
+    /* ftp destination */                                                       
+    ftpcrds_cnt = ftpcrds_cnt + 1                                               
+    ftpcrds.ftpcrds_cnt = "OPEN " || dest                                       
+                                                                                
+    /* user            */                                                       
+    ftpcrds_cnt = ftpcrds_cnt + 1                                               
+    ftpcrds.ftpcrds_cnt = "USER " || user                                       
+ end                                                                            
+                                                                                
+ /* password        */                                                          
+ ftpcrds_cnt = ftpcrds_cnt + 1                                                  
+ ftpcrds.ftpcrds_cnt = passw                                                    
+                                                                                
+ /* debug           */                                                          
+ if (debug > 0 & debug <= 9) | debug = 'Y' then do                              
+    ftpcrds_cnt = ftpcrds_cnt + 1                                               
+    ftpcrds.ftpcrds_cnt = "LOCSTAT"                                             
+    ftpcrds_cnt = ftpcrds_cnt + 1                                               
+    ftpcrds.ftpcrds_cnt = "DEBUG ALL TIME"                                      
+ end                                                                            
+                                                                                
+ /* directory       */                                                          
+ ftpcrds_cnt = ftpcrds_cnt + 1                                                  
+ ftpcrds.ftpcrds_cnt = 'CD ' direct                                             
+                                                                                
+ do idx = 1 to filelst.0                                                        
+                                                                                
+   fname  = strip(word(filelst.idx,1))                                          
+   dsname = strip(word(filelst.idx,2))                                          
+                                                                                
+ /*say 'processing file  ' idx ' name = ' fname                                 
+   say 'processing dsname' idx ' name = ' dsname  */                            
+                                                                                
+   /* put             */                                                        
+   ftpcrds_cnt = ftpcrds_cnt + 1                                                
+   ftpcrds.ftpcrds_cnt = "PUT '"dsname"' +"                                     
+                                                                                
+   /* dest file name  */                                                        
+   ftpcrds_cnt = ftpcrds_cnt + 1                                                
+   ftpcrds.ftpcrds_cnt = "     " fname                                          
+                                                                                
+ end                                                                            
+                                                                                
+ /* CLOSE           */                                                          
+ ftpcrds_cnt = ftpcrds_cnt + 1                                                  
+ ftpcrds.ftpcrds_cnt = 'CLOSE'                                                  
+                                                                                
+ /* QUIT           */                                                           
+ ftpcrds_cnt = ftpcrds_cnt + 1                                                  
+ ftpcrds.ftpcrds_cnt = 'QUIT'                                                   
+                                                                                
+ if ftpcrds_cnt > 0                                                             
+ then do                                                                        
+    "MAKEBUF"                                                                   
+    "EXECIO * DISKW FTPC (STEM ftpcrds. FINIS)"                                 
+    "DROPBUF"                                                                   
+ end                                                                            
+                                                                                
+ ADDRESS TSO  "FREE  FI(FTPC)"                                                  
+                                                                                
+return                                                                          
+                                                                                
+/*********************************************************************/         
+/* NAME:     ALLOC input                                             */         
+/*                                                                   */         
+/*********************************************************************/         
+alloc_input:                                                                    
+                                                                                
+ ADDRESS TSO "ALLOC F(input) DA('"tmpftpds"') REUSE SHR"                        
+ if rc = 0                                                                      
+ then do                                                                        
+      say 'INPUT file allocated'                                                
+      end                                                                       
+ else do                                                                        
+      say 'Error allocating input file'                                         
+      say rc                                                                    
+      exit(12)                                                                  
+      end                                                                       
+                                                                                
+ return                                                                         
+                                                                                
+/*********************************************************************/         
+/* NAME:     ALLOC output                                            */         
+/*                                                                   */         
+/*********************************************************************/         
+alloc_output:                                                                   
+                                                                                
+ ADDRESS  TSO "LISTCAT ENT('"odsname"')"                                        
+ IF RC = 0                                                                      
+ then do                                                                        
+      ADDRESS TSO "ALLOC F(output) DA('"odsname"') MOD"                         
+      if rc = 0                                                                 
+      then do                                                                   
+           say 'OUTPUT file allocated with disp of MOD'                         
+           end                                                                  
+      else do                                                                   
+           say 'Error allocating output file'                                   
+           say rc                                                               
+           exit(12)                                                             
+           end                                                                  
+      end                                                                       
+ else do                                                                        
+      ADDRESS TSO "ALLOC F(output) DA('"odsname"')",                            
+      "mgmtclas("mgmtclass") lrecl(133) dataclas("dataclass")",                 
+      storage_type" space("p_storage","s_storage") NEW"                         
+                                                                                
+      if rc = 0                                                                 
+      then do                                                                   
+           say 'OUTPUT file allocated NEW'                                      
+           end                                                                  
+      else do                                                                   
+           say 'Error allocating output file'                                   
+           say rc                                                               
+           exit(12)                                                             
+           end                                                                  
+      end                                                                       
+                                                                                
+ return                                                                         
+                                                                                
+/************* SQL ERROR ROUTINE *************/                                 
+SQLCA:                                                                          
+   SAY "SQLSTATE =" SQLSTATE                                                    
+   SAY "SQLWARN =" SQLWARN.1",",                                                
+               || SQLWARN.2",",                                                 
+               || SQLWARN.3",",                                                 
+               || SQLWARN.4",",                                                 
+               || SQLWARN.5",",                                                 
+               || SQLWARN.6",",                                                 
+               || SQLWARN.7",",                                                 
+               || SQLWARN.8",",                                                 
+               || SQLWARN.9",",                                                 
+               || SQLWARN.10""                                                  
+   SAY "SQLERRD =" SQLERRD.1",",                                                
+               || SQLERRD.2",",                                                 
+               || SQLERRD.3",",                                                 
+               || SQLERRD.4",",                                                 
+               || SQLERRD.5",",                                                 
+               || SQLERRD.6                                                     
+   SAY "SQLERRP  =" SQLERRP                                                     
+   SAY "SQLERRMC =" SQLERRMC                                                    
+   SAY "SQLCODE  =" SQLCODE                                                     
+   RETURN                                                                       
+                                                                                
+/*************  SYNTAX ERROR HANDLER **********/                                
+CRAPCODE:                                                                       
+SAY 'YOU HAVE CRAP CODE AT LINE' SIGL                                           
+SAY SOURCELINE(SIGL)                                                            
+SAY 'REXX GAVE A RETURN CODE OF' RC ', WHICH MEANS :'                           
+SAY ERRORTEXT(RC)                                                               
+EXIT                                                                            
+                                                                                
+/************* EXTERNAL ERROR HANDLER **********/                               
+BADDIES:                                                                        
+SAY 'YOU HAVE BEEN LET DOWN BY FACTORS BEYOND YOUR CONTROL AT LINE' SIGL        
+SAY SOURCELINE(SIGL)                                                            
+SAY 'RC =' RC                                                                   
+EXIT                                                                            

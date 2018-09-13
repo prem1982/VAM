@@ -1,0 +1,41 @@
+      SELECT SC1.ACCT_NBR                                                       
+            ,SC1.ACCT_ALIAS                                                     
+            ,SC1.WTN                                                            
+            ,SC1.CUST_ID_CD                                                     
+            ,SC1.USER_ID                                                        
+            ,SC1.PLAN_DESC                                                      
+            ,SC1.COST_CNTR                                                      
+            ,SC1.ACCT_CHGS                                                      
+            ,SC1.VOICE_CHGS                                                     
+            ,SC1.ACCESS_CHGS                                                    
+            ,SC1.EQUIP_CHGS                                                     
+            ,SC1.ROAMER_CHGS                                                    
+            ,SC1.MSG_CHGS                                                       
+            ,SC1.DATA_USAGE_CHGS                                                
+            ,SC1.OTHER_CHGS                                                     
+            ,SC1.TAX_SURCHGS                                                    
+            ,SC1.THIRD_PARTY_LINE                                               
+            ,SC1.TOT_CURR_CHGS                                                  
+        FROM (                                                                  
+        SELECT 'Account Number' AS ACCT_NBR                                     
+        ,CASE WHEN ALIAS_FLAG% = 'Y'                                            
+             THEN 'Billing Account Alias'                                       
+             ELSE '' END ACCT_ALIAS                                             
+        ,'Wireless Number' AS WTN                                               
+        ,'User Name' AS CUST_ID_CD                                              
+        ,'User ID' AS USER_ID                                                   
+        ,'Price Plan Description' AS PLAN_DESC                                  
+        ,'Cost Center' AS COST_CNTR                                             
+        ,'Account Chgs' AS ACCT_CHGS                                            
+        ,'Voice Chgs' AS VOICE_CHGS                                             
+        ,'Monthly Access Chgs' AS ACCESS_CHGS                                   
+        ,'Equip. Chgs' AS EQUIP_CHGS                                            
+        ,'Roaming Chgs' AS ROAMER_CHGS                                          
+        ,'Messaging Chgs' AS MSG_CHGS                                           
+        ,'Data Chgs' AS DATA_USAGE_CHGS                                         
+        ,'Other Chgs & Credits' AS OTHER_CHGS                                   
+        ,'Taxes and Surchgs' AS TAX_SURCHGS                                     
+        ,'Third-Party Charges' as THIRD_PARTY_LINE                              
+        ,'Total Current Chgs' AS TOT_CURR_CHGS                                  
+         FROM SYSIBM.SYSDUMMY1                                                  
+           ) SC1                                                                

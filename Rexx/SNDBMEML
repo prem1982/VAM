@@ -1,0 +1,719 @@
+/******************************* REXX *********************************/        
+/******************************* REXX *********************************/        
+                                                                                
+ARG db2sys ds_hlq cycle .                                                       
+                                                                                
+ trace o                                                                        
+                                                                                
+ db2sys       = strip(db2sys)                                                   
+ ds_hlq       = strip(ds_hlq)                                                   
+ mgmtclass    = 'NOBK03'                                                        
+ dataclass    = 'COMPRESS'                                                      
+ storage_type = 'TRACKS'                                                        
+ p_storage    = 1                                                               
+ s_storage    = 1                                                               
+                                                                                
+ disable_process = 'N'                                                          
+ use_test_email_addr = 'N'                                                      
+ test_email = ''                                                                
+                                                                                
+ emails.  = ''                                                                  
+                                                                                
+ SELECT                                                                         
+   WHEN DB2SYS  = 'D001'                                                        
+     then do                                                                    
+          TABPREF = 'BMGVZT'                                                    
+          REXX_LIB = 'BMGVZ0CN.UNIT.REXXLIB'                                    
+          end                                                                   
+   WHEN DB2SYS  = 'D009'                                                        
+     then do                                                                    
+          TABPREF = 'BMGVZP'                                                    
+          REXX_LIB = 'BMGVZ0CN.UNIT.REXXLIB'                                    
+          end                                                                   
+   WHEN DB2SYS  = 'D38X'                                                        
+     then do                                                                    
+          TABPREF = 'BMGVZS'                                                    
+          REXX_LIB = 'BMGVZ0CN.UNIT.REXXLIB'                                    
+          end                                                                   
+   OTHERWISE                                                                    
+          do                                                                    
+          TABPREF = 'BMGVZP'                                                    
+          REXX_LIB = 'BMGNY0DN.REXX.EXEC'                                       
+          end                                                                   
+ END                                                                            
+                                                                                
+ tmpaddrds    = ds_hlq || '.SNDBMEML.WORK.ADDR'                                 
+ tmpmsgds     = ds_hlq || '.SNDBMEML.WORK.MSG'                                  
+                                                                                
+ SIGNAL OFF ERROR /* TURN ERROR-TRAPPING OFF */                                 
+ "SUBCOM DSNREXX"                                                               
+ IF RC THEN                                                                     
+    S_RC = RXSUBCOM('ADD','DSNREXX','DSNREXX')                                  
+                                                                                
+ ADDRESS DSNREXX "CONNECT "DB2SYS                                               
+ IF SQLCODE ^= 0                                                                
+ then do                                                                        
+      SAY ' ERROR CONNECTING TO ' db2sys                                        
+      CALL SQLCA                                                                
+      SAY '  END EXECUTION'                                                     
+      exit 12                                                                   
+      END                                                                       
+                                                                                
+ /* read in the email template */                                               
+ "EXECIO * DISKR EMLTEMP (STEM emltemp.)"                                       
+ if RC ^= 0                                                                     
+ then do                                                                        
+      say error reading EMLTEMP file                                            
+      exit 12                                                                   
+      end                                                                       
+                                                                                
+ /* read in the CC email addresses */                                           
+ "EXECIO * DISKR EMLCC (STEM emlcc.)"                                           
+ if RC ^= 0                                                                     
+ then do                                                                        
+      say error reading EMLCC file                                              
+      exit 12                                                                   
+      end                                                                       
+                                                                                
+ cc_address_cnt = 0                                                             
+ cc_addresses. = ''                                                             
+ do i = 1 to emlcc.0                                                            
+   cc_address_cnt = cc_address_cnt + 1                                          
+   cc_addresses.cc_address_cnt = strip(emlcc.i)                                 
+ end                                                                            
+                                                                                
+ /* read in the BCC email addresses */                                          
+ "EXECIO * DISKR EMLBCC (STEM emlbcc.)"                                         
+ if RC ^= 0                                                                     
+ then do                                                                        
+      say error reading EMLBCC file                                             
+      exit 12                                                                   
+      end                                                                       
+                                                                                
+ bcc_address_cnt = 0                                                            
+ bcc_addresses. = ''                                                            
+ do i = 1 to emlbcc.0                                                           
+   bcc_address_cnt = bcc_address_cnt + 1                                        
+   bcc_addresses.bcc_address_cnt = strip(emlbcc.i)                              
+ end                                                                            
+                                                                                
+ /* read the parm_table to see if we should                                     
+    a) disable the process or                                                   
+    b) send all emails to a default address (for testing?) */                   
+ call read_parm_table                                                           
+                                                                                
+ if disable_process = 'Y'                                                       
+ then do                                                                        
+      say 'exiting....'                                                         
+      exit 0                                                                    
+      end                                                                       
+                                                                                
+ say 'Running email notification process'                                       
+                                                                                
+ if use_test_email_addr = 'Y'                                                   
+ then say 'override email addresses in table with ' test_email                  
+ else say 'using email addresses in contacts table'                             
+                                                                                
+                                                                                
+ /* now get the messages to send */                                             
+                                                                                
+ sel_sql = "SELECT ERR.CONFIG_ID," ||,                                          
+                 "ERR.MAN_BILL_DATE," ||,                                       
+                 "ERR.EMAIL_MESSAGE " ||,                                       
+          "FROM "TABPREF".BM_CFG_ERROR_T ERR " ||,                              
+          "WHERE ERR.EMAIL_SENT_TS IS NULL " ||,                                
+          "ORDER BY ERR.CONFIG_ID"                                              
+                                                                                
+     /*   " AND ERR.CONFIG_ID = '24126-01' "||,  */                             
+                                                                                
+ /**** FETCH PARAMETERS *****/                                                  
+ FPARMS = ":X_CONFIG_ID,:X_MAN_BILL_DATE,:X_EMAIL_MESSAGE"                      
+                                                                                
+ FSQL = "FETCH C51 INTO "FPARMS                                                 
+                                                                                
+ /**** DECLARE CURSOR *****/                                                    
+ DCLSQL = "DECLARE C51 CURSOR FOR S51"                                          
+ ADDRESS DSNREXX "EXECSQL "DCLSQL                                               
+ IF SQLCODE ^= 0                                                                
+ then do                                                                        
+      SAY 'ERROR DECLARING CURSOR C51 - SQLCODE=' SQLCODE                       
+      CALL SQLCA                                                                
+      exit 12                                                                   
+      END                                                                       
+                                                                                
+ /**** PREPARE SELECT SQL ****/                                                 
+ ADDRESS DSNREXX "EXECSQL PREPARE S51 FROM :SEL_SQL"                            
+ IF SQLCODE ^= 0                                                                
+ then do                                                                        
+      SAY 'ERROR PREPARING 'SEL_SQL ' - SQLCODE=' SQLCODE                       
+      CALL SQLCA                                                                
+      exit 12                                                                   
+      END                                                                       
+                                                                                
+                                                                                
+ /**** OPEN CURSOR ****/                                                        
+ ADDRESS DSNREXX "EXECSQL OPEN C51"                                             
+ IF SQLCODE ^= 0                                                                
+ then do                                                                        
+      SAY 'ERROR OPENING CURSOR C51 - SQLCODE=' SQLCODE                         
+      CALL SQLCA                                                                
+      exit 12                                                                   
+      END                                                                       
+                                                                                
+                                                                                
+ fetched = 0                                                                    
+                                                                                
+ ADDRESS DSNREXX "EXECSQL "FSQL                                                 
+                                                                                
+ do while SQLCODE = 0                                                           
+                                                                                
+  fetched = fetched + 1                                                         
+  x_config_id     = strip(x_config_id)                                          
+  x_man_bill_date = strip(x_man_bill_date)                                      
+  x_email_message = strip(x_email_message)                                      
+                                                                                
+  /* reformat the email message */                                              
+  msg_lines. = ''                                                               
+  msg_lines_cnt = 0                                                             
+  keep_going = 'Y'                                                              
+  do while (keep_going = 'Y')                                                   
+    msg_lines_cnt = msg_lines_cnt + 1                                           
+    if index(x_email_message,'#') > 0                                           
+    then do                                                                     
+         msg_lines.msg_lines_cnt,                                               
+              = substr(x_email_message,1,index(x_email_message,'#')-1)          
+         x_email_message,                                                       
+              = substr(x_email_message,index(x_email_message,'#')+1)            
+         end                                                                    
+    else do                                                                     
+         msg_lines.msg_lines_cnt = x_email_message                              
+         keep_going = 'N'                                                       
+         end                                                                    
+  end                                                                           
+                                                                                
+  say 'there are ' msg_lines_cnt ' message lines '                              
+  do xx = 1 to msg_lines_cnt                                                    
+    say msg_lines.xx                                                            
+  end                                                                           
+                                                                                
+                                                                                
+  to_address_cnt = 0                                                            
+  to_addresses. = ''                                                            
+                                                                                
+  call get_email_addresses                                                      
+                                                                                
+  say 'to_address_cnt  ' to_address_cnt                                         
+  say 'cc_address_cnt  ' cc_address_cnt                                         
+  say 'bcc_address_cnt ' bcc_address_cnt                                        
+                                                                                
+  if use_test_email_addr = 'Y'                                                  
+  then do                                                                       
+       say 'but overriding the email addresses'                                 
+       cc_address_cnt = 0                                                       
+       bcc_address_cnt = 0                                                      
+       to_address_cnt = 1                                                       
+       to_addresses.1 = test_email                                              
+       end                                                                      
+                                                                                
+  if to_address_cnt > 0 or cc_address_cnt > 0 or bcc_address_cnt > 0            
+  then do                                                                       
+       say 'Sending email'                                                      
+       call send_email                                                          
+       end                                                                      
+                                                                                
+  call update_bm_cfg_error                                                      
+                                                                                
+  ADDRESS DSNREXX "EXECSQL "FSQL                                                
+ end                                                                            
+                                                                                
+ if SQLCODE ^= 100                                                              
+ then do                                                                        
+      SAY 'ERROR FETCHING CURSOR C51 - SQLCODE=' SQLCODE                        
+      CALL SQLCA                                                                
+      exit 12                                                                   
+      END                                                                       
+                                                                                
+  ADDRESS DSNREXX "EXECSQL CLOSE C51"                                           
+  IF SQLCODE ^= 0                                                               
+  then do                                                                       
+       SAY 'ERROR CLOSING CURSOR C51 - SQLCODE=' SQLCODE                        
+       CALL SQLCA                                                               
+       exit 12                                                                  
+       END                                                                      
+                                                                                
+  filelst.0 = fetched                                                           
+                                                                                
+                                                                                
+                                                                                
+ return                                                                         
+                                                                                
+/*********************************************************************/         
+/* NAME:     read_parm_table                                         */         
+/*                                                                   */         
+/*********************************************************************/         
+read_parm_table:                                                                
+                                                                                
+parm_sql = "SELECT PARM_NAME," ||,                                              
+                 "PARM_VALUE " ||,                                              
+          "FROM "TABPREF".PARM_TABLE " ||,                                      
+          "WHERE PARM_NAME = 'SNDBMEML' WITH UR "                               
+                                                                                
+                                                                                
+/**** FETCH PARAMETERS *****/                                                   
+PARMT = ":XPN,:XPV"                                                             
+PSQL = "FETCH C99 INTO "PARMT                                                   
+                                                                                
+/**** DECLARE CURSOR *****/                                                     
+DCLSQL = "DECLARE C99 CURSOR FOR S99"                                           
+ADDRESS DSNREXX "EXECSQL "DCLSQL                                                
+IF SQLCODE ^= 0                                                                 
+then do                                                                         
+     SAY 'ERROR DECLARING CURSOR C99 - SQLCODE=' SQLCODE                        
+     CALL SQLCA                                                                 
+     exit 12                                                                    
+     END                                                                        
+                                                                                
+/**** PREPARE SELECT SQL ****/                                                  
+ADDRESS DSNREXX "EXECSQL PREPARE S99 FROM :PARM_SQL"                            
+IF SQLCODE ^= 0                                                                 
+then do                                                                         
+     SAY 'ERROR PREPARING 'PARM_SQL ' - SQLCODE=' SQLCODE                       
+     CALL SQLCA                                                                 
+     exit 12                                                                    
+     END                                                                        
+                                                                                
+                                                                                
+/**** OPEN CURSOR ****/                                                         
+ADDRESS DSNREXX "EXECSQL OPEN C99"                                              
+IF SQLCODE ^= 0                                                                 
+then do                                                                         
+     SAY 'ERROR OPENING CURSOR C99 - SQLCODE=' SQLCODE                          
+     CALL SQLCA                                                                 
+     exit 12                                                                    
+     END                                                                        
+                                                                                
+ADDRESS DSNREXX "EXECSQL "PSQL                                                  
+                                                                                
+if SQLCODE = 0                                                                  
+then do                                                                         
+     say "parm_table entry found for SNDBMEML"                                  
+     parms = strip(xpv)                                                         
+     say "value of parms = " parms                                              
+     if word(parms,1) = 'DISABLE'                                               
+     then do                                                                    
+          say "Wait a minute, email is to be disabled..."                       
+          disable_process = 'Y'                                                 
+          end                                                                   
+     if word(parms,2) = 'NORMAL'                                                
+     then do                                                                    
+          say "Normal email processing"                                         
+          use_test_email_addr = 'N'                                             
+          end                                                                   
+     else do                                                                    
+          use_test_email_addr = 'Y'                                             
+          /* parm should be EMAIL=derek.strachan@verizonbusiness.com */         
+          test_email = strip(substr(word(parms,2),7))                           
+          end                                                                   
+     end                                                                        
+else do                                                                         
+     say "Parm_table entry not found "                                          
+     disable_process = 'N'                                                      
+     use_test_email_addr = 'N'                                                  
+     end                                                                        
+                                                                                
+                                                                                
+ ADDRESS DSNREXX "EXECSQL CLOSE C99"                                            
+ IF SQLCODE ^= 0                                                                
+ then do                                                                        
+      SAY 'ERROR CLOSING CURSOR C99 - SQLCODE=' SQLCODE                         
+      CALL SQLCA                                                                
+      exit 12                                                                   
+      END                                                                       
+                                                                                
+ return                                                                         
+                                                                                
+/*********************************************************************/         
+/* NAME:    get_email_addresses                                      */         
+/*                                                                   */         
+/*********************************************************************/         
+get_email_addresses:                                                            
+                                                                                
+ sel_sql52 = "SELECT CON.CONFIG_ID," ||,                                        
+                 "CON.CONTACT_SEQ, " ||,                                        
+                 "CON.CONTACT_EMAIL_ID " ||,                                    
+          "FROM "TABPREF".DISTR_CONTACT_T CON "||,                              
+          "WHERE CON.CONFIG_ID = '"X_CONFIG_ID"' " ||,                          
+          "  AND CON.CONTACT_TYPE = '"TEAM"' " ||,                              
+          "  AND CON.END_DATE = '9999-12-31' " ||,                              
+          "  AND CON.CONTACT_EMAIL_ID <> '' " ||,                               
+          "ORDER BY CON.CONTACT_SEQ"                                            
+                                                                                
+     /*   "  AND CON.CONFIG_ID = '24126-01' "||,  */                            
+ say sel_sql52                                                                  
+                                                                                
+ /**** FETCH PARAMETERS *****/                                                  
+ PARMS52 = ":Y_CONFIG_ID,:Y_CONTACT_SEQ,:Y_CONTACT_EMAIL_ID"                    
+                                                                                
+ SQL52= "FETCH C52 INTO "PARMS52                                                
+                                                                                
+ /**** DECLARE CURSOR *****/                                                    
+ DCLSQL52 = "DECLARE C52 CURSOR FOR S52"                                        
+ ADDRESS DSNREXX "EXECSQL "DCLSQL52                                             
+ IF SQLCODE ^= 0                                                                
+ then do                                                                        
+      SAY 'ERROR DECLARING CURSOR C52 - SQLCODE=' SQLCODE                       
+      CALL SQLCA                                                                
+      exit 12                                                                   
+      END                                                                       
+                                                                                
+ /**** PREPARE SELECT SQL ****/                                                 
+ ADDRESS DSNREXX "EXECSQL PREPARE S52 FROM :SEL_SQL52"                          
+ IF SQLCODE ^= 0                                                                
+ then do                                                                        
+      SAY 'ERROR PREPARING 'SEL_SQL52 ' - SQLCODE=' SQLCODE                     
+      CALL SQLCA                                                                
+      exit 12                                                                   
+      END                                                                       
+                                                                                
+ /**** OPEN CURSOR ****/                                                        
+ ADDRESS DSNREXX "EXECSQL OPEN C52"                                             
+ IF SQLCODE ^= 0                                                                
+ then do                                                                        
+      SAY 'ERROR OPENING CURSOR C52 - SQLCODE=' SQLCODE                         
+      CALL SQLCA                                                                
+      exit 12                                                                   
+      END                                                                       
+                                                                                
+ ADDRESS DSNREXX "EXECSQL "SQL52                                                
+                                                                                
+ do while SQLCODE = 0                                                           
+                                                                                
+  if index(y_contact_email_id,'@') > 0                                          
+  then do                                                                       
+       to_address_cnt = to_address_cnt + 1                                      
+       to_addresses.to_address_cnt = strip(Y_CONTACT_EMAIL_ID)                  
+       end                                                                      
+                                                                                
+  ADDRESS DSNREXX "EXECSQL "SQL52                                               
+ end                                                                            
+                                                                                
+ if SQLCODE ^= 100                                                              
+ then do                                                                        
+      SAY 'ERROR FETCHING CURSOR C52 - SQLCODE=' SQLCODE                        
+      CALL SQLCA                                                                
+      exit 12                                                                   
+      END                                                                       
+                                                                                
+  ADDRESS DSNREXX "EXECSQL CLOSE C52"                                           
+  IF SQLCODE ^= 0                                                               
+  then do                                                                       
+       SAY 'ERROR CLOSING CURSOR C52 - SQLCODE=' SQLCODE                        
+       CALL SQLCA                                                               
+       exit 12                                                                  
+       END                                                                      
+                                                                                
+return                                                                          
+                                                                                
+/*********************************************************************/         
+/* NAME:    send_email                                               */         
+/*                                                                   */         
+/*********************************************************************/         
+send_email:                                                                     
+                                                                                
+                                                                                
+ call build_addr_list                                                           
+ call build_msg_file                                                            
+                                                                                
+ call alloc_MSGFILE                                                             
+ call alloc_ADDRFILE                                                            
+                                                                                
+ subject = 'ACTION REQUIRED-BillManager Configuration:'||,                      
+                               strip(X_CONFIG_ID)                               
+                                                                                
+ ADDRESS TSO EX "'"||rexx_lib||"(XMITIP)' "||,                                  
+                "' * "||,                                                       
+                " FROM ""VAM TEAM""  <DO.NOT.REPLY@VERIZON>  "||,               
+                "SUBJECT """||subject||""" "||,                                 
+                "ADDRESSFILEDD ADDRFILE "||,                                    
+                "MSGDD MSGFILE "||,                                             
+                "MSG72 "||,                                                     
+                "FORMAT TXT/TXT   "||,                                          
+                "MARGIN 0.50/0.25/0.50/0.50 '"                                  
+                                                                                
+ if rc ^= 0                                                                     
+ then do                                                                        
+      say 'Bad return code from XMITIP'                                         
+      say rc                                                                    
+      exit(12)                                                                  
+      end                                                                       
+                                                                                
+ ADDRESS TSO  "FREE  FI(MSGFILE)"                                               
+ ADDRESS TSO  "FREE  FI(ADDRFILE)"                                              
+                                                                                
+ return                                                                         
+                                                                                
+/*********************************************************************/         
+/* NAME:     ALLOC MSGFILE                                           */         
+/*                                                                   */         
+/*********************************************************************/         
+alloc_MSGFILE:                                                                  
+                                                                                
+ ADDRESS TSO "ALLOC F(MSGFILE) DA('"tmpmsgds"') REUSE SHR"                      
+ if rc ^= 0                                                                     
+ then do                                                                        
+      say 'Error allocating MSGFILE file'                                       
+      say rc                                                                    
+      exit(12)                                                                  
+      end                                                                       
+                                                                                
+ return                                                                         
+                                                                                
+/*********************************************************************/         
+/* NAME:     ALLOC ADDRFILE                                          */         
+/*                                                                   */         
+/*********************************************************************/         
+alloc_ADDRFILE:                                                                 
+                                                                                
+ ADDRESS TSO "ALLOC F(ADDRFILE) DA('"tmpaddrds"') REUSE SHR"                    
+ if rc ^= 0                                                                     
+ then do                                                                        
+      say 'Error allocating ADDRFILE file'                                      
+      say rc                                                                    
+      exit(12)                                                                  
+      end                                                                       
+                                                                                
+ return                                                                         
+                                                                                
+/*********************************************************************/         
+/* NAME:     build_addr_list                                         */         
+/*                                                                   */         
+/*********************************************************************/         
+build_addr_list:                                                                
+                                                                                
+ ADDRESS  TSO "LISTCAT ENT('"tmpaddrds"')"                                      
+ IF RC = 0                                                                      
+ then do                                                                        
+      ADDRESS TSO "ALLOC F(ADDRW) DA('"tmpaddrds"') OLD"                        
+      if rc ^= 0                                                                
+      then do                                                                   
+           say 'Error allocating address work file'                             
+           say rc                                                               
+           exit(12)                                                             
+           end                                                                  
+      end                                                                       
+ else do                                                                        
+      ADDRESS TSO "ALLOC F(ADDRW) DA('"tmpaddrds"')",                           
+      "mgmtclas("mgmtclass") lrecl(80) dataclas("dataclass")",                  
+      storage_type" space("p_storage","s_storage") NEW"                         
+                                                                                
+      if rc ^= 0                                                                
+      then do                                                                   
+           say 'Error allocating address work file'                             
+           say rc                                                               
+           exit(12)                                                             
+           end                                                                  
+      end                                                                       
+                                                                                
+ addrwork_cnt = 0                                                               
+ addrwork.    = ''                                                              
+                                                                                
+ /* first the TO list of email addresses */                                     
+                                                                                
+ to_written = 'N'                                                               
+ do z = 1 to to_address_cnt                                                     
+   addrwork_cnt = addrwork_cnt + 1                                              
+   addrwork.addrwork_cnt = "TO "||to_addresses.z                                
+   to_written = 'Y'                                                             
+ end                                                                            
+                                                                                
+                                                                                
+ /* then add the CC addresses            */                                     
+ do z = 1 to cc_address_cnt                                                     
+   addrwork_cnt = addrwork_cnt + 1                                              
+   if to_written = 'N'                                                          
+   then do                                                                      
+        addrwork.addrwork_cnt = "TO "||cc_addresses.z                           
+        to_written = 'Y'                                                        
+        end                                                                     
+   else do                                                                      
+        addrwork.addrwork_cnt = "CC "||cc_addresses.z                           
+        end                                                                     
+ end                                                                            
+                                                                                
+ /* then add the BCC addresses           */                                     
+ do z = 1 to bcc_address_cnt                                                    
+   addrwork_cnt = addrwork_cnt + 1                                              
+   if to_written = 'N'                                                          
+   then do                                                                      
+        addrwork.addrwork_cnt = "TO "||bcc_addresses.z                          
+        to_written = 'Y'                                                        
+        end                                                                     
+   else do                                                                      
+        addrwork.addrwork_cnt = "BCC "||bcc_addresses.z                         
+        end                                                                     
+ end                                                                            
+                                                                                
+                                                                                
+ if addrwork_cnt > 0                                                            
+ then do                                                                        
+    "MAKEBUF"                                                                   
+    "EXECIO * DISKW ADDRW (STEM addrwork. FINIS)"                               
+    "DROPBUF"                                                                   
+ end                                                                            
+                                                                                
+ ADDRESS TSO  "FREE  FI(ADDRW)"                                                 
+                                                                                
+return                                                                          
+                                                                                
+/*********************************************************************/         
+/* NAME:     build_msg_file                                          */         
+/*                                                                   */         
+/*********************************************************************/         
+build_msg_file:                                                                 
+                                                                                
+ ADDRESS  TSO "LISTCAT ENT('"tmpmsgds"')"                                       
+ IF RC = 0                                                                      
+ then do                                                                        
+      ADDRESS TSO "ALLOC F(MSGW) DA('"tmpmsgds"') OLD"                          
+      if rc ^= 0                                                                
+      then do                                                                   
+           say 'Error allocating message work file'                             
+           say rc                                                               
+           exit(12)                                                             
+           end                                                                  
+      end                                                                       
+ else do                                                                        
+      ADDRESS TSO "ALLOC F(MSGW) DA('"tmpmsgds"')",                             
+      "mgmtclas("mgmtclass") lrecl(80) dataclas("dataclass")",                  
+      storage_type" space("p_storage","s_storage") NEW"                         
+                                                                                
+      if rc ^= 0                                                                
+      then do                                                                   
+           say 'Error allocating message work file'                             
+           say rc                                                               
+           exit(12)                                                             
+           end                                                                  
+      end                                                                       
+                                                                                
+ /* load it up with the email template from EMLTEMP changing the                
+    &CONFIG value for badcofg.                                                  
+    At the end append the errors for this config               */               
+                                                                                
+ msgwork_cnt = 0                                                                
+ msgwork.    = ''                                                               
+                                                                                
+ do i = 1 to emltemp.0                                                          
+                                                                                
+   msgwork_cnt = msgwork_cnt + 1                                                
+                                                                                
+   if index(emltemp.i,'&CONFIG') > 0                                            
+   then                                                                         
+        msgwork.msgwork_cnt,                                                    
+        = substr(emltemp.i,1,index(emltemp.i,'&CONFIG')-1) ||x_config_id        
+   else                                                                         
+        msgwork.msgwork_cnt = emltemp.i                                         
+ end                                                                            
+                                                                                
+ /* append errors here */                                                       
+ do i = 1 to msg_lines_cnt                                                      
+    msgwork_cnt         = msgwork_cnt + 1                                       
+    msgwork.msgwork_cnt = msg_lines.i                                           
+ end                                                                            
+                                                                                
+                                                                                
+ if msgwork_cnt > 0                                                             
+ then do                                                                        
+    "MAKEBUF"                                                                   
+    "EXECIO * DISKW MSGW (STEM msgwork. FINIS)"                                 
+    "DROPBUF"                                                                   
+ end                                                                            
+                                                                                
+ ADDRESS TSO  "FREE  FI(MSGW)"                                                  
+                                                                                
+return                                                                          
+                                                                                
+/*********************************************************************/         
+/* NAME:     update_bm_cfg_error                                     */         
+/*                                                                   */         
+/*********************************************************************/         
+update_bm_cfg_error:                                                            
+                                                                                
+to_address_string = ''                                                          
+do i = 1 to to_address_cnt                                                      
+  if i > 1                                                                      
+  then to_address_string = to_address_string || ';'                             
+  to_address_string = to_address_string || to_addresses.i                       
+end                                                                             
+                                                                                
+cc_address_string = ''                                                          
+do i = 1 to cc_address_cnt                                                      
+  if i > 1                                                                      
+  then cc_address_string = cc_address_string || ';'                             
+  cc_address_string = cc_address_string || cc_addresses.i                       
+end                                                                             
+                                                                                
+bcc_address_string = ''                                                         
+do i = 1 to bcc_address_cnt                                                     
+  if i > 1                                                                      
+  then bcc_address_string = bcc_address_string || ';'                           
+  bcc_address_string = bcc_address_string || bcc_addresses.i                    
+end                                                                             
+                                                                                
+upd_sql = "UPDATE "TABPREF".BM_CFG_ERROR_T " ||,                                
+          "SET EMAIL_SENT_TS = CURRENT TIMESTAMP " ||,                          
+          "   ,EMAIL_SUBJECT = '"subject"'" ||,                                 
+          "   ,EMAIL_TO_ADDR = '"to_address_string"'" ||,                       
+          "   ,EMAIL_CC_ADDR = '"cc_address_string"'" ||,                       
+          "   ,EMAIL_BCC_ADDR = '"bcc_address_string"'" ||,                     
+          " WHERE CONFIG_ID = '"X_CONFIG_ID"'" ||,                              
+          "   AND MAN_BILL_DATE = '"X_MAN_BILL_DATE"'"                          
+                                                                                
+ADDRESS DSNREXX "EXECSQL "upd_sql                                               
+                                                                                
+IF SQLCODE ^= 0                                                                 
+then do                                                                         
+     say 'error during update BM_CFG_ERROR_T'                                   
+     call SQLCA                                                                 
+     SAY '  END EXECUTION'                                                      
+     exit 12                                                                    
+     end                                                                        
+                                                                                
+return                                                                          
+                                                                                
+/************* SQL ERROR ROUTINE *************/                                 
+SQLCA:                                                                          
+   SAY "SQLSTATE =" SQLSTATE                                                    
+   SAY "SQLWARN =" SQLWARN.1",",                                                
+               || SQLWARN.2",",                                                 
+               || SQLWARN.3",",                                                 
+               || SQLWARN.4",",                                                 
+               || SQLWARN.5",",                                                 
+               || SQLWARN.6",",                                                 
+               || SQLWARN.7",",                                                 
+               || SQLWARN.8",",                                                 
+               || SQLWARN.9",",                                                 
+               || SQLWARN.10""                                                  
+   SAY "SQLERRD =" SQLERRD.1",",                                                
+               || SQLERRD.2",",                                                 
+               || SQLERRD.3",",                                                 
+               || SQLERRD.4",",                                                 
+               || SQLERRD.5",",                                                 
+               || SQLERRD.6                                                     
+   SAY "SQLERRP  =" SQLERRP                                                     
+   SAY "SQLERRMC =" SQLERRMC                                                    
+   SAY "SQLCODE  =" SQLCODE                                                     
+   RETURN                                                                       
+                                                                                
+/*************  SYNTAX ERROR HANDLER **********/                                
+CRAPCODE:                                                                       
+SAY 'YOU HAVE CRAP CODE AT LINE' SIGL                                           
+SAY SOURCELINE(SIGL)                                                            
+SAY 'REXX GAVE A RETURN CODE OF' RC ', WHICH MEANS :'                           
+SAY ERRORTEXT(RC)                                                               
+EXIT                                                                            
+/************* EXTERNAL ERROR HANDLER **********/                               
+BADDIES:                                                                        
+SAY 'YOU HAVE BEEN LET DOWN BY FACTORS BEYOND YOUR CONTROL AT LINE' SIGL        
+SAY SOURCELINE(SIGL)                                                            
+SAY 'RC =' RC                                                                   
+EXIT                                                                            

@@ -1,0 +1,71 @@
+/* REXX */                                                                      
+/* This process reads the current CBSFHF11 file and creates a new               
+   PDS with a member for each NGB ID on the CBSFHF11 file that contains         
+   the BOCB. A new PDS is created for each bill date. The BOCBCNTL file         
+   is updated with the current cycle information for each NGB ID */             
+/* trace ?i */                                                                  
+                                                                                
+"EXECIO * DISKR PFLFSYSN (STEM sysnrec. FINIS"   /* Read SYSN to get hilevel */ 
+hilevel = strip(sysnrec.1,"t")                                                  
+bocbcntl=hilevel||".BOCBCNTL"    /* file used by VAMV macro that contains       
+                                      the BOCB data availale for each custid */ 
+                                                                                
+"EXECIO * DISKR HF11IN (STEM hf11inrec. FINIS"                                  
+                                                                                
+cycle   = C||SUBSTR(hf11inrec.1,67,6)                                           
+hf11out = hilevel||".CBSFHF11."||cycle              /* BOCB data file */        
+checkit = sysdsn("'"hf11out"'")                                                 
+                                                                                
+IF checkit ^= 'OK' THEN                                                         
+     "ALLOC DA('"hf11out"') CYL NEW CATALOG SP(50,50) DIR(100) RECFM(F B) ",    
+           "  DSORG(PO) LRECL(65) BLKSIZE(0)"                                   
+                                                                                
+DO i = 2 TO hf11inrec.0                                                         
+                                                                                
+ PARSE VAR hf11inrec.i,                                                         
+      hf11_filler1  +12,                                                        
+      hf11_ngbid    +7,         /* NGB ID */                                    
+      hf11_filler2  +9,                                                         
+      hf11_ctl1     +3,                                                         
+      hf11_line1    +65,        /* BOCB line 1 */                               
+      hf11_ctl2     +1,                                                         
+      hf11_line2    +65,        /* BOCB line 2 */                               
+      hf11_filler3  +76                                                         
+                                                                                
+ IF hf11_ctl1 = X2C('40 40 89') THEN     /* Check for new NGB ID */             
+   DO                                                                           
+    "EXECIO 0 DISKW OUTDD (FINIS"                                               
+    "FREE F(OUTDD)"                                                             
+    "ALLOC DA('"hf11out"(N"hf11_ngbid")') F(OUTDD) OLD"                         
+    "EXECIO 0 DISKW BOCBCNTL (FINIS"                                            
+    "FREE F(BOCBCNTL)"                                                          
+                                                                                
+    checkit = sysdsn("'"bocbcntl"(N"hf11_ngbid")'")                             
+    IF checkit = 'OK' THEN                                                      
+     DO                                                                         
+      "ALLOC DA('"bocbcntl"(N"hf11_ngbid")') F(BOCBCNTL) SHR"                   
+      "EXECIO * DISKR BOCBCNTL (FINIS"                                          
+      "FREE F(BOCBCNTL)"                                                        
+     END                                                                        
+                                                                                
+    "ALLOC DA('"bocbcntl"(N"hf11_ngbid")') F(BOCBCNTL) OLD"                     
+    QUEUE cycle                                                                 
+    QUEUE ''                                                                    
+    "EXECIO * DISKW BOCBCNTL ("                                                 
+   END                                                                          
+                                                                                
+QUEUE hf11_line1                                                                
+QUEUE ''                                                                        
+"EXECIO * DISKW OUTDD ("                                                        
+                                                                                
+QUEUE hf11_line2                                                                
+QUEUE ''                                                                        
+"EXECIO * DISKW OUTDD ("                                                        
+                                                                                
+END                                                                             
+                                                                                
+"EXECIO 0 DISKW OUTDD (FINIS"                                                   
+"EXECIO 0 DISKW BOCBCNTL (FINIS"                                                
+"FREE F(INDD OUTDD BOCBCNTL)"                                                   
+                                                                                
+EXIT        /* RETURN TO CALLING ENVIRONMENT */                                 

@@ -1,0 +1,13 @@
+/*REXX STORPROC: REXX TO CREATE DB2 STORED PROCEDURE */                         
+ARG TESTID UTILID DB2SYS                                                        
+/****************************************************/                          
+/****       CREATE TERM UTILITY CARDS           *****/                          
+/****************************************************/                          
+TERMCDS = TESTID".TERMUTIL."UTILID"."DB2SYS                                     
+"FREE FI(TERMCDS)"                                                              
+"DELETE '"TERMCDS"'"                                                            
+"ALLOC FI(TERMCDS) DA('"TERMCDS"') NEW"                                         
+QUEUE "  DSN SYSTEM ("DB2SYS")"                                                 
+QUEUE "  -TERM UTILITY("UTILID")"                                               
+"EXECIO * DISKW TERMCDS (FINIS"                                                 
+"FREE FI(TERMCDS)"                                                              

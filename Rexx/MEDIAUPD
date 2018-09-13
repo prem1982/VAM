@@ -1,0 +1,141 @@
+/*REXX to update FIQR Table */                                                  
+parse external SSID                                                             
+parse external owner                                                            
+parse external maxval                                                           
+address TSO                                                                     
+"execio * diskr infile (stem row. finis"                                        
+"free FI(infile)"                                                               
+ address TSO "SUBCOM DSNREXX"                                                   
+  IF RC THEN                                                                    
+     S_RC = RXSUBCOM('ADD','DSNREXX','DSNREXX')                                 
+  ADDRESS DSNREXX                                                               
+  "CONNECT" SSID                                                                
+IF SQLCODE ^=0 THEN SAY "connection error " SQLCODE                             
+ELSE                                                                            
+DO                                                                              
+    do i=1 to ROW.0                                                             
+    row.i=strip(row.i)                                                          
+    state=substr(row.i,6,2)                                                     
+    npanxx=substr(row.i,26,6)                                                   
+    say state npanxx                                                            
+    call inserttable                                                            
+    maxval=maxval+1                                                             
+    end                                                                         
+end                                                                             
+"DISCONNECT"                                                                    
+EXIT                                                                            
+/*********************************************************************/         
+inserttable:                                                                    
+ /* 1st insert */                                                               
+    INSRSTMT = ' INSERT INTO '||strip(owner)||".FIT_ISRT_QUAL_RULE " ,          
+    ' VALUES( ',                                                                
+    "'KG'," ,                                                                   
+    "'"||strip(maxval)||"'," ,                                                  
+    '+1,',                                                                      
+    "'2005-10-01'," ,                                                           
+    "'2005-10-31'," ,                                                           
+    "'ST'," ,                                                                   
+    "'"||strip(state)||"',",                                                    
+    "'  '",                                                                     
+    "'  '",                                                                     
+    "+0.00",                                                                    
+    "+0.00",                                                                    
+    "current_timestamp" ,                                                       
+    "current_timestamp" ,                                                       
+    "'39047910'" ,                                                              
+    ")"                                                                         
+    SAY INSRSTMT                                                                
+                                                                                
+   "EXECSQL PREPARE S1 FROM :INSRSTMT"                                          
+                                                                                
+ if (sqlcode <> 0)  then call sqlca                                             
+  /* Do the INSERT */                                                           
+  "EXECSQL EXECUTE S1 "                                                         
+ if (sqlcode <> 0)  then call sqlca                                             
+                                                                                
+ /* 2nd insert */                                                               
+    INSRSTMT = ' INSERT INTO '||strip(owner)||".FIT_ISRT_QUAL_RULE " ,          
+    ' VALUES( ',                                                                
+    "'KG'," ,                                                                   
+    "'"||strip(maxval)||"'," ,                                                  
+    '+2,',                                                                      
+    "'2005-10-01'," ,                                                           
+    "'2005-10-31'," ,                                                           
+    "'LB'," ,                                                                   
+    "'01'",                                                                     
+    "'  '",                                                                     
+    "'  '",                                                                     
+    "+0.00",                                                                    
+    "+0.00",                                                                    
+    "current_timestamp" ,                                                       
+    "current_timestamp" ,                                                       
+    "'39047910'" ,                                                              
+    ")"                                                                         
+    SAY INSRSTMT                                                                
+                                                                                
+   "EXECSQL PREPARE S1 FROM :INSRSTMT"                                          
+                                                                                
+ if (sqlcode <> 0)  then call sqlca                                             
+  /* Do the INSERT */                                                           
+  "EXECSQL EXECUTE S1 "                                                         
+ if (sqlcode <> 0)  then call sqlca                                             
+                                                                                
+ /* 3rd insert */                                                               
+    INSRSTMT = ' INSERT INTO '||strip(owner)||".FIT_ISRT_QUAL_RULE " ,          
+    ' VALUES( ',                                                                
+    "'KG'," ,                                                                   
+    "'"||strip(maxval)||"'," ,                                                  
+    '+3,',                                                                      
+    "'2005-10-01'," ,                                                           
+    "'2005-10-31'," ,                                                           
+    "'NX'," ,                                                                   
+    "'"||strip(npanxx)||"'," ,                                                  
+    "'  ',",                                                                    
+    "'  ',",                                                                    
+    "+0.00,",                                                                   
+    "+0.00,",                                                                   
+    "current_timestamp," ,                                                      
+    "current_timestamp," ,                                                      
+    "'39047910'" ,                                                              
+    ")"                                                                         
+    SAY INSRSTMT                                                                
+                                                                                
+   "EXECSQL PREPARE S1 FROM :INSRSTMT"                                          
+                                                                                
+ if (sqlcode <> 0)  then call sqlca                                             
+  /* Do the INSERT */                                                           
+  "EXECSQL EXECUTE S1 "                                                         
+ if (sqlcode <> 0)  then call sqlca                                             
+ RETURN                                                                         
+/*******SQL ERROR ROUTINE ********************************************/         
+ sqlca:                                                                         
+                                                                                
+ trace O                                                                        
+                                                                                
+ say "sqlcode  :" sqlcode                                                       
+                                                                                
+ say "sqlerrmc :" sqlerrmc                                                      
+                                                                                
+ say "sqlerrp  :" sqlerrp                                                       
+                                                                                
+ say "sqlerrd  :" sqlerrd.1",",                                                 
+               || sqlerrd.2",",                                                 
+               || sqlerrd.3",",                                                 
+               || sqlerrd.4",",                                                 
+               || sqlerrd.5",",                                                 
+               || sqlerrd.6                                                     
+                                                                                
+ say "sqlwarn  :" sqlwarn.0",",                                                 
+               || sqlwarn.1",",                                                 
+               || sqlwarn.2",",                                                 
+               || sqlwarn.3",",                                                 
+               || sqlwarn.4",",                                                 
+               || sqlwarn.5",",                                                 
+               || sqlwarn.6",",                                                 
+               || sqlwarn.7",",                                                 
+               || sqlwarn.8",",                                                 
+               || sqlwarn.9",",                                                 
+               || sqlwarn.10                                                    
+                                                                                
+ say "sqlstate :" sqlstate                                                      
+ return                                                                         

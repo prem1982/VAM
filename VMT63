@@ -1,0 +1,106 @@
+     SELECT V63.MAN                                                             
+           ,V63.MAN_BILL_DATE                                                   
+           ,V63.ORIG_SYSTEM_ID                                                  
+           ,V63.WORKING_TEL_NBR                                                 
+           ,V63.ASSOC_CHG_cD                                                    
+           ,V63.SUMM_TYPE_IND                                                   
+           ,CASE WHEN V63.ASSOC_CHG_CD = '1942'                                 
+                  THEN 'Roaming'                                                
+                 WHEN V63.ASSOC_CHG_CD = '1936'                                 
+                  THEN 'Data'                                                   
+                 WHEN V63.ASSOC_CHG_CD = '1935'                                 
+                  THEN 'Voice'                                                  
+                 WHEN V63.ASSOC_CHG_CD = '1944'                                 
+                  THEN 'Messaging'                                              
+                 ELSE 'Other'                                                   
+              END ITEM_CATEG                                                    
+          ,CASE WHEN V63.CUR_DELAY_IND = 2                                      
+                  THEN 'Previous'                                               
+                  ELSE 'Current'                                                
+             END USAGE_PERIOD                                                   
+          ,V63.SUMMARY_DESC CHG_DESC                                            
+          ,V63.USG_TYP_DESC CHG_TYPE                                            
+          ,V63.GRD_COST CHG_AMT                                                 
+          ,CASE WHEN V63.USG_DIS_PROP = 3 THEN 'NA'                             
+                WHEN V63.USG_DIS_PROP = 2 THEN '  '                             
+                WHEN V63.USG_COL_TXT <> ' '                                     
+                        THEN V63.USG_COL_TXT                                    
+                WHEN V63.GRD_ALLOWANCE > 0                                      
+                   THEN CHAR(INTEGER(V63.GRD_ALLOWANCE))                        
+                ELSE 'NA'                                                       
+             END ALLOWANCE                                                      
+         ,V63.GRD_USED USED_MIN                                                 
+         ,V63.GRD_BILLABLE BILLABLE_MIN                                         
+         ,CASE WHEN UPPER(V63.USG_TYP_DESC) = 'KILOBYTES'                       
+                AND V63.ASSOC_CHG_CD = '1936'                                   
+                AND V63.SUMM_TYPE_IND = 2                                       
+               THEN V63.GRD_USED                                                
+               ELSE 0 END DATA_KILOBYTES                                        
+         ,CASE WHEN UPPER(V63.USG_TYP_DESC) = 'MEGABYTES'                       
+                AND V63.ASSOC_CHG_CD = '1936'                                   
+                AND V63.SUMM_TYPE_IND = 2                                       
+               THEN V63.GRD_USED                                                
+               ELSE 0 END DATA_MEGABYTES                                        
+         ,CASE WHEN UPPER(V63.USG_TYP_DESC) = 'GIGABYTES'                       
+                AND V63.ASSOC_CHG_CD = '1936'                                   
+                AND V63.SUMM_TYPE_IND = 2                                       
+               THEN V63.GRD_USED                                                
+               ELSE 0 END DATA_GIGABYTES                                        
+         ,CASE WHEN UPPER(V63.USG_TYP_DESC) = 'DOWNLOADS'                       
+                       THEN V63.GRD_USED                                        
+                      ELSE 0 END DOWNLOADS                                      
+         ,CASE WHEN V63.SUMM_TYPE_IND = 1                                       
+                AND UPPER(V63.SUMMARY_DESC) = 'FRIENDS & FAMILY'                
+                          THEN V63.USG_USED ELSE 0 END  FF_MIN                  
+         ,CASE WHEN V63.ASSOC_CHG_CD = '1944'                                   
+                   THEN V63.GRD_USED ELSE 0 END  MSG_CHGS                       
+--*      ,COALESCE(UA.USAGE_AMT,0.000) ALLOWANCE_DECS_UA                        
+--*      ,COALESCE(UB.USAGE_AMT,0.000) ALLOWANCE_DECS_UB                        
+--*      ,COALESCE(UU.USAGE_AMT,0.000) ALLOWANCE_DECS_UU                        
+         ,CASE WHEN UPPER(V63.USG_TYP_DESC) = 'KILOBYTES'                       
+                AND V63.ASSOC_CHG_CD = '1942'                                   
+                AND V63.SUMM_TYPE_IND = 4                                       
+               THEN V63.GRD_USED                                                
+               ELSE 0 END DATA_ROAMING_KILOBYTES                                
+         ,CASE WHEN UPPER(V63.USG_TYP_DESC) = 'MEGABYTES'                       
+                AND V63.ASSOC_CHG_CD = '1942'                                   
+                AND V63.SUMM_TYPE_IND = 4                                       
+               THEN V63.GRD_USED                                                
+               ELSE 0 END DATA_ROAMING_MEGABYTES                                
+         ,CASE WHEN UPPER(V63.USG_TYP_DESC) = 'GIGABYTES'                       
+                AND V63.ASSOC_CHG_CD = '1942'                                   
+                AND V63.SUMM_TYPE_IND = 4                                       
+               THEN V63.GRD_USED                                                
+               ELSE 0 END DATA_ROAMING_GIGABYTES                                
+         ,CASE WHEN UPPER(V63.USG_TYP_DESC) = 'MESSAGES'                        
+                AND V63.ASSOC_CHG_CD = '1942'                                   
+                AND V63.SUMM_TYPE_IND = 8                                       
+               THEN V63.GRD_USED                                                
+               ELSE 0 END MSG_ROAMING                                           
+         FROM BMGVZP.VZ450_6300_T V63                                           
+         LEFT OUTER JOIN                                                        
+         BMGVZP.VZ450_MOD_116_T UA                                              
+           ON V63.MAN            = UA.MAN                                       
+          AND V63.MAN_BILL_DATE  = UA.MAN_BILL_DATE                             
+          AND V63.ORIG_SYSTEM_ID = UA.ORIG_SYSTEM_ID                            
+          AND V63.VZ450_SEQ_NBR  = UA.VZ450_SEQ_NBR                             
+          AND UA.USAGE_TYPE    = 'UA'                                           
+         LEFT OUTER JOIN                                                        
+         BMGVZP.VZ450_MOD_116_T UB                                              
+           ON V63.MAN            = UB.MAN                                       
+          AND V63.MAN_BILL_DATE  = UB.MAN_BILL_DATE                             
+          AND V63.ORIG_SYSTEM_ID = UB.ORIG_SYSTEM_ID                            
+          AND V63.VZ450_SEQ_NBR  = UB.VZ450_SEQ_NBR                             
+          AND UB.USAGE_TYPE    = 'UB'                                           
+         LEFT OUTER JOIN                                                        
+         BMGVZP.VZ450_MOD_116_T UU                                              
+           ON V63.MAN            = UU.MAN                                       
+          AND V63.MAN_BILL_DATE  = UU.MAN_BILL_DATE                             
+          AND V63.ORIG_SYSTEM_ID = UU.ORIG_SYSTEM_ID                            
+          AND V63.VZ450_SEQ_NBR  = UU.VZ450_SEQ_NBR                             
+          AND UU.USAGE_TYPE    = 'UU'                                           
+        WHERE V63.MAN = 'EVZJGJ741'                                             
+          AND V63.MAN_BILL_DATE = '2012-08-01'                                  
+          AND V63.ORIG_SYSTEM_ID = 'VW'                                         
+          AND V63.WORKING_TEL_NBR = '7702621777'                                
+       ORDER BY V63.WORKING_TEL_NBR, ITEM_CATEG                                 

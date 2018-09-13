@@ -1,0 +1,11 @@
+/*SCR00600: REXX */                                                             
+ARG BMGNS0PN CYCINFO CUSTNO CONFIGNO                                            
+"DELETE (",                                                                     
+        "'"BMGNS0PN"."CYCINFO"."CUSTNO"."CONFIGNO".DEPTOTS'",                   
+        "'"BMGNS0PN"."CYCINFO"."CUSTNO"."CONFIGNO".BMG00603'",                  
+        "'"BMGNS0PN"."CYCINFO"."CUSTNO"."CONFIGNO".BMG00604'",                  
+        "'"BMGNS0PN"."CYCINFO"."CUSTNO"."CONFIGNO".BMG00605'",                  
+        "'"BMGNS0PN"."CYCINFO"."CUSTNO"."CONFIGNO".BMG00606'",                  
+        "'"BMGNS0PN"."CYCINFO"."CUSTNO"."CONFIGNO".TABLSTAT'",                  
+        "'"BMGNS0PN"."CYCINFO"."CUSTNO"."CONFIGNO".CNTLCASL'",                  
+        ")"                                                                     

@@ -1,0 +1,19 @@
+//SORTVZTT JOB (T,JVAK,JKSD0020),'TONY.429-8535',                       JOB05348
+// CLASS=B,MSGCLASS=L,NOTIFY=&SYSUID                                            
+/*ROUTE PRINT RMT2                                                              
+//*****************************************************************             
+/*ROUTE PRINT RMT2                                                              
+/*JOBPARM ROOM=21E2                                                             
+//*****************************************************************             
+//SORTNRTH  EXEC  PGM=SYNCSORT,REGION=512K                                      
+//SORTIN    DD    DSN=V884647.VZWMTNFE,                                         
+//        DISP=SHR                                                              
+//SORTOUT   DD    DSN=V884647.VZWMTNFE.FRMT,                                    
+// DISP=(NEW,CATLG,CATLG),DCB=(LRECL=680,BLKSIZE=631),                          
+// UNIT=SYSDA,SPACE=(CYL,(100,100),RLSE),                                       
+// MGMTCLAS=LUSE180                                                             
+//SYSOUT    DD    SYSOUT=*                                                      
+//SYSIN     DD    *                                                             
+    SORT FIELDS=COPY                                                            
+    OUTREC FIELDS=(1:1,631,632:49X)                                             
+//                                                                              

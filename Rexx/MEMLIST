@@ -1,0 +1,40 @@
+/**REXX************************************************************/            
+ PARSE UPPER ARG PDSNAME                                                        
+/************************************************************/                  
+/* THIS REXX ROUTINE WILL LIST ALL MEMBERS IN A PDS AND     */                  
+/* SAVE THE LIST OF MEMBERS TO A MEMLIST FILE.              */                  
+/************************************************************/                  
+                                                                                
+  SAY PDSNAME                                                                   
+  TRACE I                                                                       
+  /* NOW PERFORM A LISTCAT COMMAND ON EACH OF THE HIGH LEVEL */                 
+  /* QUALIFIERS IN THE NOWREC ARRAY.  USE OUTTRAP TO GET THE */                 
+  /* RESULTS.                                                */                 
+                                                                                
+  LISTNAME = PDSNAME || '.MLIST'                                                
+  SAY LISTNAME                                                                  
+                                                                                
+  LIST1 =  "LISTDS '"PDSNAME"' MEMBERS"                                         
+  X=OUTTRAP(LISTM.)                                                             
+  ADDRESS TSO LIST1                                                             
+  X=OUTTRAP('OFF')                                                              
+                                                                                
+  /* FIRST 6 LINES ARE FILE DETAILS.  MEMBER LIST STARTS AT  */                 
+  /* LINE 7 OF THE OUTPUT.                                   */                 
+  DO I = 7 TO LISTM.0                                                           
+     QUEUE SUBSTR(LISTM.I,3,8)                                                  
+  END                                                                           
+                                                                                
+  /* DUMP THE MEMBER LIST INTO LISTNAME */                                      
+  "DELETE '"LISTNAME"'"                                                         
+  "ALLOC FI(MEMFILE) DA('"LISTNAME"') NEW CATALOG DATACLAS(PSFB80)",            
+   " LRECL(80)"                                                                 
+  "EXECIO * DISKW MEMFILE (FINIS"                                               
+  "FREE FI(MEMFILE)"                                                            
+                                                                                
+  /* ALWAYS SUCCEED */                                                          
+  RETURN 0                                                                      
+  /**/                                                                          
+                                                                                
+/*=============================== END ================================*/        
+/**********************************************************************/        

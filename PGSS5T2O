@@ -1,0 +1,52 @@
+ SELECT SC1.AIRTIME_DESC                                                        
+    ,CHAR(SC1.INCLUDED_NBR) INCLUDED_NBR                                        
+    ,CHAR(SC1.BILLABLE_NBR) BILLABLE_NBR                                        
+    ,CHAR(SC1.CHG_AMT) CHG_AMT                                                  
+   FROM (                                                                       
+   SELECT 'TOTAL AIRTIME' AIRTIME_DESC                                          
+       ,SUM(IN1.INCLUDED_NBR) INCLUDED_NBR                                      
+       ,SUM(IN1.BILLABLE_NBR) BILLABLE_NBR                                      
+       ,SUM(IN1.CHG_AMT) CHG_AMT                                                
+     FROM (                                                                     
+     SELECT CASE WHEN (M202.SUB_GRP_IND = '01'                                  
+                        OR M202.SUB_GRP_IND = '05'                              
+                        OR M202.SUB_GRP_IND = '09'                              
+                        OR M202.SUB_GRP_IND = '13')                             
+                  THEN 'Air Minutes Peak'                                       
+                 WHEN (M202.SUB_GRP_IND = '02'                                  
+                        OR M202.SUB_GRP_IND = '03'                              
+                        OR M202.SUB_GRP_IND = '06'                              
+                        OR M202.SUB_GRP_IND = '07'                              
+                        OR M202.SUB_GRP_IND = '10'                              
+                        OR M202.SUB_GRP_IND = '11'                              
+                        OR M202.SUB_GRP_IND = '14'                              
+                        OR M202.SUB_GRP_IND = '15')                             
+                  THEN 'Air Minutes Off-peak'                                   
+                 ELSE 'Air Minutes Other'                                       
+              END AIRTIME_DESC                                                  
+           ,INTEGER(M202.ALLOW_USED + M202.ALLOW_EXCD) INCLUDED_NBR             
+           ,INTEGER(M202.ALLOW_EXCD) BILLABLE_NBR                               
+           ,M202.CHARGE CHG_AMT                                                 
+      FROM ACCT_SUM_T TB1                                                       
+     INNER JOIN VZ450_6300_T TB2                                                
+       ON TB1.MAN = TB2.MAN                                                     
+      AND TB1.MAN_BILL_DATE = TB2.MAN_BILL_DATE                                 
+      AND TB1.ORIG_SYSTEM_ID = TB2.ORIG_SYSTEM_ID                               
+      AND TB1.VZ450_SEQ_NBR <= TB2.VZ450_SEQ_NBR                                
+      AND TB1.END_VZ450_SEQ_NBR >= TB2.VZ450_SEQ_NBR                            
+     INNER JOIN VZ450_MOD_202_T M202                                            
+         ON TB2.MAN = M202.MAN                                                  
+        AND TB2.MAN_BILL_DATE = M202.MAN_BILL_DATE                              
+        AND TB2.ORIG_SYSTEM_ID = M202.ORIG_SYSTEM_ID                            
+        AND TB2.VZ450_SEQ_NBR = M202.VZ450_SEQ_NBR                              
+      WHERE TB1.MAN = ?                                                         
+        AND TB1.MAN_BILL_DATE = ?                                               
+        AND TB1.ORIG_SYSTEM_ID = ?                                              
+        AND TB1.BAN = ?                                                         
+        AND TB1.BILL_DATE = ?                                                   
+        AND TB2.ASSOC_CHG_CD = '1935'                                           
+        AND M202.GRP_IND <> '2'                                                 
+          ) IN1                                                                 
+   WHERE IN1.AIRTIME_DESC <> 'XYZ'                                              
+     AND FILTER = ?                                                             
+       ) SC1                                                                    

@@ -1,0 +1,35 @@
+SELECT 'Total Third Party Charges' SUMMARY_DESC                                 
+,' ' USG_BILLABLE                                                               
+,CHAR(SUM(SC1.USG_COST)) USG_COST FROM                                          
+(SELECT TB3.SUMMARY_DESC AS SUMMARY_DESC                                        
+,CHAR(INT(TB3.USG_BILLABLE)) AS USG_BILLABLE                                    
+,TB3.USG_COST AS USG_COST                                                       
+FROM                                                                            
+VZ450_6300_T TB3                                                                
+WHERE TB3.MAN = ?                                                               
+AND TB3.MAN_BILL_DATE = ?                                                       
+AND TB3.WORKING_TEL_NBR = ?                                                     
+AND TB3.ORIG_SYSTEM_ID = 'VW'                                                   
+AND TB3.SUMM_TYPE_IND =  7                                                      
+  UNION ALL                                                                     
+SELECT CASE WHEN TB1.CHG_TYPE_CD = '016'                                        
+            THEN 'Taxes'                                                        
+            WHEN TB1.CHG_TYPE_CD = '017'                                        
+            THEN 'Surcharges'                                                   
+       END  AS SUMMARY_DESC                                                     
+,char(0)      AS USG_BILLABLE                                                   
+,TB1.CHG_AMT AS USG_COST                                                        
+FROM                                                                            
+VZ450_MOD_109_T TB1                                                             
+INNER JOIN                                                                      
+VZ450_6300_T TB2                                                                
+ON  TB1.MAN = TB2.MAN                                                           
+AND TB1.MAN_BILL_DATE  = TB2.MAN_BILL_DATE                                      
+AND TB1.ORIG_SYSTEM_ID = TB2.ORIG_SYSTEM_ID                                     
+AND TB1.VZ450_SEQ_NBR = TB2.VZ450_SEQ_NBR                                       
+WHERE TB1.MAN = ?                                                               
+AND TB1.MAN_BILL_DATE = ?                                                       
+AND TB1.ORIG_SYSTEM_ID = 'VW'                                                   
+AND TB2.WORKING_TEL_NBR = ?                                                     
+AND TB1.CHG_TYPE_CD IN ('016', '017') ) SC1                                     
+    WFILTER = ?                                                                 

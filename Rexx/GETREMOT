@@ -1,0 +1,17 @@
+/*REXX GETREMOT: REXX TO CREATE NDM PROCESS OVERRIDES*/                         
+ARG TESTID REMOTDSN MGMTCLAS                                                    
+PROCCRDS = TESTID".GETREMOT.DATASET.NAMES"                                      
+NOTIFYID = SYSVAR(SYSUID)                                                       
+CALL FILENAME" LOCALDSN"                                                        
+LOCALDSN = RESULT                                                               
+/****************************************************/                          
+"FREE FI(PROCCRDS)"                                                             
+"DELETE '"PROCCRDS"'"                                                           
+"ALLOC FI(PROCCRDS) DA('"PROCCRDS"') NEW"                                       
+QUEUE "   SUB PROC=GETREMOT -"                                                  
+QUEUE "       &REMOTDSN="REMOTDSN" -"                                           
+QUEUE "       &LOCALDSN="LOCALDSN" -"                                           
+QUEUE "       &NOTIFYID="NOTIFYID" -"                                           
+QUEUE "       &MGMTCLAS="MGMTCLAS" -"                                           
+"EXECIO * DISKW PROCCRDS (FINIS"                                                
+"FREE FI(PROCCRDS)"                                                             

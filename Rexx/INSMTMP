@@ -1,0 +1,199 @@
+/******************************* REXX *********************************/        
+/* REXX EXEC INSmtmp                                                  */        
+/*  insert to mastr_acct_temp_t                                       */        
+/*                                                                    */        
+/******************************* REXX *********************************/        
+                                                                                
+ARG DB2SYS DSNAME .                                                             
+                                                                                
+ TRACE o                                                                        
+                                                                                
+ DB2SYS = STRIP(DB2SYS)                                                         
+ CYCLE  = STRIP(CYCLE)                                                          
+ BILL_DATE = '9999-12-31'                                                       
+ SYSTEM = '00'                                                                  
+ more ='Y'                                                                      
+ recs_to_commit = 0                                                             
+                                                                                
+ SELECT                                                                         
+   WHEN DB2SYS  = 'D001'   THEN                                                 
+        TABPREF = 'BMGVZT'                                                      
+   WHEN DB2SYS  = 'D009'   THEN                                                 
+        TABPREF = 'BMGVZP'                                                      
+   WHEN DB2SYS  = 'D38X'   THEN                                                 
+        TABPREF = 'BMGVZS'                                                      
+   OTHERWISE                                                                    
+        TABPREF = 'BMGVZP'                                                      
+ END                                                                            
+ SIGNAL OFF ERROR /* TURN ERROR-TRAPPING OFF */                                 
+ "SUBCOM DSNREXX"                                                               
+ IF RC THEN                                                                     
+    S_RC = RXSUBCOM('ADD','DSNREXX','DSNREXX')                                  
+ ADDRESS DSNREXX "CONNECT "DB2SYS                                               
+ IF SQLCODE ^= 0                                                                
+ THEN DO                                                                        
+      SAY ' ERROR CONNECTING TO ' DB2SYS                                        
+      CALL SQLCA                                                                
+      SAY '  END EXECUTION'                                                     
+      EXIT 12                                                                   
+      END                                                                       
+                                                                                
+ ADDRESS TSO "LISTCAT ENT('"DSNAME"')"                                          
+ IF RC = 0                                                                      
+ THEN DO                                                                        
+      ADDRESS TSO "ALLOC F(MANLST) DA('"DSNAME"') SHR"                          
+      END                                                                       
+                                                                                
+ /* READ THE DATASET */                                                         
+ "EXECIO 1 DISKR MANLST (STEM MANLST.)"                                         
+ IF RC ^= 0                                                                     
+ THEN DO                                                                        
+      if rc = 2                                                                 
+      then do                                                                   
+           say empty input file                                                 
+           exit 0                                                               
+           end                                                                  
+      SAY ERROR READING MANLST FILE                                             
+      EXIT 12                                                                   
+      END                                                                       
+                                                                                
+                                                                                
+ do while (more = 'Y')                                                          
+                                                                                
+   wk_rec = strip(MANLST.1)                                                     
+   select                                                                       
+   when words(wk_rec) = 1                                                       
+      then do                                                                   
+           man = strip(wk_rec)                                                  
+           system = '  '                                                        
+           bill_date = '9999-12-31'                                             
+           end                                                                  
+   when words(wk_rec) = 2                                                       
+      then do                                                                   
+           man       = strip(word(wk_rec,1))                                    
+           system    = strip(word(wk_rec,2))                                    
+           bill_date = '9999-12-31'                                             
+           end                                                                  
+   otherwise                                                                    
+           do                                                                   
+           man       = strip(word(wk_rec,1))                                    
+           system    = strip(word(wk_rec,2))                                    
+           bill_date = strip(word(wk_rec,3))                                    
+           end                                                                  
+   end                                                                          
+                                                                                
+   call insert_temp                                                             
+                                                                                
+   recs_to_commit = recs_to_commit + 1                                          
+   if recs_to_commit > 1000                                                     
+   then do                                                                      
+        call commit_work                                                        
+        recs_to_commit = 0                                                      
+        end                                                                     
+                                                                                
+   "EXECIO 1 DISKR MANLST (STEM MANLST.)"                                       
+   IF RC ^= 0                                                                   
+   THEN more = 'N'                                                              
+                                                                                
+ end                                                                            
+                                                                                
+ call commit_work                                                               
+                                                                                
+                                                                                
+ ADDRESS TSO "FREE FI(MANLST)"                                                  
+                                                                                
+ ADDRESS DSNREXX "DISCONNECT"                                                   
+ IF SQLCODE ^= 0                                                                
+ THEN DO                                                                        
+      SAY 'ERROR WHILE DISCONNECTING'                                           
+      CALL SQLCA                                                                
+      SAY '  END EXECUTION'                                                     
+      EXIT 12                                                                   
+      END                                                                       
+                                                                                
+ RETURN                                                                         
+                                                                                
+ /*********************************************************************/        
+ /* NAME:     INSERT                                                  */        
+ /*                                                                   */        
+ /*********************************************************************/        
+ INSERT_TEMP:                                                                   
+                                                                                
+  INS_SQL = "INSERT INTO "TABPREF".MASTR_ACCT_TEMP_T " ||,                      
+            "(MAN," ||,                                                         
+             "MAN_BILL_DATE," ||,                                               
+             "ORIG_SYSTEM_ID) " ||,                                             
+            "VALUES" ||,                                                        
+            "('"man"'," ||,                                                     
+            "'"bill_date"'," ||,                                                
+            "'"system"')"                                                       
+                                                                                
+  ADDRESS DSNREXX "EXECSQL "INS_SQL                                             
+                                                                                
+  IF SQLCODE ^= 0 & sqlcode ^= -803                                             
+  THEN DO                                                                       
+       SAY 'ERROR DURING INSERT'                                                
+       say ins_sql                                                              
+       CALL SQLCA                                                               
+       SAY '  END EXECUTION'                                                    
+       EXIT 12                                                                  
+       END                                                                      
+                                                                                
+  RETURN                                                                        
+ /*********************************************************************/        
+ /* NAME:     commit                                                  */        
+ /*                                                                   */        
+ /*********************************************************************/        
+ commit_work:                                                                   
+                                                                                
+ ADDRESS DSNREXX "EXECSQL COMMIT"                                               
+ IF SQLCODE ^= 0                                                                
+ THEN DO                                                                        
+      SAY 'ERROR WHILE COMMITING'                                               
+      CALL SQLCA                                                                
+      SAY '  END EXECUTION'                                                     
+      EXIT 12                                                                   
+      END                                                                       
+                                                                                
+ return                                                                         
+                                                                                
+ /************* SQL ERROR ROUTINE *************/                                
+ SQLCA:                                                                         
+    SAY "SQLSTATE =" SQLSTATE                                                   
+    SAY "SQLWARN =" SQLWARN.1",",                                               
+                || SQLWARN.1",",                                                
+                || SQLWARN.2",",                                                
+                || SQLWARN.3",",                                                
+                || SQLWARN.4",",                                                
+                || SQLWARN.5",",                                                
+                || SQLWARN.6",",                                                
+                || SQLWARN.7",",                                                
+                || SQLWARN.8",",                                                
+                || SQLWARN.9""                                                  
+    SAY "SQLERRD =" SQLERRD.1",",                                               
+                || SQLERRD.2",",                                                
+                || SQLERRD.3",",                                                
+                || SQLERRD.4",",                                                
+                || SQLERRD.5",",                                                
+                || SQLERRD.6                                                    
+    SAY "SQLERRP  =" SQLERRP                                                    
+    SAY "SQLERRMC =" SQLERRMC                                                   
+    SAY "SQLCODE  =" SQLCODE                                                    
+    RETURN                                                                      
+                                                                                
+ /*************  SYNTAX ERROR HANDLER **********/                               
+ CRAPCODE:                                                                      
+ SAY 'YOU HAVE CRAP CODE AT LINE' SIGL                                          
+ SAY SOURCELINE(SIGL)                                                           
+ SAY 'REXX GAVE A RETURN CODE OF' RC ', WHICH MEANS :'                          
+ SAY ERRORTEXT(RC)                                                              
+ EXIT                                                                           
+ /************* EXTERNAL ERROR HANDLER **********/                              
+                                                                                
+ BADDIES:                                                                       
+ SAY 'YOU HAVE BEEN LET DOWN ' SIGL                                             
+ SAY SOURCELINE(SIGL)                                                           
+ SAY 'RC =' RC                                                                  
+ EXIT                                                                           
+                                                                                
+                                                                                

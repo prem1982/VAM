@@ -1,0 +1,18 @@
+/* REXX */                                                                      
+                                                                                
+'CGIUTILS -STATUS 200 -CT TEXT/HTML'                                            
+                                                                                
+SAY "<HTML>"                                                                    
+SAY "<HEAD><TITLE>CDOE CGI-TEST #1</TITLE></HEAD>"                              
+SAY '<BODY>'                                                                    
+SAY "<P>"                                                                       
+SAY "<CENTER><H1>"                                                              
+SAY "THIS IS A REXX CGI PRG CALLING A PLI..."                                   
+SAY "</H1></CENTER>"                                                            
+SAY "<BR>---"                                                                   
+"CALL IEFBR14"                                                                  
+SAY "<BR>---"                                                                   
+SAY "</BODY></HTML>"                                                            
+                                                                                
+EXIT                                                                            
+                                                                                

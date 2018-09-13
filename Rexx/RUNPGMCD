@@ -1,0 +1,15 @@
+/*REXX RUNPGMCD: REXX TO RUN DB2 PROGRAM */                                     
+ARG TESTID DB2SYS PGMNAME PLANNAME STORPROC PGMLIB                              
+DSNCDS = TESTID".DB2.RUN."STORPROC"."DB2SYS                                     
+PARMS='100040120010307'                                                         
+/****************************************************/                          
+"FREE FI(DSNCDS)"                                                               
+"DELETE '"DSNCDS"'"                                                             
+"ALLOC FI(DSNCDS) DA('"DSNCDS"') NEW"                                           
+QUEUE "  DSN SYSTEM ("DB2SYS")"                                                 
+QUEUE "    RUN PROGRAM("PGMNAME") PLAN("PLANNAME") -"                           
+QUEUE "            LIB('"PGMLIB"') -"                                           
+QUEUE "          PARMS('"PARMS"')"                                              
+QUEUE "  END"                                                                   
+"EXECIO * DISKW DSNCDS (FINIS"                                                  
+"FREE FI(DSNCDS)"                                                               

@@ -1,0 +1,33 @@
+/*REXX STORPROC: REXX TO CREATE DB2 STORED PROCEDURE */                         
+ARG TESTID DB2SYS OWNER COLLID MEMBER CURSORS                                   
+CALL GETPROCL MEMBER                                                            
+PROCNAME = RESULT                                                               
+DB2CNTL = TESTID".STORPROC."MEMBER                                              
+/****************************************************/                          
+"FREE FI(DB2CNTL)"                                                              
+"DELETE '"DB2CNTL"'"                                                            
+"ALLOC FI(DB2CNTL) DA('"DB2CNTL"') NEW"                                         
+QUEUE "  CREATE PROCEDURE "OWNER"."PROCNAME" ( "                                
+QUEUE "         IN CHAR(20),"                                                   
+QUEUE "         IN CHAR(1),"                                                    
+QUEUE "         IN INTEGER,"                                                    
+QUEUE "         IN SMALLINT,"                                                   
+QUEUE "         OUT INTEGER,"                                                   
+QUEUE "         OUT CHAR(8),"                                                   
+QUEUE "         OUT VARCHAR(2000),"                                             
+QUEUE "         OUT INTEGER,"                                                   
+QUEUE "         OUT CHAR(70),"                                                  
+QUEUE "         OUT CHAR(5) "                                                   
+QUEUE "  ) "                                                                    
+QUEUE "    LANGUAGE COBOL "                                                     
+QUEUE "    EXTERNAL NAME "MEMBER" "                                             
+QUEUE "    PARAMETER STYLE GENERAL "                                            
+QUEUE "    READS SQL DATA "                                                     
+QUEUE "    DETERMINISTIC "                                                      
+QUEUE "    COLLID "COLLID" "                                                    
+QUEUE "    WLM ENVIRONMENT WLM3 "                                               
+QUEUE "    STAY RESIDENT NO "                                                   
+QUEUE "    RUN OPTIONS 'STACK(128K,128K,ANY,KEEP),ALL31(ON)' "                  
+QUEUE "    RESULT SETS "CURSORS";"                                              
+"EXECIO * DISKW DB2CNTL (FINIS"                                                 
+"FREE FI(DB2CNTL)"                                                              

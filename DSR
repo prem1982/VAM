@@ -1,0 +1,10 @@
+SELECT CURRENT_TIMESTAMP                                                        
+FROM SYSIBM.SYSDUMMY1;                                                          
+SELECT * FROM                                                                   
+BMGVZP.VZW_DW_DSR_T;                                                            
+SELECT DAY(BP_START_DT) FROM                                                    
+BMGVZP.VZW_DW_DSR_T;                                                            
+SELECT * FROM                                                                   
+BMGVZP.VZW_DW_DSR_T                                                             
+WHERE MONTH(BP_START_DT) BETWEEN  5 AND 6                                       
+  AND YEAR(BP_START_DT) = 2012                                                  

@@ -1,0 +1,72 @@
+/*REXX CREATSTR: REXX TO CREATE DB2 STORED PROCEDURE */                         
+ARG TESTID DB2SYS OWNER COLLID MEMBER CURSORS                                   
+CALL GETPROCL MEMBER                                                            
+PROCNAME = RESULT                                                               
+DB2CNTL = TESTID".CREATSV5."MEMBER                                              
+PDSMEM = "BMGNS0CN.UNIT.SPCNTLV5("MEMBER")"                                     
+/****************************************************/                          
+"FREE FI(DB2CNTL)"                                                              
+"DELETE '"DB2CNTL"'"                                                            
+"ALLOC FI(DB2CNTL) DA('"DB2CNTL"') NEW"                                         
+QUEUE "  SET CURRENT SQLID='#DB2BMG';"                                          
+QUEUE "  COMMIT;"                                                               
+QUEUE "  INSERT INTO SYSIBM.SYSPROCEDURES"                                      
+QUEUE "    (PROCEDURE, AUTHID, LUNAME, LOADMOD, COLLID,"                        
+QUEUE "     LANGUAGE, ASUTIME, STAYRESIDENT, IBMREQD,"                          
+QUEUE "     RUNOPTS,"                                                           
+QUEUE "     PARMLIST,"                                                          
+QUEUE "     RESULT_SETS, WML_ENV,"                                              
+QUEUE "     PGM_TYPE, EXTERNAL_SECURITY, COMMIT_ON_RETURN)"                     
+QUEUE "    VALUES('"OWNER"."PROCNAME"',' ',' ','"MEMBER"','"COLLID"',"          
+QUEUE "           'COBOL',900, ' ','N',"                                        
+QUEUE "           'MSGFILE(OUTFILE),RPTSTG(ON),RPTOPTS(ON)',"                   
+QUEUE "           'IN  APP_USER_ID   CHAR(20),"                                 
+QUEUE "            IN  DEBUG_LEVEL   CHAR(1),"                                  
+QUEUE "            OUT RETURN_CODE   INTEGER,"                                  
+QUEUE "            OUT REASON_CODE   CHAR(8),"                                  
+QUEUE "            OUT ERROR_TEXT    VARCHAR(2000),"                            
+QUEUE "            OUT SP_SQLCODE    INTEGER,"                                  
+QUEUE "            OUT SP_SQLTOKENS  CHAR(70),"                                 
+QUEUE "            OUT SP_SQLSTATE   CHAR(5),"                                  
+/***  THE FOLLOWING LINES ARE VARIABLE BASED ON STORED PROCEDURE ***/           
+QUEUE "            IN  CUST_NO         INTEGER,"                                
+  SELECT                                                                        
+    WHEN MEMBER = 'BMGS300' THEN                                                
+     DO                                                                         
+QUEUE "            IN  CONFIG_NO       SMALLINT',"                              
+     END                                                                        
+    WHEN MEMBER = 'BMGS302' THEN                                                
+     DO                                                                         
+QUEUE "            IN  CONFIG_NO       SMALLINT,"                               
+QUEUE "            IN  LOAD_DATE       CHAR(10),"                               
+QUEUE "            IN  ACCOUNT_ID      CHAR(16),"                               
+QUEUE "            OUT NAME_ADDRESS1   VARCHAR(30),"                            
+QUEUE "            OUT NAME_ADDRESS2   VARCHAR(30),"                            
+QUEUE "            OUT NAME_ADDRESS3   VARCHAR(30),"                            
+QUEUE "            OUT NAME_ADDRESS4   VARCHAR(30),"                            
+QUEUE "            OUT NAME_ADDRESS5   VARCHAR(30),"                            
+QUEUE "            OUT ZIP             CHAR(10)',"                              
+     END                                                                        
+    WHEN MEMBER = 'BMGS301' THEN                                                
+     DO                                                                         
+QUEUE "            IN  CONFIG_NO       SMALLINT,"                               
+QUEUE "            IN  LOAD_DATE       CHAR(10),"                               
+QUEUE "            IN  ACCOUNT_ID      CHAR(16),"                               
+QUEUE "            IN  TN_TYPE         CHAR(1)',"                               
+     END                                                                        
+    OTHERWISE                                                                   
+     DO                                                                         
+QUEUE "            IN  CONFIG_NO       SMALLINT,"                               
+QUEUE "            IN  LOAD_DATE       CHAR(10)',"                              
+     END                                                                        
+  END                                                                           
+/***  THE PRECEDING LINES ARE VARIABLE BASED ON STORED PROCEDURE ***/           
+QUEUE "           "CURSORS",'BMGD012',"                                         
+QUEUE "           'M','N',NULL);"                                               
+QUEUE "  COMMIT;"                                                               
+"EXECIO * DISKW DB2CNTL (FINIS"                                                 
+"FREE FI(PDSMEM)"                                                               
+"ALLOC FI(PDSMEM) DA('"PDSMEM"') SHR"                                           
+"REPRO INFILE(DB2CNTL) OUTFILE(PDSMEM)"                                         
+"FREE FI(PDSMEM)"                                                               
+"FREE FI(DB2CNTL)"                                                              

@@ -1,0 +1,102 @@
+/*REXX ISRTMANT:REXX TO LOAD MASTER_ACCT_TEMP_T TABLE*/                 00020001
+ARG BMGNY0PN OWNER TBLSPACE DB2SYS STATE ORIGSYST                       00030001
+SIGNAL ON ERROR NAME BADDIES /* ROUTINE FOR EXTERNAL ERRORS */          00094101
+SIGNAL ON SYNTAX NAME CRAPCODE /* ROUTINE FOR CODE ERRORS */            00095001
+MSGS = MSG(ON) /* TSO/E MESSAGE SWITCH  - C.F. CONTROL MSG IN CLIST */  00097001
+SSID = 'D001'                                                           00230001
+TBL_PREFIX = 'BMGVZT'                                                   00240001
+/****** READ THE DMPLIST DD INTO MEMORY USING STEM DMPREC ******/       00250001
+ADDRESS TSO                                                             00290001
+"EXECIO * DISKR DMPLIST (STEM DMPREC. FINIS"                            00330001
+PROC_CT = 0                                                             00370001
+/****** ESTABLISH THE DB2 CONNECTION ******/                            00390001
+SIGNAL OFF ERROR /* TURN ERROR-TRAPPING OFF */                          00400001
+"SUBCOM DSNREXX"                                                        00410000
+SIGNAL ON ERROR NAME BADDIES /* ROUTINE FOR EXTERNAL ERRORS */          00420001
+IF RC THEN                                                              00430001
+   S_RC = RXSUBCOM('ADD','DSNREXX','DSNREXX')                           00440001
+                                                                        00450000
+ADDRESS DSNREXX "CONNECT" SSID                                          00460001
+IF SQLCODE ^= 0 THEN CALL SQLCA                                         00470001
+                                                                        00480000
+/****** INSERT EACH DUMP RECORD INTO TABLE ******/                      00490001
+SIGNAL OFF ERROR                                                        00506001
+CALL DLETROWS                                                           00506101
+DO TX = 1 TO DMPREC.0                                                   00507001
+   MAN      = SUBSTR(DMPREC.TX,1,13)                                    00509001
+   MDATE    = SUBSTR(DMPREC.TX,14,10)                                   00509101
+   OSYS     = SUBSTR(DMPREC.TX,24,2)                                    00509201
+   CALL ISRT1ROW TBL_PREFIX MAN MDATE OSYS                              00520001
+   PROC_CT = PROC_CT + 1                                                00540001
+END                                                                     00550001
+                                                                        00560000
+SAY 'TOTAL ROWS INSERTED=' PROC_CT                                      00570001
+                                                                        00580000
+ADDRESS DSNREXX "DISCONNECT"                                            00590001
+IF SQLCODE ^= 0 THEN CALL SQLCA                                         00600001
+EXIT                                                                    00668001
+                                                                        00669000
+/************* DELETE ALL ROWS PROCEDURE *****/                         00670001
+DLETROWS: PROCEDURE                                                     00700001
+ADDRESS DSNREXX "EXECSQL ",                                             00710001
+    "DELETE FROM "TBL_PREFIX"."MASTER_ACCT_TEMP_T""                     00711001
+RETURN 0                                                                00730001
+                                                                        00730101
+/************* INSERT 1 ROW PROCEDURE ********/                         00730201
+ISRT1ROW: PROCEDURE                                                     00731001
+ARG TBL_PREFIX MAN MDATE OSYS                                           00733001
+ADDRESS DSNREXX "EXECSQL ",                                             00830001
+    "INSERT INTO "TBL_PREFIX"."MASTER_ACCT_TEMP_T"",                    00830101
+         " ("                                                           00833001
+           " MAN,",                                                     00834001
+           " MAN_BILL_DATE,",                                           00835001
+           " ORIG_SYSTEM_ID",                                           00836001
+         " )",                                                          00839301
+        " VALUES",                                                      00839401
+         " (",                                                          00839501
+           " '"MAN"',",                                                 00839601
+           " '"MDATE"',",                                               00839701
+           " '"OSYS"'",                                                 00839801
+         " )"                                                           00839901
+IF SQLCODE ^= 0 THEN CALL SQLCA                                         00841001
+ADDRESS DSNREXX "EXECSQL COMMIT"                                        00850001
+RETURN 0                                                                00930001
+/************* SQL ERROR ROUTINE *************/                         00940001
+SQLCA:                                                                  00980000
+  SAY "SQLSTATE =" SQLSTATE                                             00990001
+  SAY "SQLWARN =" SQLWARN.0",",                                         01000001
+              || SQLWARN.1",",                                          01010000
+              || SQLWARN.2",",                                          01020000
+              || SQLWARN.3",",                                          01030000
+              || SQLWARN.4",",                                          01040000
+              || SQLWARN.5",",                                          01050000
+              || SQLWARN.6",",                                          01060000
+              || SQLWARN.7",",                                          01070000
+              || SQLWARN.8",",                                          01080000
+              || SQLWARN.9",",                                          01090000
+              || SQLWARN.10""                                           01100000
+  SAY "SQLERRD =" SQLERRD.1",",                                         01110001
+              || SQLERRD.2",",                                          01120000
+              || SQLERRD.3",",                                          01130000
+              || SQLERRD.4",",                                          01140000
+              || SQLERRD.5",",                                          01150000
+              || SQLERRD.6                                              01160000
+  SAY "SQLERRP  =" SQLERRP                                              01170001
+  SAY "SQLERRMC =" SQLERRMC                                             01180001
+  SAY "SQLCODE  =" SQLCODE                                              01190001
+  EXIT 20                                                               01200001
+                                                                        01210000
+/************* SYNTAX ERROR HANDLER **********/                         01211001
+CRAPCODE:                                                               01220001
+SAY 'YOU HAVE CRAP CODE AT LINE' SIGL                                   01230001
+SAY SOURCELINE(SIGL)                                                    01240001
+SAY 'REXX GAVE A RETURN CODE OF' RC ', WHICH MEANS :'                   01250001
+SAY ERRORTEXT(RC)                                                       01260001
+EXIT                                                                    01270001
+                                                                        01280000
+/************* EXTERNAL ERROR HANDLER **********/                       01281001
+BADDIES:                                                                01290001
+SAY 'YOU HAVE BEEN LET DOWN BY FACTORS BEYOND YOUR CONTROL AT LINE' SIGL01300001
+SAY SOURCELINE(SIGL)                                                    01310001
+SAY 'RC =' RC                                                           01320001
+EXIT                                                                    01330001

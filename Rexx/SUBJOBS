@@ -1,0 +1,12 @@
+/*REXX SUBJOBS: REXX TO SUBMIT JOBS AT SAME TIME*/                      00010000
+"SUB 'BMGNS0CN.UNIT.JCL(TEST1)'"                                        00170000
+"SUB 'BMGNS0CN.UNIT.JCL(TEST2)'"                                        00180000
+"SUB 'BMGNS0CN.UNIT.JCL(TEST3)'"                                        00190000
+"SUB 'BMGNS0CN.UNIT.JCL(TEST4)'"                                        00200000
+"SUB 'BMGNS0CN.UNIT.JCL(TEST5)'"                                        00210000
+"SUB 'BMGNS0CN.UNIT.JCL(TEST6)'"                                        00220000
+"SUB 'BMGNS0CN.UNIT.JCL(TEST7)'"                                        00230000
+"SUB 'BMGNS0CN.UNIT.JCL(TEST8)'"                                        00240000
+"SUB 'BMGNS0CN.UNIT.JCL(TEST9)'"                                        00250000
+"SUB 'BMGNS0CN.UNIT.JCL(TESTA)'"                                        00260000
+"SUB 'BMGNS0CN.UNIT.JCL(TESTB)'"                                        00270000

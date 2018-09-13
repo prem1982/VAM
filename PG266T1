@@ -1,0 +1,65 @@
+ SELECT 'Total' WTN                                                             
+    ,' ' CUST_ID_CD                                                             
+    ,' ' USER_ID                                                                
+    ,' ' PLAN_DESC                                                              
+    ,' ' COST_CNTR                                                              
+    ,' ' EMAIL_ID                                                               
+    ,CHAR(SUM(SC1.HOME_USE_CHGS)) HOME_USE_CHGS                                 
+    ,CHAR(SUM(SC1.MSG_CHGS))      MSG_CHGS                                      
+    ,CHAR(SUM(SC1.ROAM_CHGS)) ROAM_CHGS                                         
+    ,CHAR(SUM(SC1.TOTAL_CHGS)) TOTAL_CHGS                                       
+    ,' ' MEMO_BILL                                                              
+   FROM (                                                                       
+     SELECT INR.MAN                                                             
+           ,INR.WTN                                                             
+           ,CASE WHEN INR.CUST_ID_CD = ' ' THEN 'No User Name'                  
+                 ELSE INR.CUST_ID_CD END CUST_ID_CD                             
+           ,CASE WHEN INR.USER_ID = ' ' THEN 'No User ID'                       
+                 ELSE INR.USER_ID END USER_ID                                   
+           ,INR.ACCT_NBR                                                        
+           ,INR.ACCT_ALIAS                                                      
+           ,MAX(INR.MAN_BILL_DATE) MAN_BILL_DATE                                
+           ,INR.LAST_BILL_DATE                                                  
+           ,CASE WHEN INR.COST_CNTR = ' ' THEN 'No Cost Center'                 
+                 ELSE INR.COST_CNTR END COST_CNTR                               
+           ,CASE WHEN INR.EMAIL_ID = ' ' THEN 'No Email Address'                
+                 ELSE INR.EMAIL_ID END EMAIL_ID                                 
+           ,INR.PLAN_DESC                                                       
+           ,SUM(INR.HOME_USE_CHGS) HOME_USE_CHGS                                
+           ,SUM(INR.MSG_CHGS)        MSG_CHGS                                   
+           ,SUM(INR.ROAM_CHGS) ROAM_CHGS                                        
+           ,SUM(INR.TOTAL_CHGS) TOTAL_CHGS                                      
+       FROM (                                                                   
+      SELECT STG.MAN                                                            
+            ,STG.WTN  AS wTN                                                    
+            ,STG.VCH_50_A CUST_ID_CD                                            
+            ,STG.VCH_50_C USER_ID                                               
+            ,STG.WIRELESS_DAN ACCT_NBR                                          
+            ,STG.ACCT_ALIAS                                                     
+            ,STG.MAN_BILL_DATE                                                  
+            ,STG.BILL_DATE LAST_BILL_DATE                                       
+            ,STG.VCH_50_B COST_CNTR                                             
+            ,STG.VCH_100_B EMAIL_ID                                             
+            ,STG.VCH_500_B || ' ' PLAN_DESC                                     
+            ,STG.FULL_AMT HOME_USE_CHGS                                         
+            ,STG.CHG_AMT ROAM_CHGS                                              
+            ,STG.AMT_11 MSG_CHGS                                                
+            ,STG.FULL_AMT                                                       
+               + STG.AMT_11                                                     
+               + STG.CHG_AMT TOTAL_CHGS                                         
+       FROM STG_LOB_RPT_T        STG                                            
+      WHERE STG.REPORT_ID_TS = ?                                                
+        ) INR                                                                   
+     GROUP BY INR.MAN                                                           
+           ,INR.WTN                                                             
+           ,INR.CUST_ID_CD                                                      
+           ,INR.USER_ID                                                         
+           ,INR.ACCT_NBR                                                        
+           ,INR.ACCT_ALIAS                                                      
+           ,INR.LAST_BILL_DATE                                                  
+           ,INR.COST_CNTR                                                       
+           ,INR.EMAIL_ID                                                        
+           ,INR.PLAN_DESC                                                       
+     ) SC1                                                                      
+  WHERE SC1.COST_CNTR = %CONSTANT2%                                             
+    AND FILTER = ?                                                              

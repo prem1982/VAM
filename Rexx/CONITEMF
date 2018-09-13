@@ -1,0 +1,194 @@
+/*REXX CONITEMF:REXX TO UPDATE CONS_ITEM_CALLS_T TABLE */               00020001
+ARG LOADDATE ENDLDDAT BEGNPA ENDNPA                                     00030002
+SIGNAL ON ERROR NAME BADDIES /* ROUTINE FOR EXTERNAL ERRORS */          00094101
+SIGNAL ON SYNTAX NAME CRAPCODE /* ROUTINE FOR CODE ERRORS */            00095001
+MSGS = MSG(ON) /* TSO/E MESSAGE SWITCH  - C.F. CONTROL MSG IN CLIST */  00097001
+PROC_CT = 0                                                             00370001
+/****** ESTABLISH THE DB2 CONNECTION ******/                            00390001
+SIGNAL OFF ERROR /* TURN ERROR-TRAPPING OFF */                          00400001
+"SUBCOM DSNREXX"                                                        00410000
+SIGNAL ON ERROR NAME BADDIES /* ROUTINE FOR EXTERNAL ERRORS */          00420001
+IF RC THEN                                                              00430001
+   S_RC = RXSUBCOM('ADD','DSNREXX','DSNREXX')                           00440001
+                                                                        00450000
+ADDRESS DSNREXX "CONNECT D001"                                          00460001
+IF SQLCODE ^= 0 THEN CALL SQLCA                                         00470001
+                                                                        00480009
+SIGNAL OFF ERROR                                                        00506001
+/**** CREATE SELECT STRING *****/                                       00480309
+S51_STRING = "SELECT IC.MAN" ||,                                                
+      " ,IC.MAN_BILL_DATE" ||,                                                  
+      " ,IC.ORIG_SYSTEM_ID" ||,                                                 
+      " ,IC.VZ450_SEQ_NBR" ||,                                                  
+      " ,IC.BILLED_AMT_FMT" ||,                                                 
+      " ,IC.EMR_CHG_AMT" ||,                                                    
+      " ,IC.EMR_CATEGORY" ||,                                                   
+      " ,IC.EMR_FROM_NBR" ||,                                                   
+      " ,IC.FROM_NBR_FMT" ||,                                                   
+      " ,IC.EMR_TO_NBR" ||,                                                     
+      " ,IC.TO_NBR_FMT" ||,                                                     
+  " FROM BMGVZT.CONS_ITEM_CALLS_T IC" ||,                                       
+  " INNER JOIN BMGVZT.MASTER_ACCT_NO_T MT" ||,                                  
+     " ON MT.MAN = IC.MAN" ||,                                                  
+        " AND MT.MAN_BILL_DATE = IC.MAN_BILL_DATE" ||,                          
+        " AND MT.ORIG_SYSTEM_ID = IC.ORIG_SYSTEM_ID" ||,                        
+  " WHERE MT.MAN >= '"BEGNPA"'" ||,                                             
+    " AND MT.MAN <= '"ENDNPA"'" ||,                                             
+    " AND MT.LOAD_DATE >= '"LOADDATE"'" ||,                                     
+    " AND MT.LOAD_DATE <= '"ENDLDDAT"'"                                         
+SAY 'CONVERT CONITEMT, LOAD_DATE>='LOADDATE ||,                                 
+    ', LOADDATE <='ENDLDDAT', MAN >='BEGNPA',MAN<='ENDNPA                       
+/**** FETCH PARAMETERS *****/                                                   
+FPARMS = ":MAN" ||,                                                             
+      " ,:MAN_BILL_DATE" ||,                                                    
+      " ,:ORIG_SYSTEM_ID" ||,                                                   
+      " ,:VZ450_SEQ_NBR" ||,                                                    
+      " ,:BILLED_AMT_FMT" ||,                                                   
+      " ,:EMR_CHG_AMT" ||,                                                      
+      " ,:EMR_CATEGORY" ||,                                                     
+      " ,:EMR_FROM_NBR" ||,                                                     
+      " ,:FROM_NBR_FMT" ||,                                                     
+      " ,:EMR_TO_NBR" ||,                                                       
+      " ,:TO_NBR_FMT"                                                           
+FSQL = "FETCH C51 INTO "FPARMS                                                  
+/**** DECLARE CURSOR *****/                                                     
+DCLSQL = "DECLARE C51 CURSOR WITH HOLD FOR S51"                                 
+/*                                                                              
+  " FOR UPDATE OF IC.BILLED_AMT_FMT, IC.FROM_NBR_FMT, IC.TO_NBR_FMT"            
+*/                                                                              
+ADDRESS DSNREXX "EXECSQL "DCLSQL                                                
+IF SQLCODE ^= 0 THEN                                                            
+   DO                                                                           
+      SAY 'ERROR DECLARING CURSOR C51'                                          
+      CALL SQLCA                                                                
+   END                                                                          
+/**** PREPARE SELECT SQL ****/                                          00480309
+ADDRESS DSNREXX "EXECSQL PREPARE S51 FROM :S51_STRING"                  00460001
+IF SQLCODE ^= 0 THEN                                                    00841001
+   DO                                                                           
+      SAY 'ERROR PREPARING 'S51_STRING                                          
+      CALL SQLCA                                                                
+   END                                                                          
+/**** OPEN CURSOR ****/                                                 00480309
+ADDRESS DSNREXX "EXECSQL OPEN C51"                                      00460001
+IF SQLCODE ^= 0 THEN                                                    00841001
+   DO                                                                           
+      SAY 'ERROR OPENING CURSOR C51'                                            
+      CALL SQLCA                                                                
+   END                                                                          
+/****** FETCH ALL CURSOR ROWS ******/                                   00490001
+PREVNPA = '000'                                                                 
+PROC_CT = 0                                                                     
+NO_ACTION_CT = 0                                                                
+UPDATE_CT = 0                                                                   
+COMMIT_CT = 1                                                                   
+ADDRESS DSNREXX "EXECSQL "FSQL                                                  
+DO WHILE SQLCODE = 0                                                    00507001
+   PROC_CT = PROC_CT + 1                                                        
+   VSGN = ''                                                                    
+   IF EMR_CATEGORY = '32' THEN VSGN = '-'                                       
+   IF EMR_CATEGORY = '41' THEN VSGN = '-'                                       
+   IF EMR_CATEGORY = '82' THEN VSGN = '-'                                       
+   VAMTX = VSGN||EMR_CHG_AMT                                                    
+   LNG = LENGTH(VAMTX) - 1                                                      
+   VAMT = SUBSTR(VAMTX,1,LNG)                                                   
+   UPDSQL = "UPDATE BMGVZT.CONS_ITEM_CALLS_T" ||,                               
+            " SET FROM_NBR_FMT = '"EMR_FROM_NBR"'" ||,                          
+            " ,TO_NBR_FMT = '"EMR_TO_NBR"'" ||,                                 
+            " ,BILLED_AMT_FMT = "VAMT"" ||,                                     
+            " WHERE MAN = '"MAN"'" ||,                                          
+            " AND MAN_BILL_DATE = '"MAN_BILL_DATE"'" ||,                        
+            " AND ORIG_SYSTEM_ID = '"ORIG_SYSTEM_ID"'" ||,                      
+            " AND VZ450_SEQ_NBR = "VZ450_SEQ_NBR                                
+   UPDSW = 'N'                                                                  
+   CURRNPA = SUBSTR(MAN,1,6)                                                    
+   IF CURRNPA ^= PREVNPA THEN                                                   
+      DO                                                                        
+         SAY 'CURRENT NPA='CURRNPA                                              
+         PREVNPA = CURRNPA                                                      
+      END                                                                       
+   IF SUBSTR(FROM_NBR_FMT,1,10) ^= EMR_FROM_NBR THEN UPDSW = 'Y'                
+   IF SUBSTR(TO_NBR_FMT,1,10) ^= EMR_TO_NBR THEN UPDSW = 'Y'                    
+   IF BILLED_AMT_FMT ^= VAMT THEN                                               
+      DO                                                                        
+        IF UPDATE_CT < 10 THEN                                                  
+           DO                                                                   
+              SAY 'BILLED AMT='BILLED_AMT_FMT',VAMT='VAMT                       
+           END                                                                  
+        UPDSW = 'Y'                                                             
+      END                                                                       
+   IF UPDSW = 'Y' THEN                                                          
+      DO                                                                        
+         IF UPDATE_CT < 15 THEN                                                 
+            DO                                                                  
+             SAY 'MAN='MAN',TO='EMR_TO_NBR',FROM='EMR_FROM_NBR',$='VAMT T       
+            END                                                                 
+         ADDRESS DSNREXX "EXECSQL "UPDSQL                                       
+         IF SQLCODE ^= 0 THEN                                                   
+            DO                                                                  
+               SAY 'ERROR FETCHING FROM CURSOR C51'                             
+               CALL SQLCA                                                       
+            END                                                                 
+         UPDATE_CT = UPDATE_CT + 1                                              
+         COMMIT_CT = COMMIT_CT - 1                                              
+         IF COMMIT_CT = 0 THEN                                                  
+            DO                                                                  
+               ADDRESS DSNREXX "EXECSQL COMMIT"                                 
+               COMMIT_CT = 1                                                    
+            END                                                                 
+      END                                                                       
+   ADDRESS DSNREXX "EXECSQL "FSQL                                               
+END                                                                             
+IF SQLCODE ^= 100 THEN                                                          
+   DO                                                                           
+      SAY 'ERROR FETCHING FROM CURSOR C51'                                      
+      CALL SQLCA                                                                
+   END                                                                          
+                                                                                
+ADDRESS DSNREXX "EXECSQL CLOSE C51"                                             
+ADDRESS DSNREXX "EXECSQL COMMIT"                                                
+SAY 'TOTAL ROWS FETCHED=' PROC_CT                                               
+SAY '           UPDATED=' UPDATE_CT                                             
+                                                                                
+ADDRESS DSNREXX "DISCONNECT"                                                    
+IF SQLCODE ^= 0 THEN CALL SQLCA                                                 
+EXIT                                                                            
+/************* SQL ERROR ROUTINE *************/                                 
+SQLCA:                                                                          
+  SAY "SQLSTATE =" SQLSTATE                                                     
+  SAY "SQLWARN =" SQLWARN.0",",                                                 
+              || SQLWARN.1",",                                                  
+              || SQLWARN.2",",                                                  
+              || SQLWARN.3",",                                                  
+              || SQLWARN.4",",                                                  
+              || SQLWARN.5",",                                                  
+              || SQLWARN.6",",                                                  
+              || SQLWARN.7",",                                                  
+              || SQLWARN.8",",                                                  
+              || SQLWARN.9",",                                                  
+              || SQLWARN.10""                                                   
+  SAY "SQLERRD =" SQLERRD.1",",                                                 
+              || SQLERRD.2",",                                                  
+              || SQLERRD.3",",                                                  
+              || SQLERRD.4",",                                                  
+              || SQLERRD.5",",                                                  
+              || SQLERRD.6                                                      
+  SAY "SQLERRP  =" SQLERRP                                                      
+  SAY "SQLERRMC =" SQLERRMC                                                     
+  SAY "SQLCODE  =" SQLCODE                                                      
+  EXIT 20                                                                       
+                                                                                
+/************* SYNTAX ERROR HANDLER **********/                                 
+CRAPCODE:                                                                       
+SAY 'YOU HAVE CRAP CODE AT LINE' SIGL                                           
+SAY SOURCELINE(SIGL)                                                            
+SAY 'REXX GAVE A RETURN CODE OF' RC ', WHICH MEANS :'                           
+SAY ERRORTEXT(RC)                                                               
+EXIT                                                                            
+                                                                                
+/************* EXTERNAL ERROR HANDLER **********/                               
+BADDIES:                                                                        
+SAY 'YOU HAVE BEEN LET DOWN BY FACTORS BEYOND YOUR CONTROL AT LINE' SIGL        
+SAY SOURCELINE(SIGL)                                                            
+SAY 'RC =' RC                                                                   
+EXIT                                                                            

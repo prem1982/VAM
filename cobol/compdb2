@@ -1,0 +1,18 @@
+//BMGB212 JOB (T,JZDD,JKSD0033),'COMPILE DB2 PGM',                      00010000
+//  REGION=0K,CLASS=Q,MSGCLASS=Z,NOTIFY=&SYSUID                         00020000
+/*JOBPARM SYSAFF=(200A,200A)                                            00030000
+//****************************************************************      00040000
+//MYPROCS  JCLLIB ORDER=(BMGVZ0CN.UNIT.PROCLIB)                         00050000
+//****************************************************************      00060000
+//COMPILE EXEC COMPDB2,MODULE=BMGB212,PROJECT=UNIT,                     00070000
+//**COBPARMS='OPT,NOSEQ,LIB,RENT,NODYNAM,DATA(31),TRUNC(BIN)',          00080000
+//*       LINKCNTL=BMGVZ0CN.UNIT.LINKCNTL(BMGB212O),                    00090000
+//        TBLHILVL=BMGVZP,DB2SYS=D009,PKGNAME=BMGVZCOL,                 00100000
+//        TESTID=BMGVZ0CN,                                              00110000
+//        DBRMLIB=BMGVZ0CN.UNIT.DBRMLIB,                                00120000
+//        COBOLLIB=BMGVZ0CN.R11OCT.COBOL,                               00130000
+//        LINKLIB1=BMGVZ0CN.UNIT.BPGMLIB,                               00140000
+//        COPYLIB1=BMGVZ0CN.R11OCT.COPYCOB,                             00150000
+//        COPYLIB2=BMGNS0EN.PROD.COPYCOB,                               00160000
+//        COPYLIB3=BCFNS0EN.PROD.COPYCOB,                               00170000
+//        COPYLIB4=BCFNS0EN.PROD.COPYCOB                                00180000

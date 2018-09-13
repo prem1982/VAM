@@ -1,0 +1,67 @@
+   SELECT SC1.WTN                                                               
+      ,SC1.ACCT_NBR                                                             
+      ,SC1.USER_NAME                                                            
+      ,SC1.COST_CNTR                                                            
+      ,SC1.USER_ID                                                              
+      ,SC1.DEVICE_ID                                                            
+      ,SC1.PRICE_PL_DESC                                                        
+      ,SC1.ACCT_ALIAS                                                           
+      ,SC1.BILL_CYCLE                                                           
+      ,SC1.KB_USAGE                                                             
+      ,SC1.MB_USAGE                                                             
+      ,SC1.GB_USAGE                                                             
+      ,SC1.BB_KB_USAGE                                                          
+      ,SC1.BB_MB_USAGE                                                          
+      ,SC1.BB_GB_USAGE                                                          
+      ,SC1.GD_KB_USAGE                                                          
+      ,SC1.GD_MB_USAGE                                                          
+      ,SC1.GB_KB_USAGE                                                          
+      ,SC1.GB_MB_USAGE                                                          
+     FROM (                                                                     
+     SELECT 'Wireless Number'                             WTN                   
+           ,'Acct No.'                                    ACCT_NBR              
+           ,'User name'                                   USER_NAME             
+           ,'Cost Cntr'                                   COST_CNTR             
+           ,'User Id'                                     USER_ID               
+           ,'Device Id'                                   DEVICE_ID             
+           ,'Price Plan Description*'                     PRICE_PL_DESC         
+           ,CASE WHEN ALIAS_FLAG% = 'Y'                                         
+                 THEN 'Billing Account Alias'                                   
+                 ELSE ''                                                        
+            END                                           ACCT_ALIAS            
+           ,'Bill Cycle'                                  BILL_CYCLE            
+           ,'Overage'                                     OVERAGE               
+           ,'Peak Mins'                                   PEAK_MINS             
+           ,'Off Peak Minutes'                            OFFPEAK_MINS          
+           ,'Night Minutes'                               NIGHT_MINS            
+           ,'Weekend Minutes'                             WE_MINS               
+           ,'Other Minutes'                               OTHER_MINS            
+           ,'In Network Calling Peak'                     IN_PEAK               
+           ,'In Network Calling Off Peak'                 IN_OFFPEAK            
+           ,'Friends & Family Mins'                       FF_MIN                
+           ,'Domestic Kilobytes'                          KB_USAGE              
+           ,'Domestic Megabytes'                          MB_USAGE              
+           ,'Domestic Gigabytes'                          GB_USAGE              
+           ,'Domestic Mobile Broadband Connect Kilobytes' BB_KB_USAGE           
+           ,'Domestic Mobile Broadband Connect Megaytes'  BB_MB_USAGE           
+           ,'Domestic Mobile Broadband Connect Gigaytes'  BB_GB_USAGE           
+           ,'Global Data Kilobytes'                       GD_KB_USAGE           
+           ,'Global Data Megabytes'                       GD_MB_USAGE           
+           ,'Global Mobile Broadband Connect Kilobytes'   GB_KB_USAGE           
+           ,'Global Mobile Broadband Connect Megabytes'   GB_MB_USAGE           
+           ,'Domestic TXT Received'                       DOM_TXT_RCV           
+           ,'Domestic TXT Sent'                           DOM_TXT_SNT           
+           ,'International TXT Received'                  INTL_TXT_RCV          
+           ,'International TXT Sent'                      INTL_TXT_SNT          
+           ,'In-Network TXT Received'                     IN_NW_TXT_RCV         
+           ,'In-Network TXT Sent'                         IN_NW_TXT_SNT         
+           ,'Global TXT Received'                         GLOB_TXT_RCV          
+           ,'Global TXT Sent'                             GLOB_TXT_SNT          
+           ,'PIX/FLIX Received'                           PIX_FLIX_RCV          
+           ,'PIX/FLIX Sent'                               PIX_FLIX_SNT          
+           ,'In-Network PIX/FLIX Received'                IN_PIX_RCV            
+           ,'In-Network PIX/FLIX Sent'                    IN_PIX_SNT            
+           ,'International PIX/FLIX Received'             INTL_PIX_RCV          
+           ,'International PIX/FLIX Sent'                 INTL_PIX_SNT          
+      FROM SYSIBM.SYSDUMMY1                                                     
+       ) SC1                                                                    

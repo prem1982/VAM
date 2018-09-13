@@ -1,0 +1,43 @@
+/*REXX USERINFO: REXX TO CREATE NDM USER INFO CARDS*/                           
+ARG TESTID PNODE PNODEID PNODEPW SNODE SNODEID SNODEPW                          
+SAY 'PNODE=' PNODE '(' PNODEID ',' PNODEPW ')'                                  
+SAY 'SNODE=' SNODE '(' SNODEID ',' SNODEPW ')'                                  
+INFOCRDS = TESTID".USERINFO."PNODE".TO."SNODE                                   
+IF SNODE = 'NORPED4' THEN SNODE = 'MCINORPED4'                                  
+IF PNODE = 'NORPED4' THEN PNODE = 'MCINORPED4'                                  
+/****************************************************/                          
+"FREE FI(INFOCRDS)"                                                             
+"DELETE '"INFOCRDS"'"                                                           
+"ALLOC FI(INFOCRDS) DA('"INFOCRDS"') NEW"                                       
+IF PNODEID <> 'USERIDX' THEN                                                    
+   DO                                                                           
+     IF PNODEPW <> 'USERIDX' THEN                                               
+        DO                                                                      
+          QUEUE "    PNODE="PNODE" PNODEID=("PNODEID","PNODEPW") -"             
+        END                                                                     
+     ELSE                                                                       
+        DO                                                                      
+          QUEUE "    PNODE="PNODE" PNODEID="PNODEID" -"                         
+        END                                                                     
+   END                                                                          
+ELSE                                                                            
+   DO                                                                           
+      QUEUE "    PNODE="PNODE" -"                                               
+   END                                                                          
+IF SNODEID <> 'USERIDX' THEN                                                    
+   DO                                                                           
+     IF SNODEPW <> 'USERIDX' THEN                                               
+        DO                                                                      
+          QUEUE "    SNODE="SNODE" SNODEID=("SNODEID","SNODEPW")"               
+        END                                                                     
+     ELSE                                                                       
+        DO                                                                      
+          QUEUE "    SNODE="SNODE" SNODEID="SNODEID                             
+        END                                                                     
+   END                                                                          
+ELSE                                                                            
+   DO                                                                           
+      QUEUE "    SNODE="SNODE                                                   
+   END                                                                          
+"EXECIO * DISKW INFOCRDS (FINIS"                                                
+"FREE FI(INFOCRDS)"                                                             

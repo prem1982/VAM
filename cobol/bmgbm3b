@@ -1,0 +1,1197 @@
+      ******************************************************************        
+       IDENTIFICATION DIVISION.                                                 
+      ******************************************************************        
+       PROGRAM-ID. BMGBM3B.                                                     
+      ******************************************************************        
+      *   THIS MODULE CREATES A LIST OF LATEST EFFECTIVE MTN'S  AND   *         
+      *   DETERMINE IF THEY ARE ELIGIBLE TO BE EXTRACTED AND SENT TO  *         
+      *   BILL MANAGER                                                *         
+      ******************************************************************        
+      *    IF (M-BILLDATE >= WS-MIN-EFFECTIVE-DT-10) AND                        
+      *       (M-BILLDATE(1:7) > WS-LATEST-RELEASE-DATE (1:7) )                 
+       ENVIRONMENT DIVISION.                                                    
+      ******************************************************************        
+       CONFIGURATION SECTION.                                                   
+       SOURCE-COMPUTER. IBM-370.                                                
+       OBJECT-COMPUTER. IBM-370.                                                
+      ******************************************************************        
+       INPUT-OUTPUT SECTION.                                                    
+      ******************************************************************        
+       FILE-CONTROL.                                                            
+      ******************************************************************        
+      *  REPORT FILE FOR MISSING VAM                                            
+              SELECT RPTVAMS ASSIGN TO RPTVAM.                                  
+      *  REPORT FILE FOR DIFFERENCE IN BILLPERIOD                               
+              SELECT RPTBILL ASSIGN TO RPTBIL.                                  
+      ******************************************************************        
+       DATA DIVISION.                                                           
+      ******************************************************************        
+       FILE SECTION.                                                            
+      ******************************************************************        
+       FD  RPTVAMS                                                              
+            BLOCK CONTAINS 0 RECORDS                                            
+            LABEL RECORDS ARE STANDARD                                          
+            RECORDING MODE IS F                                                 
+            DATA RECORD IS FD-RPTVAMS-REC.                                      
+       01  FD-RPTVAMS-REC  PIC X(80).                                           
+      ******************************************************************        
+       FD  RPTBILL                                                              
+            BLOCK CONTAINS 0 RECORDS                                            
+            LABEL RECORDS ARE STANDARD                                          
+            RECORDING MODE IS F                                                 
+            DATA RECORD IS FD-RPTBILL-REC.                                      
+       01  FD-RPTBILL-REC  PIC X(80).                                           
+      ******************************************************************        
+       WORKING-STORAGE SECTION.                                                 
+      ******************************************************************        
+       COPY LKSTRPIO.                                                           
+       COPY PARSLNKC.                                                           
+       COPY THREADLK.                                                           
+       COPY ALLOPARM.                                                           
+       COPY FILENMLK.                                                           
+           EXEC SQL                                                             
+                                                                                
+                INCLUDE SQLCA                                                   
+           END-EXEC.                                                            
+           EXEC SQL                                                             
+                INCLUDE PARMXXXT                                                
+           END-EXEC.                                                            
+           EXEC SQL                                                             
+                INCLUDE BMCONFGT                                                
+           END-EXEC.                                                            
+           EXEC SQL                                                             
+                INCLUDE BMCONMAN                                                
+           END-EXEC.                                                            
+           EXEC SQL                                                             
+                INCLUDE BMCONPRC                                                
+           END-EXEC.                                                            
+           EXEC SQL                                                             
+                INCLUDE MASTACCT                                                
+           END-EXEC.                                                            
+           EXEC SQL                                                             
+                INCLUDE ACCSUMXT                                                
+           END-EXEC.                                                            
+           EXEC SQL                                                             
+                INCLUDE VFLCNTL                                                 
+           END-EXEC.                                                            
+           EXEC SQL                                                             
+                 DECLARE ERROR_CSR CURSOR WITH HOLD FOR                         
+                 SELECT  MAN,MAN_BILL_DATE,ORIG_SYSTEM_ID                       
+                   FROM BM_CONFIG_PROC_T                                        
+                  WHERE  GW_LOCATION = 'E'                                      
+           END-EXEC.                                                            
+                                                                                
+           EXEC SQL                                                             
+                 DECLARE CON_CUR CURSOR WITH HOLD FOR                           
+             SELECT  A.CUSTOMER_ID,A.CONFIG_ID,                                 
+                A.EFFECTIVE_DT,B.MAN,A.BILL_PERIOD,A.LOB,                       
+                B.ORIG_SYSTEM_ID                                                
+                FROM BM_CONFIG_T A INNER JOIN BM_CONFIG_MAN_T B                 
+                ON      A.CUSTOMER_ID = B.CUSTOMER_ID                           
+                AND     A.CONFIG_ID = B.CONFIG_ID                               
+                AND     A.EFFECTIVE_DT = B.EFFECTIVE_DT                         
+                WHERE A.EFFECTIVE_DT IN (SELECT MAX(C.EFFECTIVE_DT)             
+                                  FROM BM_CONFIG_T C                            
+                                WHERE C.CUSTOMER_ID = A.CUSTOMER_ID             
+                                AND   C.CONFIG_ID = A.CONFIG_ID )               
+                AND  A.VALID_FLAG = 'Y'                                         
+                ORDER BY 1,2                                                    
+           END-EXEC.                                                            
+                                                                                
+       01 DLINE-V.                                                              
+         02 VCUSTOMER          PIC X(5) VALUE SPACES.                           
+         02 VCONFIG            PIC X(2) VALUE SPACES.                           
+         02 VMAN               PIC X(13) VALUE SPACES.                          
+         02 VBILL              PIC X(2)  VALUE SPACES.                          
+         02 VLOB               PIC X(18) VALUE SPACES.                          
+                                                                                
+       01 DLINE-B.                                                              
+         02 BCUSTOMER          PIC X(5) VALUE SPACES.                           
+         02 FILLER             PIC X(1) VALUE "|".                              
+         02 BCONFIG            PIC X(2) VALUE SPACES.                           
+         02 FILLER             PIC X(1) VALUE "|".                              
+         02 BMAN               PIC X(13) VALUE SPACES.                          
+         02 FILLER             PIC X(1) VALUE "|".                              
+         02 BBILL-T            PIC X(2) VALUE SPACES.                           
+         02 FILLER             PIC X(1) VALUE "|".                              
+         02 BBILL-P            PIC X(2) VALUE SPACES.                           
+         02 FILLER             PIC X(1) VALUE "|".                              
+         02 BLOB               PIC X(18) VALUE SPACES.                          
+         02 FILLER             PIC X(1) VALUE "|".                              
+         02 B-STATUS           PIC X(1) VALUE SPACES.                           
+                                                                                
+       01  BMGB100-RECORD.                                                      
+           05 BMGB100-ACTUAL-MAN            PIC X(13).                          
+           05 BMGB100-REF-IND               PIC X(01).                          
+           05 BMGB100-REF-MAN               PIC X(13).                          
+       01  WS-BMGB100-ARRAY.                                                    
+           05 REF-FILE-DATA.                                                    
+              10 REF-FILE-ITEM      OCCURS 50000 TIMES                          
+                                      ASCENDING KEY IS REF-KEY,                 
+                                      INDEXED BY REF-IX.                        
+                 15 REF-KEY.                                                    
+                    20 ACTUAL-MAN       PIC X(13).                              
+                    20 REF-MAN          PIC X(13).                              
+       01  FIRST-QLF                PIC X(08).                                  
+       01  SECOND-QLF               PIC X(08).                                  
+       01  THIRD-QLF                PIC X(08).                                  
+       01  FOURTH-QLF               PIC X(06).                                  
+       01  FIFTH-QLF                PIC X(08).                                  
+       01  WS-VZ450-ARRAY.                                                      
+           05 VZ450-FILE-DATA.                                                  
+              10 VZ450-FILE-ITEM      OCCURS 50000 TIMES                        
+                                      ASCENDING KEY IS VZ450-KEY,               
+                                      INDEXED BY VZ450-IX.                      
+                 15 VZ450-KEY.                                                  
+                    20 VZ450-MAN       PIC X(13).                               
+                    20 VZ450-CUSTOMER  PIC X(5).                                
+                    20 VZ450-CONFIG    PIC X(7).                                
+       01  SAVE-VZ450-IX            PIC S9(4) COMP VALUE ZEROES.                
+       01  WS-SEARCH-KEY.                                                       
+           05  WS-SEARCH-MAN        PIC X(13).                                  
+           05  WS-SEARCH-CUSTOMER   PIC X(07).                                  
+       01  WS-PROCESS-IND           PIC X(01).                                  
+       01  WS-INSERT-IND            PIC X(01) VALUE ' '.                        
+       01  WS-REFMAN-IND            PIC X(01) VALUE 'N'.                        
+       01  EOF-ERR-CSR              PIC X(01) VALUE 'N'.                        
+       01  CHECK-BILLDIFF           PIC X(01) VALUE ' '.                        
+       01  WS-VAM-LOCATION          PIC X(01) VALUE SPACES.                     
+       01  WS-VZ450-DSNAME          PIC X(44) VALUE SPACES.                     
+       01  WS-BMGBM3R               PIC X(08) VALUE 'BMGBM3R'.                  
+       01  WS-BMGBM3B1              PIC X(08) VALUE 'BMGBM3B1'.                 
+       01  WS-CURR-CONFIG.                                                      
+           05 WS-CURR-CUSTOMER-ID   PIC X(05).                                  
+           05 WS-CURR-CONFIG-ID     PIC X(02).                                  
+       01  WS-JULIAN-CYCL           PIC X(06).                                  
+       01  WS-PREV-CONFIG.                                                      
+           05 WS-PREV-CUSTOMER-ID   PIC X(05).                                  
+           05 WS-PREV-CONFIG-ID     PIC X(02).                                  
+       01  NULL1-IND                PIC S9(4) COMP.                             
+       01  NULL2-IND                PIC S9(4) COMP.                             
+       01  NULL3-IND                PIC S9(4) COMP.                             
+       01  NULL4-IND                PIC S9(4) COMP.                             
+       01  WS-LATEST-RELEASE-DATE   PIC X(10).                                  
+       01  WS-DATE                  PIC X(10).                                  
+       01  WS-MAN                   PIC X(13).                                  
+       01  WS-MAN-BILL-DATE         PIC X(10).                                  
+       01  WS-ORIG-SYSTEM-ID        PIC X(02).                                  
+       01  DISPLAY-SQLCODE          PIC ZZZ,ZZ9-.                               
+       01  DISPLAY-SQLSTATE         PIC ZZZ,ZZ9-.                               
+       01  ERROR-MESSAGE.                                                       
+           02 ERROR-LEN   PIC S9(4)  COMP VALUE +960.                           
+           02 ERROR-TEXT  PIC X(80) OCCURS 12 TIMES                             
+                                    INDEXED BY ERROR-INDEX.                     
+       77  ERROR-TEXT-LEN      PIC S9(8)  COMP VALUE +80.                       
+       77  DSNTIAR-PGM         PIC X(8) VALUE 'DSNTIAR'.                        
+                                                                                
+       01  WS-ECR                        PIC X(1) VALUE 'N'.                    
+       01  WS-ICOUNT                     PIC 9(5) VALUE 0.                      
+       01  WS-FLG                        PIC X(1).                              
+                                                                                
+       01  M-DATE.                                                              
+         02  M-BILLDATE       PIC X(10).                                        
+         02  M-BILLPERIOD   REDEFINES M-BILLDATE.                               
+                05   YR     PIC X(8).                                           
+                05   BP     PIC X(2).                                           
+       01  M-SYSID                       PIC X(2).                              
+       01  M-DSNAME                      PIC X(44).                             
+       01  M-LOADDATE                    PIC X(10).                             
+       01  A-STATUS                      PIC X(1).                              
+      **** JANUARY RELEASE **                                                   
+       01  WS-CURSOR-VAR.                                                       
+           10 WS-CUSTOM-ID               PIC X(5)  VALUE SPACES.                
+           10 WS-CONFIG-ID               PIC X(2)  VALUE SPACES.                
+           10 WS-EFFECTIVE-DT            PIC X(26) VALUE SPACES.                
+           10 WS-EFF-DT-10               PIC X(10) VALUE SPACES.                
+           10 WS-BILL-PERIOD             PIC X(2)  VALUE SPACES.                
+       01  WS-BP-DATES.                                                         
+           05  WS-BP-DATE                    PIC X(10).                         
+           05  WS-BP-DATE-R.                                                    
+               10 WS-BP-CCYY                 PIC X(4).                          
+               10 FILLER                     PIC X(1) VALUE '-'.                
+               10 WS-BP-MM                   PIC X(2).                          
+               10 FILLER                     PIC X(1) VALUE '-'.                
+               10 WS-BP-DD                   PIC X(2).                          
+       01  WS-NEW-CONFIG                 PIC X(1)  VALUE 'N'.                   
+       01  WS-OLD-CONFIG                 PIC X(1)  VALUE 'N'.                   
+      **** END JANUARY RELEASE **                                               
+      **** JULY RELEASE **                                                      
+       01  WS-MIN-EFFECTIVE-DT           PIC X(26) VALUE SPACES.                
+       01  WS-MIN-EFFECTIVE-DT-10        PIC X(10) VALUE SPACES.                
+       01  WS-FROM-VZ450                 PIC X(1)  VALUE 'N'.                   
+       01  VZ450LS-REC.                                                         
+           05 VZ450LS-CUST-ID               PIC X(05) VALUE SPACES.             
+           05 VZ450LS-CONFIG-ID             PIC X(02) VALUE SPACES.             
+           05 VZ450LS-MAN                   PIC X(13) VALUE SPACES.             
+           05 VZ450LS-MAN-BILL-DATE         PIC X(10) VALUE SPACES.             
+           05 VZ450LS-ORIG-SYS-ID           PIC X(02) VALUE SPACES.             
+           05 VZ450LS-DSNAME                PIC X(44) VALUE SPACES.             
+           05 VZ450LS-LOB                   PIC X(18) VALUE SPACES.             
+           05 VZ450LS-REF-MAN-IND           PIC X(01) VALUE SPACES.             
+           05 VZ450LS-CHILD-MAN             PIC X(13) VALUE SPACES.             
+           05 FILLER                        PIC X(42) VALUE SPACES.             
+       01  FILE01-DSNAME            PIC X(44).                                  
+       01  FILE01-PGM                PIC X(8) VALUE 'FILE01'.                   
+       01  FILE01-ENTRY              PIC X(8).                                  
+       01  FILE01-EOF-SW             PIC X(1).                                  
+       01  FILE01-RECORD.                                                       
+           05 FILE01-LRECL              PIC S9(4) COMP.                         
+           05 FILE01-SYS-USE            PIC S9(4) COMP.                         
+           05 FILE01-LOGICAL-REC        PIC X(33000).                           
+       01  FILE02-DSNAME            PIC X(44).                                  
+       01  FILE02-PGM                PIC X(8) VALUE 'FILE02'.                   
+       01  FILE02-ENTRY              PIC X(8).                                  
+       01  FILE02-EOF-SW             PIC X(1).                                  
+       01  FILE02-RECORD.                                                       
+           05 FILE02-LRECL              PIC S9(4) COMP.                         
+           05 FILE02-SYS-USE            PIC S9(4) COMP.                         
+           05 FILE02-LOGICAL-REC        PIC X(33000).                           
+      **** AUGUST RELEASE **                                                    
+       01  WS-AUDIT-DSN-HLQ           PIC X(8) VALUE SPACES.                    
+      **** END AUGUST RELEASE **                                                
+      *************************************************************             
+       LINKAGE SECTION.                                                         
+      *************************************************************             
+      * LK-DATA IS COMMA DELIMITED - 1ST PARM IS DB2 SUBSYSTEM ID               
+      *                            - 2ND PARM IS DB2 PLAN NAME                  
+       01  LINKAGE-PARMS.                                                       
+           05 LK-LNG                   PIC S9(4) COMP.                          
+           05 LK-DATA                  PIC X(254).                              
+       EJECT                                                                    
+      *************************************************************             
+       PROCEDURE DIVISION USING LINKAGE-PARMS.                                  
+      *************************************************************             
+                                                                                
+           DISPLAY '---STARTING BMGBM3B PROGRAM--- '.                           
+                                                                                
+           PERFORM A000-SET-UP-PGM                                              
+              THRU A000-SET-UP-PGM-X.                                           
+                                                                                
+           PERFORM B000-MAIN-PROCESS                                            
+              THRU B000-MAIN-PROCESS-X.                                         
+                                                                                
+           PERFORM D000-FINISH-PGM                                              
+              THRU D000-FINISH-PGM-X.                                           
+                                                                                
+           GOBACK.                                                              
+       EJECT                                                                    
+                                                                                
+       A000-SET-UP-PGM.                                                         
+                                                                                
+           PERFORM A010-PARSE-LINKAGE                                           
+              THRU A010-PARSE-LINKAGE-X.                                        
+                                                                                
+           PERFORM A020-ALLOC-VZ450LS-FILE                                      
+              THRU A020-ALLOC-VZ450LS-FILE-X.                                   
+                                                                                
+           PERFORM A040-ALLOC-REFMAN-FILE                                       
+              THRU A040-ALLOC-REFMAN-FILE-X.                                    
+                                                                                
+           MOVE 'CREATE' TO THREADIO-ENTRY.                                     
+           CALL THREADIO-PGM USING THREADIO-PARMS.                              
+           SET VZ450-IX      TO 1.                                              
+           MOVE 1 TO SAVE-VZ450-IX.                                             
+           OPEN OUTPUT  RPTVAMS.                                                
+           OPEN OUTPUT  RPTBILL.                                                
+           INITIALIZE VZ450-FILE-DATA.                                          
+           INITIALIZE WS-BP-DATES.                                              
+                                                                                
+           EXEC SQL                                                             
+                SELECT CURRENT DATE INTO :WS-BP-DATE                            
+                 FROM SYSIBM.SYSDUMMY1                                          
+           END-EXEC.                                                            
+                                                                                
+           MOVE WS-BP-DATE   TO WS-BP-DATE-R.                                   
+                                                                                
+           EXEC SQL                                                             
+                OPEN CON_CUR                                                    
+           END-EXEC.                                                            
+                                                                                
+           IF SQLCODE NOT = 0 AND 466                                           
+              DISPLAY '!!! ERROR OPEN CON_CUR !!!'                              
+              PERFORM U000-DISPLAY-DB2-ERROR-MSG                                
+                 THRU U000-DISPLAY-DB2-ERROR-MSG-X                              
+           ELSE                                                                 
+             PERFORM A060-FETCH-A-CURSOR-1-ROW                                  
+                THRU A060-FETCH-A-CURSOR-1-ROW-X                                
+           END-IF.                                                              
+       A000-SET-UP-PGM-X.                                                       
+           EXIT.                                                                
+                                                                                
+       A010-PARSE-LINKAGE.                                                      
+           MOVE LK-LNG        TO PARSLNKG-LNG.                                  
+           MOVE LK-DATA       TO PARSLNKG-DATA.                                 
+                                                                                
+           CALL PARSLNKG-PGM USING PARSLNKG-PARMS.                              
+                                                                                
+           MOVE PARSLNKG-LK-PARM (1) TO THREADIO-DB2-SUBSYSTEM.                 
+           MOVE PARSLNKG-LK-PARM (2) TO THREADIO-PLAN.                          
+           MOVE PARSLNKG-LK-PARM (3) TO THREADIO-COLLECTION.                    
+           MOVE PARSLNKG-LK-PARM (4) TO WS-JULIAN-CYCL.                         
+       A010-PARSE-LINKAGE-X.                                                    
+           EXIT.                                                                
+                                                                                
+       A020-ALLOC-VZ450LS-FILE.                                                 
+           MOVE SPACES TO FILE01-DSNAME.                                        
+           MOVE 'FILE01' TO FILENAME-DSNAME.                                    
+           CALL FILENAME-PGM USING FILENAME-DSNAME                              
+                                   FILE01-DSNAME.                               
+           IF FILE01-DSNAME = SPACES                                            
+              PERFORM A030-ALLOC-FILE01                                         
+                 THRU A030-ALLOC-FILE01-X                                       
+           END-IF.                                                              
+                                                                                
+           MOVE 'OPENOUT'  TO FILE01-ENTRY.                                     
+           PERFORM Z000-CALL-FILE01-PGM                                         
+              THRU Z000-CALL-FILE01-PGM-X.                                      
+       A020-ALLOC-VZ450LS-FILE-X.                                               
+           EXIT.                                                                
+                                                                                
+       A030-ALLOC-FILE01.                                                       
+      *** ADD JULIAN CYCLE TO THE FILE NAME *****                               
+            IF THREADIO-DB2-SUBSYSTEM = 'D69X' OR                               
+               THREADIO-DB2-SUBSYSTEM(1:3) = 'DB2'                              
+               MOVE 'BMGNY0PN.BMGBM3B.VZ450LS.' TO FILE01-DSNAME (1:25)         
+            ELSE                                                                
+               MOVE 'BMGVZ0CN.BMGBM3B.VZ450LS.' TO FILE01-DSNAME (1:25)         
+            END-IF.                                                             
+            MOVE WS-JULIAN-CYCL             TO FILE01-DSNAME (26:6)             
+            MOVE 11                         TO ALLOFILE-NUM-PARMS               
+            MOVE 'DDNAME=FILE01'            TO ALLOFILE-PARM (1).               
+            MOVE 'DSNAME='                  TO ALLOFILE-PARM (2).               
+            MOVE FILE01-DSNAME              TO ALLOFILE-PARM (2)(8:44).         
+            MOVE 'DISP=(NEW,CATLG,CATLG)'   TO ALLOFILE-PARM (3).               
+            MOVE 'BUFLEN=32000'             TO ALLOFILE-PARM (4).               
+            MOVE 'FREE=CLOSE'               TO ALLOFILE-PARM (5).               
+            MOVE 'MGMTCLAS=LUSE45'          TO ALLOFILE-PARM (6).               
+            MOVE 'DATACLAS=COMPRESS'        TO ALLOFILE-PARM (7).               
+            MOVE 'LRECL=150'                TO ALLOFILE-PARM (8).               
+            MOVE 'RECFM=FB'                 TO ALLOFILE-PARM (9).               
+            MOVE 'SPACE=(CYL,(5,5),RLSE)'   TO ALLOFILE-PARM (10).              
+            MOVE 'SCRATCH=TRUE'             TO ALLOFILE-PARM (11).              
+            CALL ALLOFILE-PGM USING ALLOFILE-PARMS.                             
+       A030-ALLOC-FILE01-X.                                                     
+           EXIT.                                                                
+                                                                                
+       A040-ALLOC-REFMAN-FILE.                                                  
+           MOVE SPACES TO FILE02-DSNAME.                                        
+           MOVE 'FILE02' TO FILENAME-DSNAME.                                    
+           CALL FILENAME-PGM USING FILENAME-DSNAME                              
+                                   FILE02-DSNAME.                               
+           IF FILE02-DSNAME = SPACES                                            
+              PERFORM A050-ALLOC-FILE02                                         
+                 THRU A050-ALLOC-FILE02-X                                       
+           END-IF.                                                              
+       A040-ALLOC-REFMAN-FILE-X.                                                
+           EXIT.                                                                
+                                                                                
+       A050-ALLOC-FILE02.                                                       
+      *** ADD JULIAN CYCLE TO THE FILE NAME *****                               
+            IF THREADIO-DB2-SUBSYSTEM = 'D69X' OR                               
+               THREADIO-DB2-SUBSYSTEM(1:3) = 'DB2'                              
+               MOVE 'BMGNY0PN.BMGB100.REFMAN.J' TO FILE02-DSNAME  (1:25)        
+            ELSE                                                                
+               MOVE 'BMGVZ0CN.BMGB100.REFMAN.J' TO FILE02-DSNAME  (1:25)        
+            END-IF.                                                             
+            MOVE WS-JULIAN-CYCL(2:5)       TO FILE02-DSNAME (26:5)              
+            MOVE 5                         TO ALLOFILE-NUM-PARMS                
+            MOVE 'DDNAME=FILE02'           TO ALLOFILE-PARM (1)                 
+            MOVE 'DSNAME='                 TO ALLOFILE-PARM (2)                 
+            MOVE FILE02-DSNAME             TO ALLOFILE-PARM (2)(8:44)           
+            MOVE 'DISP=SHR'                TO ALLOFILE-PARM (3)                 
+            MOVE 'FREE=CLOSE'              TO ALLOFILE-PARM (4)                 
+            MOVE 'BUFLEN=32760'            TO ALLOFILE-PARM (5)                 
+            CALL ALLOFILE-PGM USING ALLOFILE-PARMS                              
+            IF ALLOFILE-ERROR-CODE = 0                                          
+               MOVE 'OPENIN'  TO FILE02-ENTRY                                   
+               PERFORM Z000-CALL-FILE02-PGM                                     
+                  THRU Z000-CALL-FILE02-PGM-X                                   
+               MOVE '0' TO FILE02-EOF-SW                                        
+               SET  REF-IX TO 1                                                 
+               PERFORM UNTIL FILE02-EOF-SW = '1'                                
+                   MOVE SPACES TO FILE02-RECORD                                 
+                   MOVE 'READIN' TO FILE02-ENTRY                                
+                   PERFORM Z000-CALL-FILE02-PGM                                 
+                      THRU Z000-CALL-FILE02-PGM-X                               
+                   IF FILE02-EOF-SW = '0'                                       
+                      MOVE FILE02-RECORD      TO BMGB100-RECORD                 
+                      IF BMGB100-REF-IND = 'Y'                                  
+                         MOVE BMGB100-ACTUAL-MAN TO ACTUAL-MAN (REF-IX)         
+                         MOVE BMGB100-REF-MAN    TO REF-MAN    (REF-IX)         
+                      END-IF                                                    
+                      SET  REF-IX UP BY 1                                       
+                   END-IF                                                       
+               END-PERFORM                                                      
+            END-IF.                                                             
+       A050-ALLOC-FILE02-X.                                                     
+           EXIT.                                                                
+                                                                                
+       A060-FETCH-A-CURSOR-1-ROW.                                               
+           PERFORM A070-INITIAL-VAR                                             
+              THRU A070-INITIAL-VAR-X.                                          
+                                                                                
+           EXEC SQL                                                             
+              FETCH CON_CUR INTO    :BMCONMAN-CUSTOMER-ID,                      
+                                    :BMCONMAN-CONFIG-ID,                        
+                                    :BMCONMAN-EFFECTIVE-DT,                     
+                                    :BMCONMAN-MAN,                              
+                                    :BMCONFGT-BILL-PERIOD,                      
+                                    :BMCONFGT-LOB,                              
+                                    :BMCONMAN-ORIG-SYSTEM-ID                    
+           END-EXEC.                                                            
+                                                                                
+           IF SQLCODE = 100 THEN                                                
+              MOVE 'Y' TO WS-ECR                                                
+                EXEC SQL                                                        
+                    CLOSE CON_CUR                                               
+                END-EXEC                                                        
+              GO TO A060-FETCH-A-CURSOR-1-ROW-X                                 
+           END-IF.                                                              
+                                                                                
+           IF SQLCODE NOT = 0 AND 100                                           
+              DISPLAY '!!! ERROR FETCH CON_CURSOR !!!'                          
+              PERFORM U000-DISPLAY-DB2-ERROR-MSG                                
+                 THRU U000-DISPLAY-DB2-ERROR-MSG-X                              
+              GO TO A060-FETCH-A-CURSOR-1-ROW-X                                 
+           END-IF.                                                              
+      *    DISPLAY ' BMGBM3B/A060 NEXT='                                        
+      *        BMCONMAN-CUSTOMER-ID '-'                                         
+      *        BMCONMAN-CONFIG-ID ' '                                           
+      *        BMCONMAN-EFFECTIVE-DT ' '                                        
+      *        BMCONMAN-MAN ' '                                                 
+      *        BMCONFGT-BILL-PERIOD ' '                                         
+      *        BMCONFGT-LOB.                                                    
+       A060-FETCH-A-CURSOR-1-ROW-X.                                             
+           EXIT.                                                                
+                                                                                
+       A070-INITIAL-VAR.                                                        
+             MOVE SPACES TO BMCONMAN-CUSTOMER-ID.                               
+             MOVE SPACES TO BMCONMAN-CONFIG-ID.                                 
+             MOVE SPACES TO BMCONMAN-EFFECTIVE-DT.                              
+             MOVE SPACES TO BMCONMAN-MAN.                                       
+             MOVE SPACES TO BMCONPRC-BILL-PERIOD.                               
+             MOVE SPACES TO BMCONFGT-BILL-PERIOD.                               
+             MOVE SPACES TO M-BILLDATE.                                         
+             MOVE SPACES TO M-DATE.                                             
+             MOVE SPACES TO BP.                                                 
+             MOVE SPACES TO M-SYSID.                                            
+             MOVE SPACES TO M-DSNAME.                                           
+             MOVE SPACES TO M-LOADDATE.                                         
+       A070-INITIAL-VAR-X.                                                      
+           EXIT.                                                                
+                                                                                
+       B000-MAIN-PROCESS.                                                       
+                                                                                
+           EXEC SQL                                                             
+               SELECT PARM_VALUE                                                
+               INTO :PARMXXXT-PARM-VALUE                                        
+               FROM PARM_TABLE                                                  
+               WHERE PARM_NAME = 'BILLMAN_PROCESS_IND'                          
+           END-EXEC                                                             
+                                                                                
+           EVALUATE SQLCODE                                                     
+           WHEN 0                                                               
+                MOVE PARMXXXT-PARM-VALUE-TEXT(1:1)                              
+                     TO WS-PROCESS-IND                                          
+                IF WS-PROCESS-IND = 'V'                                         
+                   PERFORM B000A-PROCESS-VZ450                                  
+                      THRU B000A-PROCESS-VZ450-X UNTIL WS-ECR = 'Y'             
+                ELSE                                                            
+                   IF WS-PROCESS-IND = 'M'                                      
+                   PERFORM B000B-PROCESS-MASTER                                 
+                      THRU B000B-PROCESS-MASTER-X UNTIL WS-ECR = 'Y'            
+                   END-IF                                                       
+                END-IF                                                          
+           WHEN 100                                                             
+                PERFORM B000B-PROCESS-MASTER                                    
+                   THRU B000B-PROCESS-MASTER-X UNTIL WS-ECR = 'Y'               
+                                                                                
+                DISPLAY 'SQLCODE : ' SQLCODE                                    
+                DISPLAY 'NO MATCHING ENTRIES IN PARM TABLE '                    
+                PERFORM U000-DISPLAY-DB2-ERROR-MSG                              
+                   THRU U000-DISPLAY-DB2-ERROR-MSG-X                            
+           WHEN OTHER                                                           
+                DISPLAY 'SQLCODE : ' SQLCODE                                    
+                DISPLAY 'ERROR WHILE ACCESSING PARM-TABLE '                     
+                        ' FOR PARM KEY  = BILL_MANAGER_UPDATE'                  
+                PERFORM U000-DISPLAY-DB2-ERROR-MSG                              
+                   THRU U000-DISPLAY-DB2-ERROR-MSG-X                            
+                GOBACK                                                          
+           END-EVALUATE.                                                        
+                                                                                
+           EXEC SQL                                                             
+               COMMIT                                                           
+           END-EXEC.                                                            
+                                                                                
+           PERFORM C100-OPEN-ERROR-CSR                                          
+              THRU C100-OPEN-ERROR-CSR-X.                                       
+       B000-MAIN-PROCESS-X.                                                     
+           EXIT.                                                                
+                                                                                
+       B000A-PROCESS-VZ450.                                                     
+              MOVE BMCONMAN-CONFIG-ID   TO WS-CURR-CONFIG-ID                    
+              MOVE BMCONMAN-CUSTOMER-ID TO WS-CURR-CUSTOMER-ID                  
+                                                                                
+              IF WS-CURR-CONFIG NOT = WS-PREV-CONFIG                            
+                    PERFORM B005-LATEST-REL-DATE                                
+                       THRU B005-LATEST-REL-DATE-X                              
+                    MOVE BMCONMAN-CONFIG-ID   TO WS-PREV-CONFIG-ID              
+                    MOVE BMCONMAN-CUSTOMER-ID TO WS-PREV-CUSTOMER-ID            
+              END-IF.                                                           
+              MOVE 'N' TO WS-FROM-VZ450.                                        
+                                                                                
+              PERFORM B100-LOOKUP-VZ450                                         
+                 THRU B100-LOOKUP-VZ450-X.                                      
+                                                                                
+              EXEC SQL                                                          
+                   COMMIT                                                       
+              END-EXEC.                                                         
+                                                                                
+              MOVE 'N' TO WS-FROM-VZ450.                                        
+                                                                                
+              PERFORM B200-PROCESS-CONFIGS                                      
+                 THRU B200-PROCESS-CONFIGS-X.                                   
+                                                                                
+              PERFORM A060-FETCH-A-CURSOR-1-ROW                                 
+                 THRU A060-FETCH-A-CURSOR-1-ROW-X.                              
+       B000A-PROCESS-VZ450-X.                                                   
+           EXIT.                                                                
+                                                                                
+       B000B-PROCESS-MASTER.                                                    
+              MOVE BMCONMAN-CONFIG-ID   TO WS-CURR-CONFIG-ID                    
+              MOVE BMCONMAN-CUSTOMER-ID TO WS-CURR-CUSTOMER-ID                  
+                                                                                
+              IF WS-CURR-CONFIG NOT = WS-PREV-CONFIG                            
+                    PERFORM B005-LATEST-REL-DATE                                
+                       THRU B005-LATEST-REL-DATE-X                              
+                    MOVE BMCONMAN-CONFIG-ID   TO WS-PREV-CONFIG-ID              
+                    MOVE BMCONMAN-CUSTOMER-ID TO WS-PREV-CUSTOMER-ID            
+              END-IF.                                                           
+                                                                                
+              MOVE 'N' TO WS-FROM-VZ450                                         
+                                                                                
+              PERFORM B200-PROCESS-CONFIGS                                      
+                 THRU B200-PROCESS-CONFIGS-X.                                   
+                                                                                
+              EXEC SQL                                                          
+                   COMMIT                                                       
+              END-EXEC.                                                         
+                                                                                
+              PERFORM B100-LOOKUP-VZ450                                         
+                 THRU B100-LOOKUP-VZ450-X.                                      
+                                                                                
+              PERFORM A060-FETCH-A-CURSOR-1-ROW                                 
+                 THRU A060-FETCH-A-CURSOR-1-ROW-X.                              
+       B000B-PROCESS-MASTER-X.                                                  
+           EXIT.                                                                
+                                                                                
+       C100-OPEN-ERROR-CSR.                                                     
+           EXEC SQL                                                             
+               OPEN ERROR_CSR                                                   
+           END-EXEC.                                                            
+            EVALUATE SQLCODE                                                    
+            WHEN 0                                                              
+                 PERFORM C200-FETCH-ERROR-CSR                                   
+                    THRU C200-FETCH-ERROR-CSR-X                                 
+                                 UNTIL EOF-ERR-CSR = 'Y'                        
+            WHEN OTHER                                                          
+                 DISPLAY '!!! ERROR OPENING ERROR_CSR'                          
+                 PERFORM U000-DISPLAY-DB2-ERROR-MSG                             
+                    THRU U000-DISPLAY-DB2-ERROR-MSG-X                           
+            END-EVALUATE.                                                       
+       C100-OPEN-ERROR-CSR-X.                                                   
+           EXIT.                                                                
+                                                                                
+       C200-FETCH-ERROR-CSR.                                                    
+            EXEC SQL                                                            
+                 FETCH ERROR_CSR INTO :BMCONPRC-MAN                             
+                                     ,:BMCONPRC-MAN-BILL-DATE                   
+                                     ,:BMCONPRC-ORIG-SYSTEM-ID                  
+            END-EXEC                                                            
+            EVALUATE SQLCODE                                                    
+            WHEN 000                                                            
+                 PERFORM C300-SELECT-MASTER                                     
+                    THRU C300-SELECT-MASTER-X                                   
+            WHEN +100                                                           
+                 MOVE 'Y' TO EOF-ERR-CSR                                        
+            WHEN OTHER                                                          
+                 DISPLAY '!!! ERROR OPENING FETCH_CSR'                          
+                 PERFORM U000-DISPLAY-DB2-ERROR-MSG                             
+                    THRU U000-DISPLAY-DB2-ERROR-MSG-X                           
+            END-EVALUATE.                                                       
+       C200-FETCH-ERROR-CSR-X.                                                  
+           EXIT.                                                                
+                                                                                
+       C300-SELECT-MASTER.                                                      
+                                                                                
+            EXEC SQL                                                            
+                 SELECT LOCATION,VZ450_DSNAME INTO                              
+                        :WS-VAM-LOCATION,                                       
+                        :WS-VZ450-DSNAME                                        
+                         FROM MASTER_ACCT_NO_T                                  
+                 WHERE MAN             = :BMCONPRC-MAN                          
+                   AND MAN_BILL_DATE   = :BMCONPRC-MAN-BILL-DATE                
+                   AND ORIG_SYSTEM_ID  = :BMCONPRC-ORIG-SYSTEM-ID               
+                   AND MAN_PARTIAL_IND = 'N'                                    
+            END-EXEC                                                            
+            EVALUATE SQLCODE                                                    
+            WHEN 000                                                            
+                 IF WS-VAM-LOCATION = 'V'                                       
+                    PERFORM C400-UPDATE-PROC                                    
+                       THRU C400-UPDATE-PROC-X                                  
+                 END-IF                                                         
+            WHEN +100                                                           
+                 CONTINUE                                                       
+            WHEN -811                                                           
+                 DISPLAY 'MULTIPLE ROWS FOR IN C300-'                           
+            WHEN OTHER                                                          
+                 DISPLAY '!!! ERROR OPENING FETCH_CSR C300'                     
+                 PERFORM U000-DISPLAY-DB2-ERROR-MSG                             
+                    THRU U000-DISPLAY-DB2-ERROR-MSG-X                           
+            END-EVALUATE.                                                       
+       C300-SELECT-MASTER-X.                                                    
+           EXIT.                                                                
+                                                                                
+       C400-UPDATE-PROC.                                                        
+            EXEC SQL                                                            
+                 UPDATE BM_CONFIG_PROC_T                                        
+                    SET VZ450_DSNAME = :WS-VZ450-DSNAME,                        
+                        GW_LOCATION  = :WS-VAM-LOCATION                         
+                  WHERE MAN             = :BMCONPRC-MAN                         
+                    AND MAN_BILL_DATE   = :BMCONPRC-MAN-BILL-DATE               
+                    AND ORIG_SYSTEM_ID  = :BMCONPRC-ORIG-SYSTEM-ID              
+            END-EXEC                                                            
+            IF SQLCODE NOT = 0                                                  
+                 DISPLAY 'BMCON-BILL-DATE=' BMCONPRC-MAN-BILL-DATE              
+                 DISPLAY '!!! ERROR C400-UPDATE'                                
+                 PERFORM U000-DISPLAY-DB2-ERROR-MSG                             
+                    THRU U000-DISPLAY-DB2-ERROR-MSG-X                           
+            END-IF.                                                             
+       C400-UPDATE-PROC-X.                                                      
+           EXIT.                                                                
+                                                                                
+       B005-LATEST-REL-DATE.                                                    
+            EXEC SQL                                                            
+             SELECT MAX(MAN_BILL_DATE)                                          
+             INTO :WS-LATEST-RELEASE-DATE:NULL1-IND                             
+             FROM BM_CONFIG_PROC_T                                              
+             WHERE    ACCT_SENT_DT <> '9999-12-31-00.00.00.000000'              
+                  AND CUSTOMER_ID = :BMCONMAN-CUSTOMER-ID                       
+                  AND CONFIG_ID   = :BMCONMAN-CONFIG-ID                         
+            END-EXEC                                                            
+            EVALUATE SQLCODE                                                    
+            WHEN 0                                                              
+                IF NULL1-IND < 0 THEN                                           
+                   MOVE '1900-01-01' TO WS-LATEST-RELEASE-DATE                  
+                END-IF                                                          
+            WHEN OTHER                                                          
+              DISPLAY '!!! ERROR GETTING LATEST RELEASE DATE '                  
+              PERFORM U000-DISPLAY-DB2-ERROR-MSG                                
+                 THRU U000-DISPLAY-DB2-ERROR-MSG-X                              
+            END-EVALUATE.                                                       
+       B005-LATEST-REL-DATE-X.                                                  
+           EXIT.                                                                
+                                                                                
+       B100-LOOKUP-VZ450.                                                       
+                                                                                
+            MOVE SPACES TO M-BILLDATE.                                          
+            MOVE SPACES TO WS-ORIG-SYSTEM-ID.                                   
+            MOVE SPACES TO WS-MAN.                                              
+                                                                                
+      **** AUGUST RELEASE **                                                    
+            IF THREADIO-DB2-SUBSYSTEM = 'D69X' OR                               
+               THREADIO-DB2-SUBSYSTEM(1:3) = 'DB2'                              
+                MOVE 'VGWNY0PN'    TO WS-AUDIT-DSN-HLQ                          
+            ELSE                                                                
+                MOVE 'BMGVZ0CN'    TO WS-AUDIT-DSN-HLQ                          
+            END-IF.                                                             
+      **** END AUGUST RELEASE **                                                
+                                                                                
+            EXEC SQL                                                            
+              SELECT MAX(MAN_BILL_DATE),ORIG_SYSTEM_ID, MAN                     
+              INTO :M-BILLDATE:NULL3-IND,                                       
+                   :WS-ORIG-SYSTEM-ID ,                                         
+                   :WS-MAN                                                      
+              FROM VZ450_FILE_CONTROL                                           
+              WHERE MAN      = :BMCONMAN-MAN                                    
+                AND MAN_BILL_DATE <  '9999-12-31'                               
+                AND GATEWAY_PROC_DATE <> '9999-12-31'                           
+      **** AUGUST RELEASE **                                                    
+      *         AND SUBSTR(AUDIT_DSNAME,1,8) = 'VGWNY0PN'                       
+                AND SUBSTR(AUDIT_DSNAME,1,8) = :WS-AUDIT-DSN-HLQ                
+      **** END AUGUST RELEASE **                                                
+              GROUP BY MAN , ORIG_SYSTEM_ID                                     
+            END-EXEC                                                            
+            DISPLAY 'BMGBM3B/B100 SQLCODE=' SQLCODE ' MAX DATE='                
+                 M-BILLDATE.                                                    
+            EVALUATE SQLCODE                                                    
+            WHEN 0                                                              
+                 PERFORM B110-GET-GW-FNAME                                      
+                    THRU B110-GET-GW-FNAME-X                                    
+                 IF SQLCODE = 0                                                 
+                    MOVE 'Y' TO WS-FROM-VZ450                                   
+                    MOVE 'N' TO CHECK-BILLDIFF                                  
+                    PERFORM B300-CHECK-PROC-TB                                  
+                       THRU B300-CHECK-PROC-TB-X                                
+                 END-IF                                                         
+            WHEN 100                                                            
+                 MOVE 'V' TO WS-FLG                                             
+                 PERFORM B400-GENERATE-RPT                                      
+                    THRU B400-GENERATE-RPT-X                                    
+            WHEN OTHER                                                          
+                 DISPLAY 'ERROR B100-VZ450-LOOKUP'                              
+                 DISPLAY 'BMCONMAN-MAN=' BMCONMAN-MAN                           
+                 PERFORM U000-DISPLAY-DB2-ERROR-MSG                             
+                    THRU U000-DISPLAY-DB2-ERROR-MSG-X                           
+            END-EVALUATE.                                                       
+       B100-LOOKUP-VZ450-X.                                                     
+           EXIT.                                                                
+                                                                                
+       B110-GET-GW-FNAME.                                                       
+                                                                                
+           EXEC SQL                                                             
+                SELECT VZ450_DSNAME                                             
+                INTO :M-DSNAME                                                  
+                FROM PARTIAL_MAN_T                                              
+                WHERE MAN           = :WS-MAN                                   
+                AND MAN_BILL_DATE   = :M-BILLDATE                               
+                AND ORIG_SYSTEM_ID  = :WS-ORIG-SYSTEM-ID                        
+                AND BAN             = :WS-MAN                                   
+                AND BILL_DATE       = :M-BILLDATE                               
+      **** AUGUST RELEASE **                                                    
+      *         AND SUBSTR(AUDIT_DSNAME,1,8) = 'VGWNY0PN'                       
+      *         AND SUBSTR(AUDIT_DSNAME,1,8) = :WS-AUDIT-DSN-HLQ                
+      **** END AUGUST RELEASE **                                                
+           END-EXEC.                                                            
+      *    DISPLAY ' BMGBM3B/B110 GTWY DSNAME='                                 
+      *                   M-DSNAME                                              
+            EVALUATE SQLCODE                                                    
+                WHEN 0                                                          
+                  CONTINUE                                                      
+                WHEN  -811                                                      
+                  CONTINUE                                                      
+                WHEN OTHER                                                      
+                  DISPLAY '!!! ERROR GETTING GATEWAY FILE NAME '                
+                  PERFORM U000-DISPLAY-DB2-ERROR-MSG                            
+                     THRU U000-DISPLAY-DB2-ERROR-MSG-X                          
+            END-EVALUATE.                                                       
+       B110-GET-GW-FNAME-X.                                                     
+           EXIT.                                                                
+                                                                                
+       B200-PROCESS-CONFIGS.                                                    
+            EXEC SQL                                                            
+              SELECT MAX(MAN_BILL_DATE),ORIG_SYSTEM_ID, MAN                     
+              INTO :M-BILLDATE,                                                 
+                   :WS-ORIG-SYSTEM-ID ,                                         
+                   :WS-MAN                                                      
+              FROM MASTER_ACCT_NO_T                                             
+              WHERE MAN      = :BMCONMAN-MAN                                    
+                AND LOCATION = 'V'                                              
+                AND MAN_BILL_DATE <  '9999-12-31'                               
+                AND MAN_PARTIAL_IND  = 'N'                                      
+                AND ORIG_SYSTEM_ID ^= 'M1'                                      
+                AND ORIG_SYSTEM_ID ^= 'M2'                                      
+              GROUP BY MAN , ORIG_SYSTEM_ID                                     
+            END-EXEC                                                            
+            EVALUATE SQLCODE                                                    
+            WHEN 0                                                              
+                 PERFORM B210-GET-MAN-INFO                                      
+                    THRU B210-GET-MAN-INFO-X                                    
+            WHEN 100                                                            
+                 MOVE '9999-12-31' TO M-LOADDATE                                
+            WHEN OTHER                                                          
+                 DISPLAY 'ERROR B200-PROCESS-CONFIGS'                           
+                 PERFORM U000-DISPLAY-DB2-ERROR-MSG                             
+                    THRU U000-DISPLAY-DB2-ERROR-MSG-X                           
+            END-EVALUATE.                                                       
+       B200-PROCESS-CONFIGS-X.                                                  
+           EXIT.                                                                
+                                                                                
+       B210-GET-MAN-INFO.                                                       
+              EXEC SQL                                                          
+               SELECT                                                           
+                      M.MAN_BILL_DATE,M.ORIG_SYSTEM_ID,                         
+                      M.VZ450_DSNAME,M.LOAD_DATE ,A.ACCT_STATUS_IND             
+                 INTO :WS-MAN-BILL-DATE,:M-SYSID,:M-DSNAME,                     
+                     :M-LOADDATE,:A-STATUS                                      
+                FROM  MASTER_ACCT_NO_T M INNER JOIN ACCT_SUM_T A                
+                         ON M.MAN=A.MAN AND                                     
+                            M.MAN_BILL_DATE = A.MAN_BILL_DATE AND               
+                            M.ORIG_SYSTEM_ID = A.ORIG_SYSTEM_ID                 
+                  WHERE                                                         
+                       M.MAN = :WS-MAN AND                                      
+                       M.MAN_BILL_DATE =  :M-BILLDATE AND                       
+                       M.ORIG_SYSTEM_ID = :WS-ORIG-SYSTEM-ID AND                
+                       A.BAN = A.MAN AND                                        
+                       M.LOCATION = 'V'                                         
+              END-EXEC                                                          
+            EVALUATE SQLCODE                                                    
+            WHEN 0                                                              
+                MOVE 'Y' TO CHECK-BILLDIFF                                      
+                PERFORM B300-CHECK-PROC-TB                                      
+                   THRU B300-CHECK-PROC-TB-X                                    
+            WHEN 100                                                            
+                CONTINUE                                                        
+            WHEN -811                                                           
+                CONTINUE                                                        
+            WHEN OTHER                                                          
+                 DISPLAY 'ERROR B210-GET-MAN-INFO'                              
+                 PERFORM U000-DISPLAY-DB2-ERROR-MSG                             
+                    THRU U000-DISPLAY-DB2-ERROR-MSG-X                           
+            END-EVALUATE.                                                       
+                                                                                
+       B210-GET-MAN-INFO-X.                                                     
+           EXIT.                                                                
+                                                                                
+       B300-CHECK-PROC-TB.                                                      
+            EXEC SQL                                                            
+                 SELECT BILL_PERIOD                                             
+                   INTO :BMCONPRC-BILL-PERIOD                                   
+                   FROM BM_CONFIG_PROC_T                                        
+                  WHERE                                                         
+                        CUSTOMER_ID = :BMCONMAN-CUSTOMER-ID AND                 
+                        CONFIG_ID = :BMCONMAN-CONFIG-ID     AND                 
+                        MAN = :BMCONMAN-MAN                 AND                 
+                        MAN_BILL_DATE = :M-BILLDATE                             
+            END-EXEC.                                                           
+                                                                                
+                                                                                
+            EVALUATE SQLCODE                                                    
+             WHEN 0                                                             
+                  IF CHECK-BILLDIFF= 'Y'                                        
+                     PERFORM B310-CHECK-BILLDIFF                                
+                        THRU B310-CHECK-BILLDIFF-X                              
+                  END-IF                                                        
+             WHEN 100                                                           
+                  IF CHECK-BILLDIFF= 'Y'                                        
+                     PERFORM B310-CHECK-BILLDIFF                                
+                        THRU B310-CHECK-BILLDIFF-X                              
+                  END-IF                                                        
+                  MOVE 'N' TO WS-NEW-CONFIG                                     
+                              WS-OLD-CONFIG                                     
+      **** ENTERPRISE CONFIGS JAN RELEASE                                       
+                  PERFORM B320-VALIDATE-CONFIG                                  
+                     THRU B320-VALIDATE-CONFIG-X                                
+            WHEN -811                                                           
+                CONTINUE                                                        
+            WHEN OTHER                                                          
+                  DISPLAY 'B300-CHECK-PROC-TB-X ERROR'                          
+                  PERFORM U000-DISPLAY-DB2-ERROR-MSG                            
+                     THRU U000-DISPLAY-DB2-ERROR-MSG-X                          
+            END-EVALUATE.                                                       
+       B300-CHECK-PROC-TB-X.                                                    
+           EXIT.                                                                
+                                                                                
+       B310-CHECK-BILLDIFF.                                                     
+             IF BMCONFGT-BILL-PERIOD                                            
+                       NOT EQUAL TO M-BILLDATE(9:2)  THEN                       
+                MOVE 'B'                        TO WS-FLG                       
+                PERFORM B400-GENERATE-RPT                                       
+                   THRU B400-GENERATE-RPT-X                                     
+             END-IF.                                                            
+       B310-CHECK-BILLDIFF-X.                                                   
+           EXIT.                                                                
+                                                                                
+       B320-VALIDATE-CONFIG.                                                    
+            IF BMCONMAN-CUSTOMER-ID(1:1) NOT EQUAL TO 4 THEN                    
+               PERFORM B330-VALIDATE-INS                                        
+                  THRU B330-VALIDATE-INS-X                                      
+               IF (M-BILLDATE >= WS-MIN-EFFECTIVE-DT-10) AND                    
+                  (M-BILLDATE(1:7) > WS-LATEST-RELEASE-DATE (1:7) )             
+                  PERFORM B340-INS-CFPRT-TB                                     
+                     THRU B340-INS-CFPRT-TB-X                                   
+               END-IF                                                           
+            ELSE                                                                
+               IF M-BILLDATE(1:7) > WS-LATEST-RELEASE-DATE(1:7)                 
+                  PERFORM B340-INS-CFPRT-TB                                     
+                     THRU B340-INS-CFPRT-TB-X                                   
+               END-IF                                                           
+            END-IF.                                                             
+       B320-VALIDATE-CONFIG-X.                                                  
+            EXIT.                                                               
+                                                                                
+       B330-VALIDATE-INS.                                                       
+            EXEC SQL                                                            
+              SELECT MIN(EFFECTIVE_DT)                                          
+              INTO :WS-MIN-EFFECTIVE-DT                                         
+              FROM BM_CONFIG_T                                                  
+              WHERE CUSTOMER_ID = :BMCONMAN-CUSTOMER-ID                         
+                AND CONFIG_ID   = :BMCONMAN-CONFIG-ID                           
+            END-EXEC.                                                           
+            EVALUATE SQLCODE                                                    
+               WHEN 000                                                         
+                 MOVE WS-MIN-EFFECTIVE-DT TO                                    
+                              WS-MIN-EFFECTIVE-DT-10                            
+               WHEN OTHER                                                       
+                 DISPLAY 'ERROR B330-VALIDATE-INS'                              
+                 PERFORM U000-DISPLAY-DB2-ERROR-MSG                             
+                    THRU U000-DISPLAY-DB2-ERROR-MSG-X                           
+            END-EVALUATE.                                                       
+       B330-VALIDATE-INS-X.                                                     
+           EXIT.                                                                
+                                                                                
+       B340-INS-CFPRT-TB.                                                       
+      ****** IF THE MAX ACCOUNT IS PICKED FROM VZ450 TABLE THEN DO NOT          
+      ****** INSERT IN CONFIG_PROC DIRECTLY. WRITE THESE RECORDS TO A           
+      ****** FILE SO THAT BMGBM3B1 WILL PICK THIS UP.                           
+            IF WS-FROM-VZ450 = 'Y' AND WS-ORIG-SYSTEM-ID = '22' THEN            
+               CONTINUE                                                         
+            ELSE                                                                
+               IF WS-FROM-VZ450 = 'K' THEN                                      
+                  PERFORM B350-WRITE-FILE                                       
+                  THRU B350-WRITE-FILE-X                                        
+                  MOVE 'N' TO WS-FROM-VZ450                                     
+                  GO TO B340-INS-CFPRT-TB-X                                     
+               END-IF                                                           
+                                                                                
+               MOVE BMCONMAN-CUSTOMER-ID TO WS-SEARCH-CUSTOMER (1:5)            
+               MOVE BMCONMAN-CONFIG-ID   TO WS-SEARCH-CUSTOMER (6:2)            
+               MOVE BMCONMAN-MAN         TO WS-SEARCH-MAN                       
+               SET VZ450-IX  TO 1                                               
+               SEARCH  VZ450-FILE-ITEM                                          
+                   AT END MOVE 'Y' TO WS-INSERT-IND                             
+                   WHEN VZ450-KEY (VZ450-IX) = WS-SEARCH-KEY                    
+                    MOVE 'N'   TO WS-INSERT-IND                                 
+               END-SEARCH                                                       
+               IF WS-INSERT-IND = 'Y'                                           
+                MOVE BMCONMAN-CUSTOMER-ID TO BMCONPRC-CUSTOMER-ID               
+                MOVE BMCONMAN-CONFIG-ID   TO BMCONPRC-CONFIG-ID                 
+                MOVE BMCONMAN-MAN         TO BMCONPRC-MAN                       
+                MOVE M-BILLDATE           TO BMCONPRC-MAN-BILL-DATE             
+                MOVE BMCONMAN-ORIG-SYSTEM-ID                                    
+                                          TO BMCONPRC-ORIG-SYSTEM-ID            
+                MOVE BP                   TO BMCONPRC-BILL-PERIOD               
+                MOVE M-LOADDATE           TO BMCONPRC-VAM-LOAD-DATE             
+                MOVE M-DSNAME             TO BMCONPRC-VZ450-DSNAME              
+                MOVE BMCONFGT-LOB         TO BMCONPRC-LOB-IND                   
+                MOVE A-STATUS             TO BMCONPRC-ACCT-STATUS-IND           
+                MOVE '9999-12-31-00.00.00.000000'                               
+                                          TO BMCONPRC-ACCT-SENT-DT              
+                                             BMCONPRC-CD-CUT-DT                 
+                                             BMCONPRC-CD-MAIL-DT                
+                                             BMCONPRC-PORTAL-UPLOAD-DT          
+                                             BMCONPRC-BM-PROCESS-DT             
+                MOVE 'Y'                  TO BMCONPRC-VALID-FLAG                
+                MOVE 'N'                  TO BMCONPRC-STATUS-FLAG               
+                                                                                
+               EXEC SQL                                                         
+                       INSERT INTO BM_CONFIG_PROC_T                             
+                           ( CUSTOMER_ID                                        
+                             ,CONFIG_ID                                         
+                             ,MAN                                               
+                             ,MAN_BILL_DATE                                     
+                             ,ORIG_SYSTEM_ID                                    
+                             ,BILL_PERIOD                                       
+                             ,VAM_LOAD_DATE                                     
+                             ,VZ450_DSNAME                                      
+                             ,LOB_IND                                           
+                             ,ACCT_STATUS_IND                                   
+                             ,ACCT_SENT_DT                                      
+                             ,BM_PROCESS_DT                                     
+                             ,PORTAL_UPLOAD_DT                                  
+                             ,CD_CUT_DT                                         
+                             ,CD_MAIL_DT                                        
+                             ,STATUS_FLAG                                       
+                             ,VALID_FLAG                                        
+                             ,GW_LOCATION)                                      
+                    VALUES (:BMCONPRC-CUSTOMER-ID                               
+                           ,:BMCONPRC-CONFIG-ID                                 
+                           ,:BMCONPRC-MAN                                       
+                           ,:BMCONPRC-MAN-BILL-DATE                             
+                           ,:BMCONPRC-ORIG-SYSTEM-ID                            
+                           ,:BMCONPRC-BILL-PERIOD                               
+                           ,:BMCONPRC-VAM-LOAD-DATE                             
+                           ,:BMCONPRC-VZ450-DSNAME                              
+                           ,:BMCONPRC-LOB-IND                                   
+                           ,:BMCONPRC-ACCT-STATUS-IND                           
+                           ,:BMCONPRC-ACCT-SENT-DT                              
+                           ,:BMCONPRC-BM-PROCESS-DT                             
+                           ,:BMCONPRC-PORTAL-UPLOAD-DT                          
+                           ,:BMCONPRC-CD-CUT-DT                                 
+                           ,:BMCONPRC-CD-MAIL-DT                                
+                           ,:BMCONPRC-STATUS-FLAG                               
+                           ,:BMCONPRC-VALID-FLAG                                
+                           ,'V')                                                
+                    END-EXEC                                                    
+                IF SQLCODE NOT = 0                                              
+                  DISPLAY '!!! ERROR INSERTING BM_CONFIG_PROC_T'                
+                  DISPLAY 'BMCONPRC-CUSTOMER-ID=' BMCONPRC-CUSTOMER-ID          
+                  DISPLAY 'BMCONPRC-CONFIG-ID=' BMCONPRC-CONFIG-ID              
+                  DISPLAY 'BMCONPRC-MAN='       BMCONPRC-MAN                    
+                  PERFORM U000-DISPLAY-DB2-ERROR-MSG                            
+                     THRU U000-DISPLAY-DB2-ERROR-MSG-X                          
+                END-IF                                                          
+                IF SQLCODE  = 0                                                 
+                   ADD 1 TO WS-ICOUNT                                           
+                END-IF                                                          
+               END-IF                                                           
+                                                                                
+             END-IF.                                                            
+       B340-INS-CFPRT-TB-X.                                                     
+            EXIT.                                                               
+                                                                                
+       B350-WRITE-FILE.                                                         
+            ADD 1 TO WS-ICOUNT.                                                 
+            SET  VZ450-IX TO SAVE-VZ450-IX                                      
+            MOVE BMCONMAN-CUSTOMER-ID   TO VZ450-CUSTOMER (VZ450-IX).           
+            MOVE BMCONMAN-CONFIG-ID     TO VZ450-CONFIG (VZ450-IX).             
+            MOVE BMCONMAN-MAN           TO VZ450-MAN (VZ450-IX).                
+            SET  VZ450-IX UP BY 1.                                              
+            SET  SAVE-VZ450-IX TO VZ450-IX.                                     
+                                                                                
+            MOVE BMCONMAN-CUSTOMER-ID   TO VZ450LS-CUST-ID.                     
+            MOVE BMCONMAN-CONFIG-ID     TO VZ450LS-CONFIG-ID.                   
+            MOVE BMCONMAN-MAN           TO VZ450LS-MAN.                         
+            PERFORM B360-SEARCH-REFMAN                                          
+               THRU B360-SEARCH-REFMAN-X                                        
+            IF WS-REFMAN-IND = 'Y'                                              
+               MOVE REF-MAN    (REF-IX)     TO VZ450LS-MAN                      
+               MOVE ACTUAL-MAN (REF-IX)     TO VZ450LS-CHILD-MAN                
+               MOVE 'Y'                     TO VZ450LS-REF-MAN-IND              
+            ELSE                                                                
+               MOVE BMCONMAN-MAN            TO VZ450LS-MAN                      
+               MOVE SPACES                  TO VZ450LS-CHILD-MAN                
+               MOVE 'N'                     TO VZ450LS-REF-MAN-IND              
+            END-IF                                                              
+            MOVE M-BILLDATE             TO VZ450LS-MAN-BILL-DATE.               
+            MOVE WS-ORIG-SYSTEM-ID      TO VZ450LS-ORIG-SYS-ID.                 
+              UNSTRING VFLCNTL-AUDIT-DSNAME                                     
+              DELIMITED BY '.' INTO                                             
+               FIRST-QLF                                                        
+               SECOND-QLF                                                       
+               THIRD-QLF                                                        
+               FOURTH-QLF                                                       
+               FIFTH-QLF                                                        
+              END-UNSTRING                                                      
+             IF THREADIO-DB2-SUBSYSTEM = 'D69X' OR                              
+                THREADIO-DB2-SUBSYSTEM(1:3) = 'DB2'                             
+              STRING 'VGWNY0PN.' SECOND-QLF '.'                                 
+                     'VIPS.' FOURTH-QLF                                         
+              DELIMITED BY SIZE INTO VZ450LS-DSNAME                             
+              END-STRING                                                        
+             ELSE                                                               
+              STRING 'BMGVZ0CN.' SECOND-QLF '.'                                 
+                     'VIPS.' FOURTH-QLF                                         
+              DELIMITED BY SIZE INTO VZ450LS-DSNAME                             
+              END-STRING                                                        
+                                                                                
+             END-IF                                                             
+            MOVE BMCONFGT-LOB           TO VZ450LS-LOB.                         
+                                                                                
+            MOVE 'WRITEOUT'             TO FILE01-ENTRY.                        
+            MOVE VZ450LS-REC            TO FILE01-RECORD.                       
+            PERFORM Z000-CALL-FILE01-PGM                                        
+               THRU Z000-CALL-FILE01-PGM-X.                                     
+       B350-WRITE-FILE-X.                                                       
+           EXIT.                                                                
+                                                                                
+                                                                                
+       B360-SEARCH-REFMAN.                                                      
+           SET REF-IX TO 1                                                      
+           SEARCH  REF-FILE-ITEM                                                
+                   AT END MOVE 'N' TO WS-REFMAN-IND                             
+                   WHEN ACTUAL-MAN (REF-IX) = BMCONMAN-MAN                      
+                       MOVE 'Y'   TO WS-REFMAN-IND                              
+           END-SEARCH.                                                          
+       B360-SEARCH-REFMAN-X.                                                    
+           EXIT.                                                                
+                                                                                
+       B400-GENERATE-RPT.                                                       
+             IF WS-FLG = 'V'                                                    
+                MOVE BMCONMAN-MAN         TO VMAN                               
+                MOVE BMCONMAN-CUSTOMER-ID TO VCUSTOMER                          
+                MOVE BMCONMAN-CONFIG-ID   TO VCONFIG                            
+                MOVE BMCONFGT-BILL-PERIOD TO VBILL                              
+                MOVE BMCONFGT-LOB         TO VLOB                               
+             ELSE                                                               
+                MOVE BMCONMAN-CUSTOMER-ID       TO BCUSTOMER                    
+                MOVE BMCONMAN-CONFIG-ID         TO BCONFIG                      
+                MOVE BMCONMAN-MAN               TO BMAN                         
+                MOVE BMCONFGT-BILL-PERIOD       TO BBILL-T                      
+                MOVE BMCONFGT-LOB               TO BLOB                         
+                MOVE M-BILLDATE(9:2)            TO BBILL-P                      
+                MOVE A-STATUS                   TO B-STATUS                     
+             END-IF                                                             
+             PERFORM B410-WRITE-RPT                                             
+                THRU B410-WRITE-RPT-X.                                          
+       B400-GENERATE-RPT-X.                                                     
+           EXIT.                                                                
+                                                                                
+       B410-WRITE-RPT.                                                          
+           IF WS-FLG = 'V'                                                      
+             WRITE FD-RPTVAMS-REC FROM DLINE-V                                  
+           END-IF.                                                              
+           IF WS-FLG = 'B'                                                      
+              WRITE FD-RPTBILL-REC FROM DLINE-B                                 
+           END-IF.                                                              
+       B410-WRITE-RPT-X.                                                        
+           EXIT.                                                                
+                                                                                
+       Z000-CALL-FILE01-PGM.                                                    
+           CALL FILE01-PGM USING FILE01-ENTRY                                   
+                                 FILE01-RECORD                                  
+                                 FILE01-EOF-SW.                                 
+                                                                                
+       Z000-CALL-FILE01-PGM-X.                                                  
+           EXIT.                                                                
+                                                                                
+       Z000-CALL-FILE02-PGM.                                                    
+           CALL FILE02-PGM USING FILE02-ENTRY                                   
+                                 FILE02-RECORD                                  
+                                 FILE02-EOF-SW.                                 
+                                                                                
+       Z000-CALL-FILE02-PGM-X.                                                  
+           EXIT.                                                                
+                                                                                
+       U000-DISPLAY-DB2-ERROR-MSG.                                              
+                                                                                
+           MOVE SQLCODE    TO DISPLAY-SQLCODE.                                  
+           MOVE SQLSTATE   TO DISPLAY-SQLSTATE.                                 
+           DISPLAY 'SQLCODE=' DISPLAY-SQLCODE ',SQLSTATE='                      
+                              DISPLAY-SQLSTATE                                  
+                                                                                
+           CALL DSNTIAR-PGM USING SQLCA                                         
+                                  ERROR-MESSAGE                                 
+                                  ERROR-TEXT-LEN                                
+           PERFORM VARYING ERROR-INDEX FROM 1 BY 1                              
+             UNTIL ERROR-INDEX > 8                                              
+           DISPLAY ERROR-TEXT (ERROR-INDEX)                                     
+           END-PERFORM.                                                         
+       U000-DISPLAY-DB2-ERROR-MSG-X.                                            
+           EXIT.                                                                
+       D000-FINISH-PGM.                                                         
+                                                                                
+      *START OF SEPTEMBER RELEASE (CHANGES TO UPDATE PARM_TABLE)                
+           EXEC SQL                                                             
+                UPDATE PARM_TABLE                                               
+                SET    PARM_VALUE = 'N'                                         
+            WHERE  PARM_NAME IN ('BMGBMB1A','BMGBMB1B','BMGBMB1C'               
+                                   ,'BMGBMB1D','BMGBMB1E','BMGBMB1V'            
+                        ,'BMGBMB1W','BMGBMB1X','BMGBMB1Y'                       
+                        ,'BMGBMB1Z')                                            
+           END-EXEC.                                                            
+           IF   SQLCODE NOT = 0                                                 
+                DISPLAY '!!! ERROR B200-UPDATE-PARM'                            
+                DISPLAY 'PARM NAMES    :  BMGBMB1*'                             
+                PERFORM U000-DISPLAY-DB2-ERROR-MSG                              
+                   THRU U000-DISPLAY-DB2-ERROR-MSG-X                            
+           ELSE                                                                 
+                DISPLAY 'SUCCESSFULLY UPDATED PARM_TABLE'                       
+                DISPLAY 'PARM NAMES    :  BMGBMB1*'                             
+           END-IF.                                                              
+      *END OF SEPTEMBER RELEASE (CHANGES TO UPDATE PARM_TABLE)                  
+                                                                                
+           MOVE 'CLOSFILE' TO FILE01-ENTRY.                                     
+           PERFORM Z000-CALL-FILE01-PGM                                         
+               THRU Z000-CALL-FILE01-PGM-X.                                     
+           MOVE 'DESTROY' TO THREADIO-ENTRY.                                    
+                                                                                
+           CALL THREADIO-PGM USING THREADIO-PARMS.                              
+                                                                                
+           CLOSE  RPTVAMS.                                                      
+           CLOSE  RPTBILL.                                                      
+           DISPLAY '-------- STATISTICS---------------'                         
+           DISPLAY 'NO OF ROWS INSERTED IN BM_CONFIG_PROC_T:-'                  
+                WS-ICOUNT.                                                      
+       D000-FINISH-PGM-X.                                                       
+           EXIT.                                                                

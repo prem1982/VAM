@@ -1,0 +1,10 @@
+/*REXX COPYEDI: REXX TO COPY UNIX FILES */                                      
+PATHNM = '/u/bmgvz2cn/Batch/ediAPR2004.out'                                     
+"ALLOC FI(UNIXIN) PATH('"PATHNM"') PATHOPTS(ORDONLY)"                           
+MVSDSN = 'BMGVZ0CN.EDI.APR2004'                                                 
+"DELETE '"MVSDSN"'"                                                             
+"ALLOC FI(MVSOUT) DA('"MVSDSN"') NEW CATALOG",                                  
+    " NEW CATALOG DATACLAS(PSVB) LRECL(4096)",                                  
+    " SPACE(25,25) CYLINDERS MGMTCLAS(NOBK07)"                                  
+"OCOPY INDD(UNIXIN) OUTDD(MVSOUT) TEXT CONVERT(YES) PATHOPTS(USE)"              
+EXIT                                                                            

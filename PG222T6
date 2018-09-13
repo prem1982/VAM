@@ -1,0 +1,121 @@
+ SELECT 'Total' STRUCT_NODE                                                     
+      ,' ' LAST_BILL_DATE                                                       
+      ,CHAR(SUM(SC1.PHONES)) PHONES                                             
+      ,CHAR(SUM(SC1.ACCT_CHGS)) ACCT_CHGS                                       
+      ,CHAR(SUM(SC1.AIRTIME_MIN)) AIRTIME_MIN                                   
+      ,CHAR(SUM(SC1.FF_MIN))      FF_MIN                                        
+      ,CHAR(SUM(SC1.AIRTIME_BILLABLE)) AIRTIME_BILLABLE                         
+      ,CHAR(SUM(SC1.MONTHLY_CHGS)) MONTHLY_CHGS                                 
+      ,CHAR(SUM(SC1.EQUIP_CHGS)) EQUIP_CHGS                                     
+      ,CHAR(SUM(SC1.VOICE_CHGS)) VOICE_CHGS                                     
+      ,CHAR(SUM(SC1.MSG_CHGS))   MSG_CHGS                                       
+      ,CHAR(SUM(SC1.DATA_USAGE_CHGS)) DATA_USAGE_CHGS                           
+      ,CHAR(SUM(SC1.ROAMER_CHGS)) ROAMER_CHGS                                   
+      ,CHAR(SUM(SC1.OTHER_CHGS)) OTHER_CHGS                                     
+      ,CHAR(SUM(SC1.TAX_SURCHGS)) TAX_SURCHGS                                   
+      ,CHAR(SUM(SC1.THIRD_PARTY_LINE)) THIRD_PARTY_LINE                         
+      ,CHAR(SUM(SC1.TOT_CURR_CHGS)) TOT_CURR_CHGS                               
+   FROM (                                                                       
+    SELECT IN2.STRUCT_NODE                                                      
+          ,IN2.LAST_BILL_DATE                                                   
+          ,SUM(IN2.PHONES) PHONES                                               
+          ,SUM(IN2.ACCT_CHGS) ACCT_CHGS                                         
+          ,SUM(IN2.AIRTIME_MIN) AIRTIME_MIN                                     
+          ,SUM(IN2.FF_MIN) FF_MIN                                               
+          ,SUM(IN2.AIRTIME_BILLABLE) AIRTIME_BILLABLE                           
+          ,SUM(IN2.MONTHLY_CHGS) MONTHLY_CHGS                                   
+          ,SUM(IN2.EQUIP_CHGS) EQUIP_CHGS                                       
+          ,SUM(IN2.VOICE_CHGS) VOICE_CHGS                                       
+          ,SUM(IN2.MSG_CHGS)   MSG_CHGS                                         
+          ,SUM(IN2.DATA_USAGE_CHGS) DATA_USAGE_CHGS                             
+          ,SUM(IN2.ROAMER_CHGS) ROAMER_CHGS                                     
+          ,SUM(IN2.OTHER_CHGS) OTHER_CHGS                                       
+          ,SUM(IN2.TAX_SURCHGS) TAX_SURCHGS                                     
+          ,SUM(IN2.THIRD_PARTY_LINE) THIRD_PARTY_LINE                           
+          ,SUM(IN2.TOT_CURR_CHGS) TOT_CURR_CHGS                                 
+      FROM (                                                                    
+     SELECT INR.LVL_1_NAME AS STRUCT_NODE                                       
+           ,INR.LAST_BILL_DATE                                                  
+           ,INR.WTN                                                             
+           ,1 PHONES                                                            
+           ,SUM(INR.ACCT_CHGS) ACCT_CHGS                                        
+           ,SUM(INR.AIRTIME_MIN) AIRTIME_MIN                                    
+           ,SUM(INR.FF_MIN) FF_MIN                                              
+           ,SUM(INR.AIRTIME_BILLABLE) AIRTIME_BILLABLE                          
+           ,SUM(INR.MONTHLY_CHGS) MONTHLY_CHGS                                  
+           ,SUM(INR.EQUIP_CHGS) EQUIP_CHGS                                      
+           ,SUM(INR.VOICE_CHGS) VOICE_CHGS                                      
+           ,SUM(INR.MSG_CHGS)   MSG_CHGS                                        
+           ,SUM(INR.DATA_CHGS) DATA_USAGE_CHGS                                  
+           ,SUM(INR.ROAMER_CHGS) ROAMER_CHGS                                    
+           ,SUM(INR.OTHER_CHGS) OTHER_CHGS                                      
+           ,SUM(INR.TAXES_SURCHGS) TAX_SURCHGS                                  
+           ,SUM(INR.THIRD_PARTY_LINE) THIRD_PARTY_LINE                          
+           ,SUM(INR.ACCT_CHGS                                                   
+              + INR.MONTHLY_CHGS                                                
+              + INR.EQUIP_CHGS                                                  
+              + INR.VOICE_CHGS                                                  
+              + INR.DATA_CHGS                                                   
+              + INR.ROAMER_CHGS                                                 
+              + INR.OTHER_CHGS                                                  
+              + INR.TAXES_SURCHGS                                               
+              + INR.THIRD_PARTY_LINE                                            
+              + INR.MSG_CHGS)      TOT_CURR_CHGS                                
+        FROM (                                                                  
+      SELECT STG.MAN                                                            
+            ,STG.WTN                                                            
+            ,STG.VCH_50_A CUST_ID_CD                                            
+            ,STG.VCH_50_C USER_ID                                               
+            ,STG.WIRELESS_DAN ACCT_NBR                                          
+            ,STG.ACCT_ALIAS                                                     
+            ,STG.MAN_BILL_DATE                                                  
+            ,STG.MAN_BILL_DATE LAST_BILL_DATE                                   
+            ,STG.VCH_500_B || ' ' PLAN_DESC                                     
+            ,STG.VCH_50_B COST_CNTR                                             
+            ,STG.VCH_100_B EMAIL_ID                                             
+            ,CASE WHEN ACCTLVL.LOW_MTN IS NULL THEN 0                           
+                  WHEN ACCTLVL.LOW_MTN = STG.WTN                                
+                           THEN ACCTLVL.LOW_MTN_CHGS                            
+                  ELSE ACCTLVL.MTN_CHGS                                         
+              END ACCT_CHGS                                                     
+            ,STG.INT_F AIRTIME_MIN                                              
+            ,STG.INT_G AIRTIME_BILLABLE                                         
+            ,STG.INT_J FF_MIN                                                   
+            ,STG.AMT_1 MONTHLY_CHGS                                             
+            ,STG.AMT_2 EQUIP_CHGS                                               
+            ,STG.AMT_3 VOICE_CHGS                                               
+            ,STG.AMT_4 DATA_CHGS                                                
+            ,STG.AMT_5 ROAMER_CHGS                                              
+            ,STG.AMT_11 MSG_CHGS                                                
+            ,DECIMAL(STG.AMT_6                                                  
+                        + STG.ADJ_AMT,13,2) OTHER_CHGS                          
+            ,STG.AMT_7 TAXES_SURCHGS                                            
+            ,STG.AMT_13 THIRD_PARTY_LINE                                        
+            ,RTRIM(SUBSTR(STG.VCH_500_A,52,50)) LVL_1_NAME                      
+        FROM STG_LOB_RPT_T        STG                                           
+       LEFT OUTER JOIN (                                                        
+      SELECT STG.MAN                                                            
+            ,STG.MAN_BILL_DATE                                                  
+            ,STG.WTN  AS LOW_MTN                                                
+            ,SUM(STG.AMT_3) MTN_CHGS                                            
+            ,SUM(STG.AMT_1) LOW_MTN_CHGS                                        
+        FROM STG_LOB_RPT_T        STG                                           
+       WHERE STG.REPORT_ID_TS = ?                                               
+         AND STG.LINE_NUM < 0                                                   
+      GROUP BY STG.MAN                                                          
+            ,STG.MAN_BILL_DATE                                                  
+            ,STG.WTN                                                            
+                ) ACCTLVL                                                       
+          ON STG.MAN = ACCTLVL.MAN                                              
+         AND STG.MAN_BILL_DATE = ACCTLVL.MAN_BILL_DATE                          
+       WHERE STG.REPORT_ID_TS = ?                                               
+         AND STG.LINE_NUM >= 0                                                  
+         ) INR                                                                  
+     GROUP BY INR.LVL_1_NAME                                                    
+           ,INR.LAST_BILL_DATE                                                  
+           ,INR.WTN                                                             
+       ) IN2                                                                    
+    GROUP BY IN2.STRUCT_NODE                                                    
+          ,IN2.LAST_BILL_DATE                                                   
+    ) SC1                                                                       
+  WFILTER = ?                                                                   

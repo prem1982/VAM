@@ -1,0 +1,103 @@
+   SELECT                                                                       
+   SC1.WTN,                                                                     
+   SC1.ESN,                                                                     
+   SC1.DEVICE_MANUF,                                                            
+   SC1.DEVICE_MODEL,                                                            
+   SC1.UPGRADE_DATE,                                                            
+   SC1.NE2_DATE,                                                                
+   SC1.USER_NAME,                                                               
+   SC1.COST_CNTR,                                                               
+   SC1.EMAIL                                                                    
+  FROM (                                                                        
+   SELECT                                                                       
+   TB1.MAN,                                                                     
+   TB1.BAN,                                                                     
+   TB1.ORIG_SYSTEM_ID,                                                          
+   TB1.MTN                                                                      
+   WTN,                                                                         
+   TB1.ESN_MEID                                                                 
+   ESN,                                                                         
+   TB1.MANUFACTURER_NM                                                          
+   DEVICE_MANUF,                                                                
+   TB1.MODEL                                                                    
+   DEVICE_MODEL,                                                                
+   TB1.ELIG_UPGRADE_DT                                                          
+   UPGRADE_DATE,                                                                
+   TB1.NE2_ELIG_REDEMP_DT                                                       
+   NE2_DATE,                                                                    
+   STRIP                                                                        
+    (                                                                           
+   TB1.FAMILY_NAME                                                              
+    )                                                                           
+   ||',                                                                         
+   '|| STRIP                                                                    
+    (                                                                           
+   TB1.GIVEN_NAME                                                               
+    )                                                                           
+   USER_NAME,                                                                   
+   CASE                                                                         
+           WHEN TB1.UIM_COST_CTR_CD = ' '                                       
+           THEN 'No Cost Center'                                                
+           ELSE TB1.UIM_COST_CTR_CD                                             
+            END COST_CNTR,                                                      
+   TB1.EMAIL_ADDR                                                               
+   EMAIL                                                                        
+  FROM (                                                                        
+   SELECT                                                                       
+   X.MAN,                                                                       
+   X.OSID,                                                                      
+   COUNT                                                                        
+    (                                                                           
+   *                                                                            
+    )                                                                           
+   NBR_TIMES                                                                    
+  FROM STRUCTURES_T X                                                           
+   WHERE X.REPORT_ID_TS = STRUCTURE_TS%                                         
+     AND X.MAN <> ' '                                                           
+     AND X.OSID = 'VW'                                                          
+     AND X.POSITION_TYPE = ?                                                    
+     AND X.POSITION_OID = ?                                                     
+   GROUP                                                                        
+   BY                                                                           
+   X.MAN,                                                                       
+   X.OSID                                                                       
+    )                                                                           
+   STR                                                                          
+   INNER JOIN VZW_MTN_T TB1                                                     
+     ON STR.MAN = TB1.MAN                                                       
+     AND STR.OSID = TB1.ORIG_SYSTEM_ID                                          
+     AND TB1.MAN IS NOT NULL                                                    
+     AND TB1.ACTIVE_END_DATE = '9999-12-31'                                     
+     AND (SUBSTR(TB1.MTN_STATUS,1,1) = 'A'                                      
+             OR SUBSTR(TB1.MTN_STATUS,1,1) = 'B')                               
+   WHERE ( ( FROM_DATE%                                                         
+   =                                                                            
+   THRU_DATE%                                                                   
+     AND TB1.ACTIVE_START_DATE <= FROM_DATE%                                    
+     AND TB1.ACTIVE_END_DATE >= THRU_DATE%                                      
+    )                                                                           
+   OR                                                                           
+    (                                                                           
+   FROM_DATE%  <> THRU_DATE%                                                    
+     AND SUBSTR ( CHAR                                                          
+    (                                                                           
+   TB1.ACTIVE_START_DATE                                                        
+   ),                                                                           
+   1,                                                                           
+   7                                                                            
+    )                                                                           
+   <=                                                                           
+   SUBSTR (                                                                     
+   FROM_DATE%,                                                                  
+   1,                                                                           
+   7                                                                            
+    )                                                                           
+     AND CHAR ( TB1.ACTIVE_END_DATE                                             
+    )                                                                           
+   >=                                                                           
+   THRU_DATE%                                                                   
+    )                                                                           
+    )                                                                           
+    )                                                                           
+   SC1                                                                          
+   WFILTER = ?                                                                  

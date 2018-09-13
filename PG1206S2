@@ -1,0 +1,77 @@
+  SELECT SC1.DATE_OF_USAGE                                                      
+       ,SC1.TIME_OF_USAGE                                                       
+       ,SC1.DATA_USG_DESC                                                       
+       ,SC1.DATA_SVC_DESC                                                       
+       ,CHAR(SC1.MINS) MINS                                                     
+       ,CHAR(SC1.APP_PRICE) APP_PRICE                                           
+       ,CHAR(SC1.TOTAL_CHGS) TOTAL_CHGS                                         
+      FROM (                                                                    
+    SELECT IN1.DATE_OF_USAGE                                                    
+          ,CASE WHEN (IN1.AM_PM_IND = 'P'                                       
+                       AND IN1.TIME_HH = '01')                                  
+                  THEN '13:' || IN1.TIME_MM || ':00'                            
+                WHEN (IN1.AM_PM_IND = 'P'                                       
+                       AND IN1.TIME_HH = '02')                                  
+                  THEN '14:' || IN1.TIME_MM || ':00'                            
+                WHEN (IN1.AM_PM_IND = 'P'                                       
+                       AND IN1.TIME_HH = '03')                                  
+                  THEN '15:' || IN1.TIME_MM || ':00'                            
+                WHEN (IN1.AM_PM_IND = 'P'                                       
+                       AND IN1.TIME_HH = '04')                                  
+                  THEN '16:' || IN1.TIME_MM || ':00'                            
+                WHEN (IN1.AM_PM_IND = 'P'                                       
+                       AND IN1.TIME_HH = '05')                                  
+                  THEN '17:' || IN1.TIME_MM || ':00'                            
+                WHEN (IN1.AM_PM_IND = 'P'                                       
+                       AND IN1.TIME_HH = '06')                                  
+                  THEN '18:' || IN1.TIME_MM || ':00'                            
+                WHEN (IN1.AM_PM_IND = 'P'                                       
+                       AND IN1.TIME_HH = '07')                                  
+                  THEN '19:' || IN1.TIME_MM || ':00'                            
+                WHEN (IN1.AM_PM_IND = 'P'                                       
+                       AND IN1.TIME_HH = '08')                                  
+                  THEN '20:' || IN1.TIME_MM || ':00'                            
+                WHEN (IN1.AM_PM_IND = 'P'                                       
+                       AND IN1.TIME_HH = '09')                                  
+                  THEN '21:' || IN1.TIME_MM || ':00'                            
+                WHEN (IN1.AM_PM_IND = 'P'                                       
+                       AND IN1.TIME_HH = '10')                                  
+                  THEN '22:' || IN1.TIME_MM || ':00'                            
+                WHEN (IN1.AM_PM_IND = 'P'                                       
+                       AND IN1.TIME_HH = '11')                                  
+                  THEN '23:' || IN1.TIME_MM || ':00'                            
+                ELSE IN1.TIME_HH || ':' || IN1.TIME_MM || ':00'                 
+            END TIME_OF_USAGE                                                   
+          ,IN1.DATA_USG_DESC                                                    
+          ,IN1.DATA_SVC_DESC                                                    
+          ,IN1.MINS                                                             
+          ,IN1.APP_PRICE                                                        
+          ,IN1.TOTAL_CHGS                                                       
+      FROM (                                                                    
+     SELECT SUBSTR(V50S.DATE_OF_USAGE,3,2) || '/' ||                            
+                 SUBSTR(V50S.DATE_OF_USAGE,1,2) DATE_OF_USAGE                   
+           ,SUBSTR(V50S.TIME_OF_USAGE,6,1) AM_PM_IND                            
+           ,SUBSTR(V50S.TIME_OF_USAGE,1,2) TIME_HH                              
+           ,SUBSTR(V50S.TIME_OF_USAGE,4,2) TIME_MM                              
+           ,V50S.DATA_USG_DESC                                                  
+           ,V50S.DATA_SVC_DESC                                                  
+           ,V50S.MINUTES MINS                                                   
+           ,V50S.APP_PRICE                                                      
+           ,V50S.TOTAL_CHANGES TOTAL_CHGS                                       
+      FROM ACCT_SUM_T TB1                                                       
+     INNER JOIN VZ450_VMT50202_T V50S                                           
+        ON TB1.MAN = V50S.MAN                                                   
+       AND TB1.MAN_BILL_DATE = V50S.MAN_BILL_DATE                               
+       AND TB1.ORIG_SYSTEM_ID = V50S.ORIG_SYSTEM_ID                             
+       AND TB1.VZ450_SEQ_NBR <= V50S.VZ450_SEQ_NBR                              
+       AND TB1.END_VZ450_SEQ_NBR >= V50S.VZ450_SEQ_NBR                          
+       AND V50S.WORKING_TEL_NBR = ?                                             
+     WHERE TB1.MAN = ?                                                          
+       AND TB1.MAN_BILL_DATE = ?                                                
+       AND TB1.ORIG_SYSTEM_ID = ?                                               
+       AND TB1.BAN = ?                                                          
+       AND TB1.BILL_DATE = ?                                                    
+       AND V50S.ASSOC_CHG_CD = '1944'                                           
+      ) IN1                                                                     
+    ) SC1                                                                       
+  WFILTER = ?                                                                   

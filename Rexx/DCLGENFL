@@ -1,0 +1,20 @@
+/*REXX*/                                                                        
+ARG HILVL LBL1 TBLSP DB2SYS OWNER                                               
+CALL GETNAMEL TBLSP                                                             
+TBLNAME = RESULT                                                                
+/****************** DSN COMMANDS **************************/                    
+DSNCDS = HILVL".DCLGENFL"                                                       
+"FREE FI(DSNCDS)"                                                               
+"DELETE '"DSNCDS"'"                                                             
+"ALLOC FI(DSNCDS) DA('"DSNCDS"') NEW "                                          
+QUEUE "  DSN SYSTEM ("DB2SYS")                      "                           
+QUEUE "      DCLGEN TABLE("OWNER"."TBLNAME") -"                                 
+QUEUE "             LIBRARY('BMGVZ0CN."LBL1".COPYCOB("TBLSP")') -  "            
+QUEUE "             ACTION(REPLACE) -               "                           
+QUEUE "             STRUCTURE("TBLSP"-RECORD) - "                               
+QUEUE "             QUOTE -                         "                           
+QUEUE "             COLSUFFIX(YES) NAMES("TBLSP"-)  "                           
+QUEUE "  END                                        "                           
+QUEUE                                                                           
+"EXECIO * DISKW DSNCDS (FINIS"                                                  
+"FREE FI(DSNCDS)"                                                               

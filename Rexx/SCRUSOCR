@@ -1,0 +1,6 @@
+/*SCRUSOCR: REXX */                                                             
+ARG BMGNS0PN CYCINFO CUSTNO CONFIGNO                                            
+"DELETE (",                                                                     
+        "'"BMGNS0PN"."CYCINFO"."CUSTNO"."CONFIGNO".USOCRPTS'",                  
+        "'"BMGNS0PN"."CYCINFO"."CUSTNO"."CONFIGNO".USOCADSL'",                  
+        ")"                                                                     

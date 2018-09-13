@@ -1,0 +1,86 @@
+/*REXX UNLDSQL: REXX TO CREATE DB2 UNLOAD SQL*/                                 
+ address TSO                                                                    
+ trace O                                                                        
+ SSID ="D009"                                                                   
+ address TSO "SUBCOM DSNREXX"                                                   
+ REQUEST_NO = 0                                                                 
+ out.0=0                                                                        
+ Fetch_parms = ":request_no,:app_user_id,:user_name,:config_type,               
+ :config_id,:customer_name,:action,:mode,:start_date,:comments                  
+ ,:ss_file_name,:status,:record_count,:records_failed,:records_added            
+ ,:records_delete"                                                              
+ call connect                                                                   
+ extractf = "BMGVZ0CN.AFT.EXTRACT"                                              
+ "ALLOC FI(output) DA('"extractf"') NEW DATACLAS(PSFB80)"                       
+ call run_sql                                                                   
+ call finish                                                                    
+ exit                                                                           
+/*-------------------------------------------------------------------*/         
+connect:                                                                        
+  If RC <> 0 then                                                               
+     S_RC = RXSUBCOM('ADD','DSNREXX','DSNREXX')                                 
+  ADDRESS DSNREXX  "CONNECT" SSID                                               
+  If SQLCODE ^=0 Then DO                                                        
+      SAY "Connection error " SQLCODE                                           
+      SAY "Rexx terminating"                                                    
+      EXIT                                                                      
+  End                                                                           
+  else                                                                          
+    Say 'Connect sqlcode = ' SQLCODE                                            
+return                                                                          
+run_sql:                                                                        
+ sqlstmt =       ,                                                              
+' SELECT                      ',                                                
+'    REQUEST_NO               ',                                                
+'    ,APP_USER_ID              ',                                               
+'    ,USER_NAME                ',                                               
+'    ,CONFIG_TYPE              ',                                               
+'    ,CONFIG_ID                ',                                               
+'    ,CUSTOMER_NAME            ',                                               
+'    ,ACTION                   ',                                               
+'    ,MODE                     ',                                               
+'    ,START_DATE               ',                                               
+'    ,COMMENTS                 ',                                               
+'    ,SS_FILE_NAME          ',                                                  
+'    ,STATUS                ',                                                  
+'    ,RECORD_COUNT          ',                                                  
+'    ,RECORDS_FAILED        ',                                                  
+'    ,RECORDS_ADDED         ',                                                  
+'    ,RECORDS_DELETE        ',                                                  
+' FROM BMGVZP.AFT_REQ_T                                      ',                 
+'      WITH UR                                              ',                  
+ADDRESS DSNREXXC "EXECSQL DECLARE C1 CURSOR FOR S1"                             
+ADDRESS DSNREXXC "EXECSQL PREPARE S1 FROM :sqlstmt"                             
+ADDRESS DSNREXXC "EXECSQL OPEN C1"                                              
+SAY "SQL CODE AFTER OPEN = " SQLCODE                                            
+if (sqlcode = 0)  then do                                                       
+  ADDRESS DSNREXXC  "EXECSQL FETCH C1 INTO "fetch_parms                         
+   SAY "SQLCODE ON FETCH = " sqlcode                                            
+  if sqlcode = 0 then                                                           
+    do                                                                          
+      msg = ' '                                                                 
+      say 'request no   ='  REQUEST_NO                                          
+    end                                                                         
+end                                                                             
+call write_out                                                                  
+ADDRESS DSNREXXC "EXECSQL  close C1"                                            
+return                                                                          
+/*---------------------------------------------------------------*/             
+write_out:                                                                      
+ spac = "  "                                                                    
+ rec =  request_no||app_user_id||user_name||,                                   
+        config_type||config_id||customer_name||action||mode,                    
+        start_date||comments||ss_file_name||status||record_count,               
+        records_failed||records_added||records_delete                           
+ out.i = rec                                                                    
+ return                                                                         
+finish:                                                                         
+   say 'In finish'                                                              
+   ADDRESS DSNREXX "DISCONNECT"                                                 
+    address TSO                                                                 
+     "ALLOC FI(outpt) DA('BMGVZ0CN.AFT.EXTRACT') SHR REUSE"                     
+     "execio * diskw outpt (stem out. finis"                                    
+     "free FI(outpt)"                                                           
+ return                                                                         
+                                                                                
+/*---------------------------------------------------------------*/             

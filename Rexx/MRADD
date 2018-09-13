@@ -1,0 +1,137 @@
+/*REXX MRADD: REXX TO CREATE DATASETS/RECORDS USED TO CREATE MR*/               
+ARG TESTID MR TI APPL RLSEID PATH                                               
+MRNUM    = TESTID".MRNUM"                                                       
+TILEVEL  = TESTID".TILEVEL"                                                     
+MISCDATA = TESTID".MISCDATA"                                                    
+TESTINST = TESTID".TESTINST"                                                    
+RELWORK  = TESTID".RELWORK"                                                     
+SPECIAL  = TESTID".SPECIAL"                                                     
+PROBDESC = TESTID".PROBDESC"                                                    
+CANCDESC = TESTID".CANCDESC"                                                    
+RELPDS   = TESTID".RELPDS"                                                      
+OTHERCN  = TESTID".OTHERCN"                                                     
+OTHERMR  = TESTID".OTHERMR"                                                     
+WORKLIST = TESTID".WORKLIST"                                                    
+TRANREUS = TESTID".TRANREUS"                                                    
+/*********************************************************/                     
+CALL LEADZERO MR 6                                                              
+MR6 = RESULT                                                                    
+SAY 'MR6='MR6                                                                   
+CALL LEADZERO TI 2                                                              
+TI2 = RESULT                                                                    
+SAY 'TI2='TI2                                                                   
+XDATE = DATE(S)                                                                 
+YYMMDD = SUBSTR(XDATE,3,6)                                                      
+SAY 'YYMMDD='YYMMDD                                                             
+XTIME = TIME()                                                                  
+DTIME = SUBSTR(XTIME,1,2)"."SUBSTR(XTIME,4,2)"."SUBSTR(XTIME,7,2)               
+SAY 'DTIME='DTIME                                                               
+CALL PADBLNKS RLSEID 11                                                         
+RLSEID11 = RESULT                                                               
+SAY 'RLSEID11='RLSEID11                                                         
+CALL PADBLNKS TESTID 8                                                          
+ID8 = RESULT                                                                    
+SAY 'ID8='ID8                                                                   
+CALL PADBLNKS APPL 4                                                            
+APPL4 = RESULT                                                                  
+SAY 'APPL4='APPL4                                                               
+CALL IDNAME TESTID                                                              
+XNAME = RESULT                                                                  
+BLNK20 = '                    '                                                 
+LNG = LENGTH(XNAME)                                                             
+LNGX = 20 - LNG                                                                 
+NAME20 = XNAME||SUBSTR(BLNK20,1,LNGX)                                           
+SAY 'NAME20='NAME20                                                             
+CALL IDTN TESTID                                                                
+TN12 = RESULT                                                                   
+SAY 'TN12='TN12                                                                 
+CALL MRAPPL2 APPL                                                               
+APPL2 = RESULT                                                                  
+SAY 'APPL2='APPL2                                                               
+CALL PADBLNKS PATH 1                                                            
+PATH1 = RESULT                                                                  
+SAY 'PATH1='PATH1                                                               
+/*********************************************************/                     
+"FREE FI(MRWKFILE)"                                                             
+/*********************************************************/                     
+"DELETE '"MRNUM"'"                                                              
+"ALLOC FI(MRWKFILE) DA('"MRNUM"') NEW DATACLAS(PSFB80)"                         
+QUEUE MR6||APPL2                                                                
+"EXECIO * DISKW MRWKFILE (FINIS"                                                
+"FREE FI(MRWKFILE)"                                                             
+/*********************************************************/                     
+"DELETE '"TILEVEL"'"                                                            
+"ALLOC FI(MRWKFILE) DA('"TILEVEL"') NEW DATACLAS(PSFB80)"                       
+QUEUE MR6||APPL2||TI2||PATH1||YYMMDD||DTIME                                     
+"EXECIO * DISKW MRWKFILE (FINIS"                                                
+"FREE FI(MRWKFILE)"                                                             
+/*********************************************************/                     
+"DELETE '"MISCDATA"'"                                                           
+"ALLOC FI(MRWKFILE) DA('"MISCDATA"') NEW DATACLAS(PSFB80)"                      
+QUEUE MR6||APPL2||TI2||RLSEID11||APPL4||PATH1||ID8||NAME20"X "YYMMDD||TN12      
+"EXECIO * DISKW MRWKFILE (FINIS"                                                
+"FREE FI(MRWKFILE)"                                                             
+/*********************************************************/                     
+"DELETE '"TESTINST"'"                                                           
+"ALLOC FI(MRWKFILE) DA('"TESTINST"') NEW DATACLAS(PSFB80)"                      
+QUEUE MR6||APPL2||TI2" 1TESTED AT COSTAR"                                       
+"EXECIO * DISKW MRWKFILE (FINIS"                                                
+"FREE FI(MRWKFILE)"                                                             
+/*********************************************************/                     
+"DELETE '"RELWORK"'"                                                            
+"ALLOC FI(MRWKFILE) DA('"RELWORK"') NEW DATACLAS(PSFB80)"                       
+QUEUE MR6||APPL2||TI2"NONE"                                                     
+"EXECIO * DISKW MRWKFILE (FINIS"                                                
+"FREE FI(MRWKFILE)"                                                             
+/*********************************************************/                     
+"DELETE '"SPECIAL"'"                                                            
+"ALLOC FI(MRWKFILE) DA('"SPECIAL"') NEW DATACLAS(PSFB80)"                       
+QUEUE MR6||APPL2||TI2"NONE"                                                     
+"EXECIO * DISKW MRWKFILE (FINIS"                                                
+"FREE FI(MRWKFILE)"                                                             
+/*********************************************************/                     
+"DELETE '"PROBDESC"'"                                                           
+"ALLOC FI(MRWKFILE) DA('"PROBDESC"') NEW DATACLAS(PSFB80)"                      
+QUEUE MR6||APPL2||TI2" 1RELEASE OF ELEMENTS TO PRODUCTION"                      
+"EXECIO * DISKW MRWKFILE (FINIS"                                                
+"FREE FI(MRWKFILE)"                                                             
+/*********************************************************/                     
+"DELETE '"CANCDESC"'"                                                           
+"ALLOC FI(MRWKFILE) DA('"CANCDESC"') NEW DATACLAS(PSFB80)"                      
+"EXECIO * DISKW MRWKFILE (FINIS"                                                
+"FREE FI(MRWKFILE)"                                                             
+/*********************************************************/                     
+"DELETE '"RELPDS"'"                                                             
+"ALLOC FI(MRWKFILE) DA('"RELPDS"') NEW DATACLAS(PSFB80)"                        
+"EXECIO * DISKW MRWKFILE (FINIS"                                                
+"FREE FI(MRWKFILE)"                                                             
+/*********************************************************/                     
+"DELETE '"OTHERCN"'"                                                            
+"ALLOC FI(MRWKFILE) DA('"OTHERCN"') NEW DATACLAS(PSFB80)"                       
+QUEUE MR6||APPL2||TI2"NONE"                                                     
+"EXECIO * DISKW MRWKFILE (FINIS"                                                
+"FREE FI(MRWKFILE)"                                                             
+/*********************************************************/                     
+"DELETE '"OTHERMR"'"                                                            
+"ALLOC FI(MRWKFILE) DA('"OTHERMR"') NEW DATACLAS(PSFB80)"                       
+QUEUE MR6||APPL2||TI2"NONE"                                                     
+"EXECIO * DISKW MRWKFILE (FINIS"                                                
+"FREE FI(MRWKFILE)"                                                             
+/*********************************************************/                     
+"DELETE '"TRANREUS"'"                                                           
+"ALLOC FI(MRWKFILE) DA('"TRANREUS"') NEW DATACLAS(PSFB80)"                      
+"EXECIO * DISKW MRWKFILE (FINIS"                                                
+"FREE FI(MRWKFILE)"                                                             
+/*********************************************************/                     
+"DELETE '"WORKLIST"'"                                                           
+"ALLOC FI(MRWKFILE) DA('"WORKLIST"') NEW DATACLAS(PSFB80)"                      
+"EXECIO * DISKR ELEMENTS (FINIS STEM ELEMREC."                                  
+DO I = 1 TO ELEMREC.0                                                           
+    MEMBER = WORD(ELEMREC.I,1)                                                  
+    CALL PADBLNKS MEMBER 10                                                     
+    XMEM = RESULT                                                               
+    TYPE   = WORD(ELEMREC.I,2)                                                  
+    QUEUE MR6||APPL2||TI2||XMEM||TYPE                                           
+END                                                                             
+"EXECIO * DISKW MRWKFILE (FINIS"                                                
+"FREE FI(MRWKFILE)"                                                             

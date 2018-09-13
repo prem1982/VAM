@@ -1,0 +1,218 @@
+        /* --------------------  rexx procedure  -------------------- *         
+         * Name:      XMITIPML                                        *         
+         *                                                            *         
+         * Function:  Mail Lookup for XMITIP                          *         
+         *                                                            *         
+         * Syntax:    %xmitipml name "/" table-name                   *         
+         *                                                            *         
+         * Author:    Lionel B. Dyck                                  *         
+         *            Kaiser Permanente Information Technology        *         
+         *            Walnut Creek, CA 94598                          *         
+         *            (925) 926-5332                                  *         
+         *            Internet: lionel.b.dyck@kp.org                  *         
+         *                                                            *         
+         * History:                                                   *         
+         *            11/02/01 - fix misleading dup                   *         
+         *            10/10/01 - clean up ldap variables              *         
+         *            07/23/01 - force atype to null                  *         
+         *            06/25/01 - fix gldsrch                          *         
+         *            06/21/01 - minor correction for startup         *         
+         *            11/24/00 - add upper case e-address             *         
+         *            11/21/00 - fit cols 1-72                        *         
+         *            11/16/00 - cleanup                              *         
+         *            11/13/00 - creation                             *         
+         *                                                            *         
+         * ---------------------------------------------------------- */        
+                                                                                
+        /* ----------------------------------------------------- *              
+         * Get any input options                                 *              
+         * ----------------------------------------------------- */             
+         parse arg option "/" table_name                                        
+                                                                                
+        /* ----------------------------------------------------- *              
+         * Set defaults                                          *              
+         * ----------------------------------------------------- */             
+         x = xmitldap()                                                         
+         parse value x with ldap_s "/" ldap_o "/" .                             
+         dd         = "ldap"random(999)                                         
+         ldap_table = dd                                                        
+         null       = ""                                                        
+         error      = 0                                                         
+         ldap_s     = strip(ldap_s)                                             
+         ldap_o     = strip(ldap_o)                                             
+                                                                                
+        /* ----------------------------------------------------- *              
+         * Test to see if this is enabled                        *              
+         * ----------------------------------------------------- */             
+         if ldap_s = 0 then do                                                  
+            zedsmsg = "Invalid"                                                 
+            zedlmsg = "This function is not enabled on your system".            
+            Address ISPExec "Setmsg msg(isrz001)"                               
+            exit 4                                                              
+            end                                                                 
+                                                                                
+        /* ----------------------------------------------------- *              
+         * If no parameters call the display routine             *              
+         * ----------------------------------------------------- */             
+         if length(option) > 0 then call test_option                            
+                               else error = 1                                   
+         if error = 1 then signal display                                       
+                      else Address ISPExec "Control Nondispl Enter"             
+                                                                                
+        /* ----------------------------------------------------- *              
+         * Display the prompt panel for input                    *              
+         * ----------------------------------------------------- */             
+         Display:                                                               
+         error = 0                                                              
+         do forever                                                             
+            lact  = null                                                        
+            Address ISPExec                                                     
+            "Display Panel(xmitipml)"                                           
+            if rc > 4 then exit 4                                               
+            call test_option                                                    
+            if error = 0 then call start                                        
+            end                                                                 
+                                                                                
+        /* ----------------------------------------------------- *              
+         * Start of the process                                  *              
+         * ----------------------------------------------------- */             
+         Start:                                                                 
+         Address TSO                                                            
+                                                                                
+        /* ----------------------------------------------------- *              
+         * Allocate the work file for the ldap search            *              
+         * ----------------------------------------------------- */             
+         "Alloc f("dd") ds("dd".list) new spa(90,90) tr"                        
+                                                                                
+        /* ----------------------------------------------------- *              
+         * Now invoke the ldap search command.                   *              
+         * ----------------------------------------------------- */             
+         cmd = 'GLDSRCH ENVAR("LIBPATH=/")' ,                                   
+               '/ -h' ldap_s '-b "'ldap_o'"' ,                                  
+               '"cn='option'"' ,                                                
+               ">DD:"dd                                                         
+         cmd                                                                    
+                                                                                
+        /* ----------------------------------------------------- *              
+         * Read the results and free/delete the work file        *              
+         * ----------------------------------------------------- */             
+         "Execio * diskr" dd " (finis stem ldap."                               
+         call msg 'off'                                                         
+         "Free f("dd")"                                                         
+         "delete "dd".list"                                                     
+                                                                                
+        /* ----------------------------------------------------- *              
+         * Test to see if we had any hits                        *              
+         * ----------------------------------------------------- */             
+         if ldap.0 = 0 then do                                                  
+            zedsmsg = "Not Found"                                               
+            zedlmsg = "Name:" option "not found - try again"                    
+            Address ISPExec "Setmsg msg(isrz001)"                               
+            return                                                              
+            end                                                                 
+                                                                                
+        /* ----------------------------------------------------- *              
+         * Setup Table environment                               *              
+         * ----------------------------------------------------- */             
+         cn    = 0                                                              
+         table = 0                                                              
+         Address ISPExec                                                        
+                                                                                
+        /* ----------------------------------------------------- *              
+         * Now process thru the results getting name/address     *              
+         * ----------------------------------------------------- */             
+         do i = 1 to ldap.0                                                     
+            work = strip(ldap.i)                                                
+            if left(work,3) = "cn=" then do                                     
+                if cn = 0 then do                                               
+                   parse value work with "cn="ename ",ou=" .                    
+                   end                                                          
+                cn = 1                                                          
+                mail = 0                                                        
+                end                                                             
+            if left(work,5) = "mail=" then do                                   
+                if mail = 0 then do                                             
+                   parse value work with "mail="eaddr .                         
+                   call add_address                                             
+                   end                                                          
+                mail = 1                                                        
+                cn = 0                                                          
+                end                                                             
+            end                                                                 
+                                                                                
+        /* ----------------------------------------------------- *              
+         * Display the LDAP Results Table                        *              
+         * ----------------------------------------------------- */             
+          mult_sels = 0                                                         
+          crp = 1                                                               
+          rowcrp = 0                                                            
+          disp:                                                                 
+          do forever                                                            
+             zcmd = null                                                        
+             if mult_sels = 0 then do                                           
+               "TBTop" ldap_table                                               
+               "TBSkip" ldap_table "Number("crp")"                              
+                  "TBDispl" ldap_table "Panel(xmitipmt)" ,                      
+                          "Csrrow("rowcrp") AutoSel(No)"                        
+               end                                                              
+             else                                                               
+               "TBDispl" ldap_table                                             
+             t_rc = rc                                                          
+             mult_sels = ztdsels                                                
+             if t_rc > 7 then do                                                
+                "TBEnd" ldap_table                                              
+                return                                                          
+                end                                                             
+             Select                                                             
+               When zsel = "S" then do                                          
+                    lact = "Added"                                              
+                    zsel = null                                                 
+                    lact = "Added"                                              
+                    eaddru = translate(eaddr)                                   
+                    atype  = null                                               
+                    "TBAdd" table_name "order"                                  
+                    if rc > 0 then lact = "Dup"                                 
+                    "TBMod" ldap_table                                          
+                    end                                                         
+               Otherwise nop                                                    
+               end                                                              
+               zsel = null                                                      
+          end                                                                   
+                                                                                
+         return                                                                 
+                                                                                
+        /* ----------------------------------------------------- *              
+         * If option is * or x* or *x then set error as too      *              
+         *    many names could be returned with that query.      *              
+         * ----------------------------------------------------- */             
+         Test_option:                                                           
+         error = 0                                                              
+         if option = "*" then error = 1                                         
+         if length(option) = 2 then do                                          
+            if right(option,1) = "*" then error = 1                             
+            if left(option,1)  = "*" then error = 1                             
+            end                                                                 
+         if error = 1 then do                                                   
+            zedsmsg = "Error!"                                                  
+            zedlmsg = "A name of" option "is too generic.  Try" ,               
+                      "something more specific."                                
+            Address ISPExec "Setmsg msg(isrz001)"                               
+            end                                                                 
+         return                                                                 
+                                                                                
+        /* ----------------------------------------------------- *              
+         * Add the name and address to our selection table       *              
+         * ----------------------------------------------------- */             
+         Add_Address:                                                           
+         if table = 0 then call open_table                                      
+         "TBAdd" ldap_table "order"                                             
+         return                                                                 
+                                                                                
+        /* ----------------------------------------------------- *              
+         * Open the ldap mail lookup table                       *              
+         * ----------------------------------------------------- */             
+         Open_Table:                                                            
+         table = 1                                                              
+         "TBCreate" ldap_table "Keys(ename) Names(lact eaddr) Share"            
+         "TBSort"   ldap_table "Fields(ename,c,a)"                              
+         return                                                                 

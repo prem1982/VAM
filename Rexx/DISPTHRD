@@ -1,0 +1,13 @@
+/*REXX DISPTHRD: REXX TO DISPLAY DB2 THREAD */                          00010005
+ARG TESTID DB2SYS                                                       00020000
+DB2CNTL = TESTID".DISPLAY.THREAD."DB2SYS                                00030000
+/****************************************************/                  00040000
+"FREE FI(DB2CNTL)"                                                      00050000
+"DELETE '"DB2CNTL"'"                                                    00060000
+"ALLOC FI(DB2CNTL) DA('"DB2CNTL"') NEW"                                 00070000
+QUEUE "  DSN SYSTEM("DB2SYS")"                                          00080000
+QUEUE "  -DISPLAY THREAD(*)"                                            00092005
+QUEUE "  END"                                                           00100000
+"EXECIO * DISKW DB2CNTL (FINIS"                                         00110000
+"FREE FI(DB2CNTL)"                                                      00120000
+/* QUEUE "  -DISPLAY THREAD(*) LOC(*) DETAIL"  */                       00130005

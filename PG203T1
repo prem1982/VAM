@@ -1,0 +1,111 @@
+ SELECT 'Total Current Charges' COST_CNTR                                       
+       ,' ' WTN                                                                 
+       ,' ' CUST_ID_CD                                                          
+       ,CHAR(SUM(CASE WHEN SC1.ACCT_LVL_IND = 'N' THEN 0                        
+          ELSE SC1.ACCT_LVL_CHGS END)) ACCT_LVL_CHGS                            
+       ,CHAR(SUM(SC1.MO_ACCESS)) MO_ACCESS                                      
+       ,CHAR(SUM(SC1.TOTAL_USAGE)) TOTAL_USAGE                                  
+       ,CHAR(SUM(SC1.EQUIPMENT)) EQUIPMENT                                      
+       ,CHAR(SUM(SC1.TAXES_SURCHGS)) TAXES_SURCHGS                              
+       ,CHAR(SUM(SC1.TAXES_FEES)) TAXES_FEES                                    
+       ,CHAR(SUM(SC1.THIRD_PARTY)) THIRD_PARTY                                  
+       ,CHAR(SUM(SC1.TOTAL_CHARGES)) TOTAL_CHARGES                              
+    FROM (                                                                      
+   SELECT IN1.MAN                                                               
+         ,IN1.MAN_BILL_DATE                                                     
+         ,IN1.ORIG_SYSTEM_ID                                                    
+         ,IN1.BAN                                                               
+         ,IN1.BILL_DATE                                                         
+         ,IN1.COST_CNTR                                                         
+         ,IN1.ACCT_LVL_IND                                                      
+         ,CASE WHEN IN1.MO_ACCESS <> 0 THEN 'Y' ELSE 'N'                        
+               END ACCESS_IND                                                   
+         ,CASE WHEN IN1.TOTAL_USAGE <> 0 THEN 'Y'                               
+           ELSE IN1.USAGE_IND END USAGE_IND                                     
+         ,CASE WHEN IN1.EQUIPMENT <> 0 THEN 'Y' ELSE 'N'                        
+               END EQUIP_IND                                                    
+         ,CASE WHEN IN1.TAXES_SURCHGS <> 0 THEN 'Y' ELSE 'N'                    
+               END SURCHG_IND                                                   
+         ,CASE WHEN IN1.TAXES_FEES <> 0 THEN 'Y' ELSE 'N'                       
+               END TAX_IND                                                      
+         ,IN1.WTN                                                               
+         ,IN1.CUST_ID_CD                                                        
+         ,IN1.ACCT_LVL_CHGS                                                     
+         ,IN1.MO_ACCESS                                                         
+         ,IN1.TOTAL_USAGE                                                       
+         ,IN1.EQUIPMENT                                                         
+         ,IN1.TAXES_SURCHGS                                                     
+         ,IN1.TAXES_FEES                                                        
+         ,IN1.THIRD_PARTY                                                       
+         ,IN1.TOTAL_CHARGES                                                     
+     FROM (                                                                     
+     SELECT WTX.MAN                                                             
+           ,WTX.MAN_BILL_DATE                                                   
+           ,WTX.ORIG_SYSTEM_ID                                                  
+           ,WTX.BAN                                                             
+           ,WTX.BILL_DATE                                                       
+           ,CASE WHEN WTX.COST_CNTR = '' THEN 'No Cost-Center'                  
+              ELSE WTX.COST_CNTR END COST_CNTR                                  
+           ,WTX.WORKING_TEL_NBR                                                 
+           ,CASE WHEN WTX.WORKING_TEL_NBR = 'SHELLACCT'                         
+                   THEN 'Account Charges'                                       
+                 ELSE WTX.WORKING_TEL_NBR                                       
+             END WTN                                                            
+           ,SUBSTR(WTX.USER_NAME,1,28) CUST_ID_CD                               
+           ,CASE WHEN WTX.WORKING_TEL_NBR = 'SHELLACCT'                         
+                      THEN 'Y' ELSE 'N'                                         
+                 END ACCT_LVL_IND                                               
+           ,WTX.ACCT_LVL_CHGS ACCT_LVL_CHGS                                     
+           ,WTX.MONTHLY_CHGS MO_ACCESS                                          
+           ,WTX.WTN_HAS_USAGE USAGE_IND                                         
+           ,CASE WHEN WTX.WORKING_TEL_NBR = 'SHELLACCT'                         
+                 THEN WTX.VOICE_CHGS                                            
+                    + WTX.DATA_CHGS                                             
+                    + WTX.ROAMING_CHGS                                          
+                    + WTX.CHG_CD_1944                                           
+                    + WTX.CHG_CD_1945                                           
+                 ELSE WTX.VOICE_CHGS                                            
+                    + WTX.DATA_CHGS                                             
+                    + WTX.ROAMING_CHGS                                          
+                    + WTX.CHG_CD_1944                                           
+                    + WTX.CHG_CD_1946                                           
+                 END   TOTAL_USAGE                                              
+           ,CASE WHEN WTX.WORKING_TEL_NBR = 'SHELLACCT'                         
+                 THEN WTX.CHG_CD_1945                                           
+                 ELSE WTX.CHG_CD_1946                                           
+            END  THIRD_PARTY                                                    
+           ,WTX.EQUIP_CHGS EQUIPMENT                                            
+           ,DECIMAL(CASE WHEN LENGTH(WTX.DID_INFO) = 0                          
+                    THEN '+000000000.00'                                        
+                    ELSE                                                        
+              CASE WHEN SUBSTR(HEX(SUBSTR(WTX.DID_INFO,1,6)),12,1)              
+                = 'D' THEN '-' ELSE '+' END                                     
+              || SUBSTR(HEX(SUBSTR(WTX.DID_INFO,1,6)),1,9) || '.'               
+              || SUBSTR(HEX(SUBSTR(WTX.DID_INFO,1,6)),10,2)                     
+                      END,11,2) AS TOTAL_CHARGES                                
+           ,DECIMAL(CASE WHEN LENGTH(WTX.DID_INFO) = 0                          
+                    THEN '+000000000.00'                                        
+                    ELSE                                                        
+              CASE WHEN SUBSTR(HEX(SUBSTR(WTX.DID_INFO,31,6)),12,1)             
+                = 'D' THEN '-' ELSE '+' END                                     
+              || SUBSTR(HEX(SUBSTR(WTX.DID_INFO,31,6)),1,9) || '.'              
+              || SUBSTR(HEX(SUBSTR(WTX.DID_INFO,31,6)),10,2)                    
+                      END,11,2) AS TAXES_SURCHGS                                
+           ,DECIMAL(CASE WHEN LENGTH(WTX.DID_INFO) = 0                          
+                    THEN '+000000000.00'                                        
+                    ELSE                                                        
+              CASE WHEN SUBSTR(HEX(SUBSTR(WTX.DID_INFO,37,6)),12,1)             
+                = 'D' THEN '-' ELSE '+' END                                     
+              || SUBSTR(HEX(SUBSTR(WTX.DID_INFO,37,6)),1,9) || '.'              
+              || SUBSTR(HEX(SUBSTR(WTX.DID_INFO,37,6)),10,2)                    
+                      END,11,2) AS TAXES_FEES                                   
+         FROM DESCRIPTION2~ STG                                                 
+        INNER JOIN WTN_T WTX                                                    
+          ON STG.BAN = WTX.BAN                                                  
+         AND STG.BILL_DATE = WTX.BILL_DATE                                      
+         AND STG.ORIG_SYSTEM_ID = WTX.ORIG_SYSTEM_ID                            
+         AND STG.WTN_CKT_CLI = WTX.WORKING_TEL_NBR                              
+        WHERE STG.REPORT_ID_TS = ?                                              
+           ) IN1                                                                
+         ) SC1                                                                  
+   WFILTER = ?                                                                  

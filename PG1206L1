@@ -1,0 +1,57 @@
+    SELECT LG1.DESCRIPTION                                                      
+      FROM (                                                                    
+      SELECT TB4.VZ450_SEQ_NBR                                                  
+            ,1 AS LINE_NBR                                                      
+            ,TB4.TEXT_1 AS DESCRIPTION                                          
+            ,1 AS DUM_NBR                                                       
+            ,CASE WHEN TB4.TEXT_LN_NBR = 1 THEN 2                               
+               ELSE 3 END DISPLAY_TYPE                                          
+         FROM ACCT_SUM_T TB1                                                    
+       INNER JOIN VZ450_6300_T TB3                                              
+          ON TB1.MAN = TB3.MAN                                                  
+         AND TB1.MAN_BILL_DATE = TB3.MAN_BILL_DATE                              
+         AND TB1.ORIG_SYSTEM_ID = TB3.ORIG_SYSTEM_ID                            
+         AND TB1.VZ450_SEQ_NBR <= TB3.VZ450_SEQ_NBR                             
+         AND TB1.END_VZ450_SEQ_NBR >= TB3.VZ450_SEQ_NBR                         
+       INNER JOIN TEXT_FYI_T TB4                                                
+          ON TB3.MAN = TB4.MAN                                                  
+         AND TB3.MAN_BILL_DATE = TB4.MAN_BILL_DATE                              
+         AND TB3.ORIG_SYSTEM_ID = TB4.ORIG_SYSTEM_ID                            
+         AND TB3.VZ450_SEQ_NBR = TB4.VZ450_BASE_REC_SEQ                         
+     WHERE TB1.MAN = ?                                                          
+       AND TB1.MAN_BILL_DATE = ?                                                
+       AND TB1.ORIG_SYSTEM_ID = ?                                               
+       AND TB1.BAN = ?                                                          
+       AND TB1.BILL_DATE = ?                                                    
+       AND TB3.WORKING_TEL_NBR = ?                                              
+       AND TB3.ASSOC_CHG_CD = '1944'                                            
+       AND TB4.TEXT_LOCATION_CD = 'K'                                           
+       UNION ALL                                                                
+      SELECT TB4.VZ450_SEQ_NBR                                                  
+            ,2 AS LINE_NBR                                                      
+            ,TB4.TEXT_2 AS DESCRIPTION                                          
+            ,1 AS DUM_NBR                                                       
+            ,3 DISPLAY_TYPE                                                     
+         FROM ACCT_SUM_T TB1                                                    
+       INNER JOIN VZ450_6300_T TB3                                              
+          ON TB1.MAN = TB3.MAN                                                  
+         AND TB1.MAN_BILL_DATE = TB3.MAN_BILL_DATE                              
+         AND TB1.ORIG_SYSTEM_ID = TB3.ORIG_SYSTEM_ID                            
+         AND TB1.VZ450_SEQ_NBR <= TB3.VZ450_SEQ_NBR                             
+         AND TB1.END_VZ450_SEQ_NBR >= TB3.VZ450_SEQ_NBR                         
+       INNER JOIN TEXT_FYI_T TB4                                                
+          ON TB3.MAN = TB4.MAN                                                  
+         AND TB3.MAN_BILL_DATE = TB4.MAN_BILL_DATE                              
+         AND TB3.ORIG_SYSTEM_ID = TB4.ORIG_SYSTEM_ID                            
+         AND TB3.VZ450_SEQ_NBR = TB4.VZ450_BASE_REC_SEQ                         
+     WHERE TB1.MAN = ?                                                          
+       AND TB1.MAN_BILL_DATE = ?                                                
+       AND TB1.ORIG_SYSTEM_ID = ?                                               
+       AND TB1.BAN = ?                                                          
+       AND TB1.BILL_DATE = ?                                                    
+       AND TB3.WORKING_TEL_NBR = ?                                              
+       AND TB3.ASSOC_CHG_CD = '1944'                                            
+       AND TB4.TEXT_LOCATION_CD = 'K'                                           
+      ) LG1                                                                     
+   ORDER BY LG1.VZ450_SEQ_NBR                                                   
+           ,LG1.LINE_NBR                                                        

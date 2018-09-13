@@ -1,0 +1,304 @@
+/* rexx */                                                              00010000
+/*===================================================================== 00020000
+This program ("exec") reads a DCLGEN for a BMG LoB Detail Staging       00030000
+table and generates the necessary code for BMGS620; there are three     00040000
+components                                                              00050000
+of this code :                                                          00060000
+                                                                        00070000
+1) Source (base) table variable names for SELECT cursor.                00080000
+                                                                        00090000
+2) Staging table variable parameter markers (using CAST) for INSERT     00100000
+statement.                                                              00110000
+                                                                        00120000
+3) Staging table variable names for FETCH statements.                   00130000
+                                                                        00140000
+4) Staging table variable names for INSERT statements.                  00150000
+                                                                        00160000
+The first component comes from the source table DCLGEN; the rest,       00170000
+from the stage table DCLGEN.                                            00180000
+                                                                        00190000
+THINGS TO DO                                                            00200000
+-Debug parameter.                                                       00210000
+                                                                        00211000
+=====================================================================*/ 00212000
+signal on error name baddies /* Routine for external errors */          00213000
+signal on syntax name crapcode /* Routine for code errors */            00214000
+                                                                        00215000
+msgs = msg(on) /* TSO/E message switch  - c.f. CONTROL MSG in CLIST */  00216000
+                                                                        00217000
+/*--------------------------------------------------------------------- 00218000
+Initialise                                                              00219000
+---------------------------------------------------------------------*/ 00220000
+/* Input control dataset listing members to be processed */             00230000
+memlist_dsn = "DCLGENB1.V3R2.DATA"                                      00240000
+                                                                        00250000
+/* Input DCLGEN members dataset */                                      00260000
+                                                                        00270000
+dclgen_dsn = "BMGVZ0CN.UNIT.COPYCOB"                                    00280000
+/*/                                                                     00290000
+dclgen_dsn = "DA8MWVD.DCLGENB1.COPYCOB"                                 00300000
+*/                                                                      00310000
+/* Output COBOL dataset */                                              00320000
+                                                                        00330000
+cobol_dsn = "BMGVZ0CN.UNIT.COPYCOB"                                     00340000
+/*/                                                                     00350000
+cobol_dsn = "DA8MWVD.DCLGENB1.COPYCOB"                                  00360000
+*//*                                                                    00370000
+cobol_dsn = "DA8MWVD.E.COPYCOB"                                         00380000
+*/                                                                      00381000
+                                                                        00382000
+/* Now read the member list in */                                       00383000
+address tso                                                             00384000
+                                                                        00385000
+"alloc f(memlist) da("memlist_dsn") shr reu"                            00386000
+                                                                        00387000
+"execio * diskr memlist (stem member. finis"                            00388000
+                                                                        00389000
+"free f(memlist)"                                                       00390000
+                                                                        00400000
+do mx = 1 to member.0                                                   00410000
+   genmem = word(member.mx,1)                                           00420000
+   /* Call member processing sub-routine */                             00430000
+   if left(genmem,1) = 'S' then                                         00440000
+      /* Process source table */                                        00450000
+      call stagep1 genmem                                               00460000
+   else                                                                 00470000
+      /* Process stage table */                                         00480000
+      call sourcep1 genmem                                              00490000
+   say genmem ':' result 'columns.'                                     00500000
+end /* do mx = 1 to member.0*/                                          00510000
+                                                                        00520000
+say 'Total members processed : ' mx-1                                   00530000
+                                                                        00540000
+/*--------------------------------------------------------------------- 00550000
+End of main program                                                     00560000
+---------------------------------------------------------------------*/ 00570000
+exit                                                                    00580000
+                                                                        00590000
+/*--------------------------------------------------------------------- 00600000
+Source table DCLGEN processing                                          00610000
+---------------------------------------------------------------------*/ 00620000
+sourcep1: PROCEDURE expose dclgen_dsn cobol_dsn                         00630000
+/* Receive arguments "No we don't!" "Oh yes we do!" "Oh no we don't!"*/ 00640000
+arg genmem                                                              00650000
+                                                                        00660000
+/* Build output member names */                                         00670000
+genmem_1 = left(genmem,7) || '1'                                        00680000
+genmem_3 = left(genmem,7) || '3'                                        00690000
+genmem_4 = left(genmem,7) || '4'                                        00700000
+                                                                        00710000
+/* Counters for component output stems */                               00720000
+j1 = 0                                                                  00730000
+j3 = 0                                                                  00740000
+j4 = 0                                                                  00750000
+                                                                        00760000
+/* Opening quotes for component output strings */                       00770000
+openq_1 = "                 ' "                                         00780000
+openq_3 = "                 :"                                          00790000
+openq_4 = "                ,:"                                          00800000
+                                                                        00810000
+/* Closing quotes for component output strings */                       00820000
+closeq_1 = "'"                                                          00830000
+closeq_3 = ""                                                           00840000
+closeq_4 = ""                                                           00850000
+                                                                        00860000
+address tso                                                             00870000
+                                                                        00880000
+/*--------------------------------------------------------------------- 00890000
+Set fixed "header" strings per component                                00900000
+---------------------------------------------------------------------*/ 00910000
+outrec_3.1 = "              exec sql fetch from cursor_1 into"          00920000
+j3 = 1                                                                  00921000
+                                                                        00922000
+outrec_4.1 = "              exec sql execute insert_row using"          00923000
+outrec_4.2 = "                 :LK-REPORT-ID-TS"                        00924000
+outrec_4.3 = "                ,:LK-REPORT-LINE-COUNT"                   00925000
+j4 = 3                                                                  00926000
+                                                                        00927000
+/*--------------------------------------------------------------------- 00928000
+Allocate input DCLGEN member and output COBOL members                   00929000
+---------------------------------------------------------------------*/ 00930000
+"alloc f(dclgen) da('"dclgen_dsn"("genmem")') shr reu"                  00940000
+"alloc f(out1) da('"cobol_dsn"("genmem_1")') old reu"                   00950000
+"alloc f(out3) da('"cobol_dsn"("genmem_3")') old reu"                   00960000
+"alloc f(out4) da('"cobol_dsn"("genmem_4")') old reu"                   00970000
+/*--------------------------------------------------------------------- 00980000
+Loop through the DCLGEN records                                         00990000
+---------------------------------------------------------------------*/ 01000000
+/* Read all (well, sort of...) into stem */                             01010000
+"execio * diskr dclgen (stem genrec. finis"                             01020000
+                                                                        01030000
+/* Record processing loop */                                            01040000
+do ix = 1 to genrec.0                                                   01050000
+                                                                        01060000
+   parse var genrec.ix 1 gash,                                          01070000
+                      7 ast +1,                                         01080000
+                      str_1,                                            01090000
+                      str_2,                                            01100000
+                      .                                                 01110000
+   select                                                               01120000
+      when ast = '*' then nop                                           01130000
+      when str_1 = 'EXEC' then nop                                      01140000
+      when str_1 = '01' then nop                                        01150000
+      when str_1 = ')' then nop                                         01160000
+      when str_1 = '10' then                                            01170000
+         /* COBOL variable */                                           01180000
+         do                                                             01181000
+         j3 = j3 + 1                                                    01182000
+         outrec_3.j3 = openq_3 || str_2 || closeq_3                     01183000
+         openq_3 = "                ,:"                                 01184000
+         j4 = j4 + 1                                                    01185000
+         outrec_4.j4 = openq_4 || str_2 || closeq_4                     01186000
+         end                                                            01187000
+      when str_1 = '(' then                                             01188000
+         /* First DB2 column */                                         01189000
+         do                                                             01190000
+         j1 = j1 + 1                                                    01200000
+         outrec_1.j1 = openq_1 || str_2 || closeq_1                     01210000
+         openq_1 = "                 ', "                               01220000
+         end                                                            01230000
+      otherwise                                                         01240000
+         /* DB2 column other than first */                              01250000
+         do                                                             01260000
+         j1 = j1 + 1                                                    01270000
+         outrec_1.j1 = openq_1 || str_1 || closeq_1                     01280000
+         end                                                            01290000
+   end                                                                  01300000
+end                                                                     01310000
+                                                                        01320000
+/*--------------------------------------------------------------------- 01330000
+Set fixed "trailer" strings per component                               01340000
+---------------------------------------------------------------------*/ 01350000
+outrec_1.j1 = strip(outrec_1.j1,T,"'") || "###'"                        01360000
+                                                                        01370000
+j3 = j3 + 1                                                             01380000
+outrec_3.j3 = "              end-exec"                                  01390000
+                                                                        01391000
+j4 = j4 + 1                                                             01392000
+outrec_4.j4 = "              end-exec"                                  01393000
+                                                                        01394000
+/*--------------------------------------------------------------------- 01395000
+Write the output to respective members                                  01396000
+---------------------------------------------------------------------*/ 01397000
+"execio * diskw out1 (stem outrec_1. finis"                             01398000
+"execio * diskw out3 (stem outrec_3. finis"                             01399000
+"execio * diskw out4 (stem outrec_4. finis"                             01400000
+"free f(dclgen out1 out3 out4)"                                         01410000
+                                                                        01420000
+/*--------------------------------------------------------------------- 01430000
+End of SOURCEP1 sub-routine                                             01440000
+---------------------------------------------------------------------*/ 01450000
+return j1                                                               01460000
+                                                                        01470000
+/*--------------------------------------------------------------------- 01480000
+Stage table DCLGEN processing                                           01490000
+---------------------------------------------------------------------*/ 01500000
+stagep1: PROCEDURE expose dclgen_dsn cobol_dsn                          01510000
+/* Receive arguments "No we don't!" "Oh yes we do!" "Oh no we don't!"*/ 01520000
+arg genmem                                                              01530000
+                                                                        01540000
+/* Build output member names */                                         01550000
+genmem_2 = left(genmem,7) || '2'                                        01560000
+                                                                        01570000
+/* Counters for component output stems */                               01580000
+j2 = 0                                                                  01590000
+                                                                        01600000
+/* Opening quotes for component output strings */                       01610000
+openq_2 = "                 ' "                                         01620000
+                                                                        01630000
+/* Closing quotes for component output strings */                       01640000
+closeq_2 = ")'"                                                         01650000
+                                                                        01660000
+address tso                                                             01670000
+                                                                        01680000
+/*--------------------------------------------------------------------- 01690000
+Set fixed "header" strings per component                                01700000
+---------------------------------------------------------------------*/ 01710000
+outrec_2.1 = "                 'INSERT INTO '"                          01720000
+outrec_2.2 = "                 ins-sub-stage-table"                     01730000
+outrec_2.3 = "                 ' VALUES('"                              01740000
+j2 = 3                                                                  01750000
+                                                                        01760000
+/*--------------------------------------------------------------------- 01770000
+Allocate input DCLGEN member and output COBOL members                   01780000
+---------------------------------------------------------------------*/ 01790000
+"alloc f(dclgen) da('"dclgen_dsn"("genmem")') shr reu"                  01800000
+"alloc f(out2) da('"cobol_dsn"("genmem_2")') old reu"                   01810000
+                                                                        01820000
+/*--------------------------------------------------------------------- 01830000
+Loop through the DCLGEN records                                         01840000
+---------------------------------------------------------------------*/ 01850000
+/* Read all (well, sort of...) into stem */                             01860000
+"execio * diskr dclgen (stem genrec. finis"                             01870000
+                                                                        01880000
+/* Record processing loop */                                            01890000
+do ix = 1 to genrec.0                                                   01900000
+                                                                        01910000
+   parse var genrec.ix 1 gash,                                          01920000
+                      7 ast +1,                                         01930000
+                      str_1,                                            01940000
+                      str_2,                                            01950000
+                      str_3,                                            01960000
+                      str_4,                                            01970000
+                      .                                                 01980000
+   select                                                               01990000
+      when ast = '*' then nop                                           02000000
+      when str_1 = 'EXEC' then nop                                      02010000
+      when str_1 = '01' then nop                                        02020000
+      when str_1 = ')' then nop                                         02030000
+      when str_1 = '10' then nop                                        02040000
+      when str_1 = '(' then                                             02050000
+         /* First DB2 column */                                         02060000
+         do                                                             02070000
+         if right(str_3,1) = ',' then                                   02080000
+            /* Jiggery-pokery to cope with DECIMAL formats */           02090000
+            do                                                          02100000
+            str_3 = str_3 || ' ' || str_4                               02110000
+            end                                                         02120000
+         j2 = j2 + 1                                                    02130000
+         outrec_2.j2 = openq_2 || 'CAST(? AS ' || str_3 || closeq_2     02140000
+         openq_2 = "                 ', "                               02150000
+         end                                                            02160000
+      otherwise                                                         02170000
+         /* DB2 column other than first */                              02180000
+         do                                                             02190000
+         if right(str_2,1) = ',' then                                   02200000
+            /* Jiggery-pokery to cope with DECIMAL formats */           02210000
+            do                                                          02220000
+            str_2 = str_2 || ' ' || str_3                               02230000
+            end                                                         02240000
+         j2 = j2 + 1                                                    02250000
+         outrec_2.j2 = openq_2 || 'CAST(? AS ' || str_2 || closeq_2     02260000
+         end                                                            02270000
+   end                                                                  02280000
+end                                                                     02290000
+                                                                        02300000
+/*--------------------------------------------------------------------- 02310000
+Set fixed "trailer" strings per component                               02320000
+---------------------------------------------------------------------*/ 02330000
+j2 = j2 + 1                                                             02340000
+outrec_2.j2 = "                 ')'"                                    02350000
+                                                                        02360000
+/*--------------------------------------------------------------------- 02370000
+Write the output to respective members                                  02380000
+---------------------------------------------------------------------*/ 02390000
+"execio * diskw out2 (stem outrec_2. finis"                             02400000
+"free f(dclgen out2)"                                                   02410000
+                                                                        02420000
+/*--------------------------------------------------------------------- 02430000
+End of STAGEP1 sub-routine                                              02440000
+---------------------------------------------------------------------*/ 02450000
+return j2-4                                                             02460000
+                                                                        02470000
+crapcode: /* Syntax error-handling routine */                           02480000
+say 'You have crap code at line' sigl                                   02490000
+say sourceline(sigl)                                                    02500000
+say 'REXX gave a return code of' rc ', which means :'                   02510000
+say errortext(rc)                                                       02520000
+EXIT /* End of syntax error-handling routine */                         02530000
+                                                                        02540000
+baddies: /* External error. "Not my fault, guv, honest!" */             02550000
+say 'You have been let down by factors beyond your control at line' sigl02560000
+say sourceline(sigl)                                                    02570000
+say 'RC =' rc                                                           02580000
+EXIT /* End of code error-handling routine */                           02590000

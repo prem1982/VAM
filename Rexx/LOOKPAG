@@ -1,0 +1,375 @@
+/******************************* REXX *********************************/00010000
+/* REXX EXEC lookup ban                                               */00020000
+/******************************* REXX *********************************/00030000
+                                                                        00040000
+ARG DB2SYS .                                                            00041000
+                                                                        00042000
+ TRACE o                                                                00043000
+                                                                        00044000
+ DB2SYS = STRIP(DB2SYS)                                                 00045000
+                                                                        00046000
+ SELECT                                                                 00046100
+   WHEN DB2SYS  = 'D001'   THEN                                         00046200
+        TABPREF = 'BMGVZT'                                              00046300
+   WHEN DB2SYS  = 'D009'   THEN                                         00046400
+        TABPREF = 'BMGVZP'                                              00046500
+   WHEN DB2SYS  = 'D38X'   THEN                                         00046600
+        TABPREF = 'BMGVZS'                                              00046700
+   OTHERWISE                                                            00046800
+        TABPREF = 'BMGVZP'                                              00046900
+ END                                                                    00047000
+                                                                        00048000
+ cnt = 0                                                                00049000
+ rpt_cnt = 0                                                            00050000
+ trn. = ''                                                              00060000
+ rpt. = ''                                                              00070000
+ x = ","                                                                00080000
+                                                                        00081000
+                                                                        00082000
+ rows_to_commit = 0                                                     00083000
+ say_something = 0                                                      00084000
+                                                                        00085000
+ SIGNAL OFF ERROR /* TURN ERROR-TRAPPING OFF */                         00086000
+ "SUBCOM DSNREXX"                                                       00087000
+ IF RC THEN                                                             00088000
+    S_RC = RXSUBCOM('ADD','DSNREXX','DSNREXX')                          00089000
+ ADDRESS DSNREXX "CONNECT "DB2SYS                                       00090000
+ IF SQLCODE ^= 0                                                        00100000
+ THEN DO                                                                00110000
+      SAY ' ERROR CONNECTING TO ' DB2SYS                                00120000
+      CALL SQLCA                                                        00130000
+      SAY '  END EXECUTION'                                             00140000
+      EXIT 12                                                           00150000
+      END                                                               00160000
+                                                                        00170000
+numeric digits 12                                                       00180000
+                                                                        00190000
+rptout.1='rao,given acct,display acct,pages,type,log,bill_date,'||,     00200000
+         'customer,amt_due,'||,                                         00200100
+         'ban,Cust Acct,service type,system,status,man,'||,             00200200
+          'last bill,Acct status,paper_ind,found,my_pages'              00200300
+"EXECIO 1 DISKW REPORT (STEM rptout.)"                                  00200400
+                                                                        00200500
+                                                                        00200600
+ "EXECIO 1 DISKR RPTIN (STEM rptin.)"                                   00200700
+ if RC ^= 0                                                             00200800
+ then do                                                                00200900
+      say error reading RPTIN file                                      00201000
+      if rc = 2                                                         00202000
+      then do                                                           00203000
+           say rc                                                       00204000
+           say Empty input file                                         00205000
+           exit 0                                                       00206000
+           end                                                          00207000
+      exit 12                                                           00208000
+      end                                                               00209000
+                                                                        00210000
+ "EXECIO 1 DISKR RPTIN (STEM rptin.)"                                   00211002
+                                                                        00220000
+more = 'Y'                                                              00230000
+do while (more = 'Y')                                                   00231000
+                                                                        00231100
+   parse var rptin.1 a(x)b(x)c(x)d(x)e(x)f(x)g(x)h(x)i(x),              00231200
+             j(x)k(x)l(x)m(x)n(x)o(x)man(x)rest                         00231300
+                                                                        00231400
+   output = rptin.1                                                     00231500
+                                                                        00231600
+   man = strip(man)                                                     00231700
+                                                                        00232700
+   call select_paper                                                    00232800
+                                                                        00232900
+   if found_accts = 'Y'                                                 00233000
+   then my_pages = c_num_pages                                          00233100
+   else my_pages = '0'                                                  00233200
+                                                                        00233300
+                                                                        00233400
+   rptout.1=output||','||found_accts||','||my_pages                     00233500
+                                                                        00238000
+   "EXECIO 1 DISKW REPORT (STEM rptout.)"                               00239000
+                                                                        00240000
+   "EXECIO 1 DISKR RPTIN (STEM rptin.)"                                 00240100
+                                                                        00240200
+   if rc ^= 0                                                           00240300
+   then more = 'N'                                                      00240400
+                                                                        00240500
+                                                                        00240600
+end                                                                     00240700
+                                                                        00240800
+                                                                        00240900
+"EXECIO 0 DISKW REPORT (FINIS)"                                         00241000
+                                                                        00242000
+                                                                        00243000
+                                                                        00244000
+ ADDRESS DSNREXX "DISCONNECT"                                           00245000
+ IF SQLCODE ^= 0                                                        00246000
+ THEN DO                                                                00247000
+      SAY 'ERROR WHILE DISCONNECTING'                                   00248000
+      CALL SQLCA                                                        00249000
+      SAY '  END EXECUTION'                                             00250000
+      EXIT 12                                                           00260000
+      END                                                               00270000
+                                                                        00280000
+say 'Ending....'                                                        00290000
+                                                                        00300000
+                                                                        00310000
+RETURN                                                                  00320000
+                                                                        00330000
+                                                                        00340000
+/*********************************************************************/ 00350000
+/* NAME:     select_paper                                            */ 00360001
+/*                                                                   */ 00370000
+/*********************************************************************/ 00380000
+select_paper:                                                           00390001
+                                                                        00400000
+ found_accts = 'N'                                                      00410000
+ c_num_pages     = ''                                                   00411000
+                                                                        00415000
+                                                                        00416000
+ this_sql =,                                                            00417000
+      "SELECT NUM_PAGES " ||,                                           00418004
+       "FROM "TABPREF".PAPER_METRICS_T  " ||,                           00420000
+       " WHERE CUSTOMER_ACCT_NUM = '"||strip(man)||"' "|| ,             00426004
+       "  AND RUN_DATE = '2010-03-01' "|| ,                             00426100
+       " WITH UR "                                                      00427000
+                                                                        00428000
+                                                                        00428203
+/**** FETCH PARAMETERS *****/                                           00429000
+CPARMS= ":c_num_pages"                                                  00430000
+                                                                        00440000
+CSQL = "FETCH C52 INTO "CPARMS                                          00450000
+                                                                        00460000
+/**** DECLARE CURSOR *****/                                             00470000
+DCLSQL2 = "DECLARE C52 CURSOR FOR S52"                                  00480000
+ADDRESS DSNREXX "EXECSQL "DCLSQL2                                       00490000
+IF SQLCODE ^= 0                                                         00500000
+then do                                                                 00510000
+     SAY 'ERROR DECLARING CURSOR C52 - SQLCODE=' SQLCODE                00520000
+     CALL SQLCA                                                         00530000
+     exit 12                                                            00540000
+     END                                                                00550000
+                                                                        00560000
+/**** PREPARE SELECT SQL ****/                                          00570000
+ADDRESS DSNREXX "EXECSQL PREPARE S52 FROM :THIS_SQL"                    00580000
+IF SQLCODE ^= 0                                                         00590000
+then do                                                                 00600000
+     SAY 'ERROR PREPARING 'PROFILE_SQL ' - SQLCODE=' SQLCODE            00610000
+     CALL SQLCA                                                         00620000
+     exit 12                                                            00630000
+     END                                                                00640000
+                                                                        00650000
+/**** OPEN CURSOR ****/                                                 00660000
+ADDRESS DSNREXX "EXECSQL OPEN C52"                                      00670000
+IF SQLCODE ^= 0                                                         00680000
+then do                                                                 00690000
+     SAY 'ERROR OPENING CURSOR C52 - SQLCODE=' SQLCODE                  00700000
+     CALL SQLCA                                                         00710000
+     exit 12                                                            00720000
+     END                                                                00730000
+                                                                        00740000
+ADDRESS DSNREXX "EXECSQL "CSQL                                          00750000
+                                                                        00760000
+                                                                        00761000
+if SQLCODE = 0                                                          00761100
+then do                                                                 00761200
+     c_num_pages     = strip(c_num_pages)                               00761300
+     found_accts = 'Y'                                                  00761700
+     end                                                                00761800
+else DO                                                                 00761900
+     if sqlcode = 100                                                   00762000
+     then do                                                            00763000
+          found_accts = 'N'                                             00763100
+          END                                                           00763200
+     else do                                                            00763300
+          SAY 'ERROR DURING SELECT current_ban'                         00763400
+          CALL SQLCA                                                    00763500
+          SAY '  END EXECUTION'                                         00763600
+          EXIT 12                                                       00763700
+          END                                                           00763800
+     END                                                                00763900
+                                                                        00764000
+                                                                        00764100
+ADDRESS DSNREXX "EXECSQL CLOSE C52"                                     00764200
+IF SQLCODE ^= 0                                                         00764300
+then do                                                                 00764400
+     SAY 'ERROR CLOSING CURSOR C52 - SQLCODE=' SQLCODE                  00764500
+     CALL SQLCA                                                         00764600
+     exit 12                                                            00764700
+     END                                                                00764800
+                                                                        00764900
+ RETURN                                                                 00765000
+                                                                        00766000
+                                                                        00767000
+/*********************************************************************/ 00768000
+/* NAME:     select_subscription                                     */ 00769000
+/*                                                                   */ 00770000
+/*********************************************************************/ 00771000
+select_subscription:                                                    00771100
+                                                                        00771200
+ subs_found = 'N'                                                       00771300
+ x_cust_acct = ''                                                       00771400
+ x_st = ''                                                              00771500
+ x_sys = ''                                                             00771600
+ x_status = ''                                                          00771700
+ x_ind = ''                                                             00771800
+                                                                        00771900
+ SEL_SQL = "SELECT CUSTOMER_ACCT_NUM," ||,                              00772000
+                  "SERVICE_TYPE," ||,                                   00772100
+                  "ORIG_SYSTEM_ID," ||,                                 00772200
+                  "STATUS," ||,                                         00772300
+                  "COALESCE(PAPER_SUPPRESS_IND,'0') " ||,               00772400
+       " FROM "TABPREF".SUBSCRIPTION "||,                               00772500
+       " WHERE ( SERVICE_ID = '"||strip(c_man)||"' "||,                 00772600
+       "   OR CUSTOMER_ACCT_NUM = '"||strip(c_man)||"' ) "||,           00772700
+       " AND SERVICE_TYPE IN ('BTN','SBTN','CPE','SCPE','CORP') "||,    00772800
+       " ORDER BY STATUS_DATE DESC "                                    00772900
+                                                                        00773000
+                                                                        00773100
+/**** FETCH PARAMETERS *****/                                           00773200
+FPARMS= ":x_cust_acct,:x_st,:x_sys,:x_status,:x_ind"                    00773300
+                                                                        00773400
+FSQL = "FETCH C51 INTO "FPARMS                                          00773500
+                                                                        00773600
+/**** DECLARE CURSOR *****/                                             00773700
+DCLSQL = "DECLARE C51 CURSOR FOR S51"                                   00773800
+ADDRESS DSNREXX "EXECSQL "DCLSQL                                        00773900
+IF SQLCODE ^= 0                                                         00774000
+then do                                                                 00774100
+     SAY 'ERROR DECLARING CURSOR C51 - SQLCODE=' SQLCODE                00774200
+     CALL SQLCA                                                         00774300
+     exit 12                                                            00774400
+     END                                                                00774500
+                                                                        00774600
+/**** PREPARE SELECT SQL ****/                                          00774700
+ADDRESS DSNREXX "EXECSQL PREPARE S51 FROM :SEL_SQL"                     00774800
+IF SQLCODE ^= 0                                                         00774900
+then do                                                                 00775000
+     SAY 'ERROR PREPARING 'SEL_SQL ' - SQLCODE=' SQLCODE                00775100
+     CALL SQLCA                                                         00775200
+     exit 12                                                            00775300
+     END                                                                00775400
+                                                                        00775500
+/**** OPEN CURSOR ****/                                                 00775600
+ADDRESS DSNREXX "EXECSQL OPEN C51"                                      00775700
+IF SQLCODE ^= 0                                                         00775800
+then do                                                                 00775900
+     SAY 'ERROR OPENING CURSOR C51 - SQLCODE=' SQLCODE                  00776000
+     CALL SQLCA                                                         00776100
+     exit 12                                                            00776200
+     END                                                                00776300
+                                                                        00776400
+ADDRESS DSNREXX "EXECSQL "FSQL                                          00776500
+                                                                        00776600
+                                                                        00776700
+IF SQLCODE = 0                                                          00776800
+then do                                                                 00776900
+     x_cust_acct = strip(x_cust_acct)                                   00777000
+     x_st = strip(x_st)                                                 00777100
+     x_sys = strip(x_sys)                                               00777200
+     x_status = strip(x_status)                                         00777300
+     x_ind = strip(x_ind)                                               00777400
+     end                                                                00777500
+else DO                                                                 00777600
+     if sqlcode = 100                                                   00777700
+     then do                                                            00777800
+          subs_found = 'N'                                              00777900
+          END                                                           00778000
+     else do                                                            00778100
+          SAY 'ERROR DURING SELECT'                                     00778200
+          CALL SQLCA                                                    00778300
+          SAY '  END EXECUTION'                                         00778400
+          EXIT 12                                                       00778500
+          END                                                           00778600
+     END                                                                00778700
+                                                                        00778800
+ ADDRESS DSNREXX "EXECSQL CLOSE C51"                                    00778900
+ IF SQLCODE ^= 0                                                        00779000
+ then do                                                                00779100
+      SAY 'ERROR CLOSING CURSOR C51 - SQLCODE=' SQLCODE                 00779200
+      CALL SQLCA                                                        00779300
+      exit 12                                                           00779400
+      END                                                               00779500
+                                                                        00779600
+ RETURN                                                                 00779700
+                                                                        00779800
+                                                                        00779900
+/*********************************************************************/ 00780000
+/* NAME:     remove_quotes                                           */ 00780100
+/*                                                                   */ 00780200
+/*********************************************************************/ 00780300
+remove_quotes:procedure                                                 00780400
+                                                                        00780500
+parse arg in_string                                                     00780600
+                                                                        00780700
+new_string = in_string                                                  00780800
+xx = index(new_string,'"')                                              00780900
+                                                                        00781000
+do while xx > 0                                                         00782000
+  temp_string = substr(new_string,1,xx-1)||substr(new_string,xx+1)      00783000
+  new_string = temp_string                                              00784000
+  xx = index(new_string,'"')                                            00785000
+end                                                                     00786000
+                                                                        00787000
+if in_string ^= new_string                                              00788000
+then do                                                                 00789000
+     say 'string changed, old=' in_string ' new=' new_string            00790000
+     end                                                                00791000
+                                                                        00792000
+return(new_string)                                                      00793000
+                                                                        00794000
+/*********************************************************************/ 00795000
+/* NAME:     commit_work                                             */ 00796000
+/*                                                                   */ 00797000
+/*********************************************************************/ 00798000
+commit_work:                                                            00799000
+                                                                        00800000
+ ADDRESS DSNREXX "EXECSQL COMMIT"                                       00801000
+ IF SQLCODE ^= 0                                                        00802000
+ THEN DO                                                                00803000
+      SAY 'ERROR WHILE COMMITING'                                       00804000
+      CALL SQLCA                                                        00805000
+      SAY '  END EXECUTION'                                             00806000
+      EXIT 12                                                           00807000
+      END                                                               00808000
+                                                                        00808100
+ RETURN                                                                 00808200
+                                                                        00808300
+/************* SQL ERROR ROUTINE *************/                         00808400
+SQLCA:                                                                  00808500
+   SAY "SQLSTATE =" SQLSTATE                                            00808600
+   SAY "SQLWARN =" SQLWARN.1",",                                        00808700
+               || SQLWARN.1",",                                         00808800
+               || SQLWARN.2",",                                         00808900
+               || SQLWARN.3",",                                         00809000
+               || SQLWARN.4",",                                         00809100
+               || SQLWARN.5",",                                         00809200
+               || SQLWARN.6",",                                         00809300
+               || SQLWARN.7",",                                         00809400
+               || SQLWARN.8",",                                         00809500
+               || SQLWARN.9""                                           00809600
+   SAY "SQLERRD =" SQLERRD.1",",                                        00809700
+               || SQLERRD.2",",                                         00809800
+               || SQLERRD.3",",                                         00809900
+               || SQLERRD.4",",                                         00810000
+               || SQLERRD.5",",                                         00810100
+               || SQLERRD.6                                             00810200
+   SAY "SQLERRP  =" SQLERRP                                             00810300
+   SAY "SQLERRMC =" SQLERRMC                                            00810400
+   SAY "SQLCODE  =" SQLCODE                                             00810500
+   RETURN                                                               00810600
+                                                                        00810700
+/*************  SYNTAX ERROR HANDLER **********/                        00810800
+CRAPCODE:                                                               00810900
+SAY 'YOU HAVE CRAP CODE AT LINE' SIGL                                   00811000
+SAY SOURCELINE(SIGL)                                                    00811100
+SAY 'REXX GAVE A RETURN CODE OF' RC ', WHICH MEANS :'                   00811200
+SAY ERRORTEXT(RC)                                                       00811300
+EXIT                                                                    00811400
+                                                                        00811500
+/************* EXTERNAL ERROR HANDLER **********/                       00811600
+BADDIES:                                                                00811700
+SAY 'YOU HAVE BEEN LET DOWN BY FACTORS BEYOND YOUR CONTROL AT LINE' SIGL00811800
+SAY SOURCELINE(SIGL)                                                    00811900
+SAY 'RC =' RC                                                           00812000
+EXIT                                                                    00812100
+                                                                        00812200
+                                                                        00812300

@@ -1,0 +1,18 @@
+/*REXX DROPSTOR: REXX TO CREATE DB2 DROP CARDS */                       00010000
+ARG TESTID OWNER MEMBER DB2SYS                                          00020000
+CALL GETPROCL MEMBER                                                    00021000
+PROCNAME = RESULT                                                       00022000
+/****************************************************/                  00023000
+/****       CREATE DROP STORED PROCEDURE CARDS  *****/                  00024000
+/****************************************************/                  00025000
+DROPCDS = TESTID".DROPSTOR."MEMBER"."DB2SYS                             00026000
+"FREE FI(DROPCDS)"                                                      00027000
+"DELETE '"DROPCDS"'"                                                    00028000
+"ALLOC FI(DROPCDS) DA('"DROPCDS"') NEW"                                 00029000
+IF OWNER = 'BMGNSP' THEN                                                00029103
+   QUEUE "DROP PROCEDURE "PROCNAME" RESTRICT;"                          00029203
+ELSE                                                                    00029303
+   QUEUE "DROP PROCEDURE "OWNER"."PROCNAME" RESTRICT;"                  00030003
+QUEUE "COMMIT;"                                                         00031000
+"EXECIO * DISKW DROPCDS (FINIS"                                         00040000
+"FREE FI(DROPCDS)"                                                      00050000

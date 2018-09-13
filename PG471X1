@@ -1,0 +1,22 @@
+SELECT 'MAN = ' || X'7D' || ACT.MAN || X'7D' || '                               
+AND MAN_BILL_DATE = ' || X'7D' || CHAR(ACT.MAN_BILL_DATE) || X'7D' || '         
+AND ORIG_SYSTEM_ID = ' || X'7D' || ACT.ORIG_SYSTEM_ID || X'7D' || '             
+AND BAN = ' || X'7D' || ACT.BAN || X'7D' || ' AND BILL_DATE = ' ||              
+X'7D' || CHAR(ACT.BILL_DATE) || X'7D' AS LINK_PARAMS,                           
+                                                                                
+(SELECT CASE WHEN SC1.ACCT_ASSOC_CD = 'A'                                       
+            THEN '202'                                                          
+            ELSE '471'                                                          
+            END AS TARGET_PAGE_ID                                               
+       ,TB1.MAN                                                                 
+       ,TB1.MAN_BILL_DATE                                                       
+       ,TB1.ORIG_SYSTEM_ID                                                      
+       ,TB1.BAN                                                                 
+       ,TB1.BILL_DATE                                                           
+FROM                                                                            
+ACCT_SUM_T TB1                                                                  
+WHERE TB1.MAN = ?                                                               
+  AND TB1.MAN_BILL_DATE = ?                                                     
+  AND TB1.ORIG_SYSTEM_ID = ?                                                    
+  AND TB1.BAN = ?                                                               
+  AND TB1.BILL_DATE = ? ) SC1                                                   

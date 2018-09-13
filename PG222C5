@@ -1,0 +1,41 @@
+     SELECT SC1.ACCT_NBR                                                        
+           ,SC1.ACCT_ALIAS                                                      
+           ,SC1.LAST_BILL_DATE                                                  
+           ,SC1.PHONES                                                          
+           ,SC1.ACCT_CHGS                                                       
+           ,SC1.AIRTIME_MIN                                                     
+           ,SC1.FF_MIN                                                          
+           ,SC1.AIRTIME_BILLABLE                                                
+           ,SC1.MONTHLY_CHGS                                                    
+           ,SC1.EQUIP_CHGS                                                      
+           ,SC1.VOICE_CHGS                                                      
+           ,SC1.MSG_CHGS                                                        
+           ,SC1.DATA_USAGE_CHGS                                                 
+           ,SC1.ROAMER_CHGS                                                     
+           ,SC1.OTHER_CHGS                                                      
+           ,SC1.TAX_SURCHGS                                                     
+           ,SC1.THIRD_PARTY_LINE                                                
+           ,SC1.TOT_CURR_CHGS                                                   
+       FROM (                                                                   
+       SELECT 'Acct No.' AS ACCT_NBR                                            
+       ,CASE WHEN ALIAS_FLAG% = 'Y'                                             
+             THEN 'Billing Account Alias'                                       
+             ELSE '' END ACCT_ALIAS                                             
+       ,'Billing Cycle Date' AS LAST_BILL_DATE                                  
+       ,'Phones' AS PHONES                                                      
+       ,'Account Chgs' AS ACCT_CHGS                                             
+       ,'Plan Usage (minutes)' AS AIRTIME_MIN                                   
+       ,'Friends & Family Mins' AS FF_MIN                                       
+       ,'Billable Mins' AS AIRTIME_BILLABLE                                     
+       ,'Monthly Access Charges' AS MONTHLY_CHGS                                
+       ,'Equip. Chgs' AS EQUIP_CHGS                                             
+       ,'Voice Chgs' AS VOICE_CHGS                                              
+       ,'Messaging Chgs' AS MSG_CHGS                                            
+       ,'Data Chgs' AS DATA_USAGE_CHGS                                          
+       ,'Roaming Chgs' AS ROAMER_CHGS                                           
+       ,'Other Chgs & Credits' AS OTHER_CHGS                                    
+       ,'Taxes and Surchgs' AS TAX_SURCHGS                                      
+       ,'Third-Party Charges' AS THIRD_PARTY_LINE                               
+       ,'Total Current Chgs' AS TOT_CURR_CHGS                                   
+        FROM SYSIBM.SYSDUMMY1                                                   
+          ) SC1                                                                 

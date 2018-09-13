@@ -1,0 +1,12 @@
+/*REXX DROPCRDS: REXX TO CREATE DB2 DROP CARDS */                       00010000
+ARG TESTID INDXNAME DB2SYS                                              00020000
+/****************************************************/                  00030000
+/****       CREATE DROP TABLE CARDS             *****/                  00040000
+/****************************************************/                  00050000
+DROPCDS = TESTID".DROPINDX."DB2SYS                                      00060000
+"FREE FI(DROPCDS)"                                                      00070000
+"DELETE '"DROPCDS"'"                                                    00080000
+"ALLOC FI(DROPCDS) DA('"DROPCDS"') NEW"                                 00090000
+QUEUE "DROP INDEX "INDXNAME";"                                          00100000
+"EXECIO * DISKW DROPCDS (FINIS"                                         00120000
+"FREE FI(DROPCDS)"                                                      00130000

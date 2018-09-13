@@ -1,0 +1,36 @@
+/*REXX MRADD: REXX TO CREATE DATASETS/RECORDS USED TO CREATE MR*/               
+ARG TESTID MR TI                                                                
+MRNUM    = TESTID".MRNUM"                                                       
+TILEVEL  = TESTID".TILEVEL"                                                     
+MISCDATA = TESTID".MISCDATA"                                                    
+TESTINST = TESTID".TESTINST"                                                    
+RELWORK  = TESTID".RELWORK"                                                     
+SPECIAL  = TESTID".SPECIAL"                                                     
+PROBDESC = TESTID".PROBDESC"                                                    
+CANCDESC = TESTID".CANCDESC"                                                    
+RELPDS   = TESTID".RELPDS"                                                      
+OTHERCN  = TESTID".OTHERCN"                                                     
+OTHERMR  = TESTID".OTHERMR"                                                     
+WORKLIST = TESTID".WORKLIST"                                                    
+TRANREUS = TESTID".TRANREUS"                                                    
+/*********************************************************/                     
+CALL LEADZERO MR 6                                                              
+MR6 = RESULT                                                                    
+CALL LEADZERO TI 2                                                              
+TI2 = RESULT                                                                    
+XDATE = DATE()                                                                  
+XTIME = TIME()                                                                  
+/*********************************************************/                     
+"FREE FI(MRWKFILE)"                                                             
+/*********************************************************/                     
+"DELETE '"MRNUM"'"                                                              
+"ALLOC FI(MRWKFILE) DA('"MRNUM"') NEW DATACLAS(PSFB80)"                         
+QUEUE MR6"BG"                                                                   
+"EXECIO * DISKW MRWKFILE (FINIS"                                                
+"FREE FI(MRWKFILE)"                                                             
+/*********************************************************/                     
+"DELETE '"TILEVEL"'"                                                            
+"ALLOC FI(MRWKFILE) DA('"TILEVEL"') NEW DATACLAS(PSFB80)"                       
+QUEUE MR6"BG"TI2"1"YYMMDD"12.01.01"                                             
+"EXECIO * DISKW MRWKFILE (FINIS"                                                
+"FREE FI(MRWKFILE)"                                                             

@@ -1,0 +1,103 @@
+/******************************* REXX *********************************/        
+/* REXX EXEC bldftpd     v 1.0                                        */        
+/******************************* REXX *********************************/        
+                                                                                
+ARG .                /* no arguments */                                         
+                                                                                
+ trace o                                                                        
+ more         = 'Y'                                                             
+ timestamp    = ''                                                              
+                                                                                
+ i = 0                                                                          
+                                                                                
+                                                                                
+                                                                                
+"EXECIO * DISKR server  (STEM server.)"                                         
+if RC ^= 0                                                                      
+then do                                                                         
+     say error reading server  file                                             
+     exit 12                                                                    
+     end                                                                        
+                                                                                
+ newfiles.0 = 0                                                                 
+ newfiles.  = ''                                                                
+ delim = '.ETRAK-VSSI'                                                          
+ delim2  = '.txt'                                                               
+ /* reformat the files to delete */                                             
+ do i = 1 to server.0                                                           
+    parse var server.i part1 (delim)  part2 (delim2)                            
+    newfiles.i = part1||part2                                                   
+ end                                                                            
+ newfiles.0 = server.0                                                          
+                                                                                
+ say 'reformatted files'                                                        
+ do i = 1 to newfiles.0                                                         
+    say i ' : ' newfiles.i                                                      
+ end                                                                            
+                                                                                
+"EXECIO 1 DISKR weblist (STEM weblist.)"                                        
+if RC ^= 0                                                                      
+then do                                                                         
+     say error reading weblist file                                             
+     if rc = 2                                                                  
+     then do                                                                    
+          say rc                                                                
+          say Empty weblist file                                                
+          exit 0                                                                
+          end                                                                   
+     exit 12                                                                    
+end                                                                             
+                                                                                
+                                                                                
+i = 1                                                                           
+line_count = 0                                                                  
+lines. = ''                                                                     
+delim = '..'                                                                    
+do while (more = 'Y')                                                           
+  line = ''                                                                     
+                                                                                
+  this_file = strip(word(weblist.1,10))                                         
+  if index(this_file,'.EVR') > 0                                                
+  then do                                                                       
+       parse var this_file subscriber (delim) weblist_file                      
+       x= index(weblist_file,'.txt')                                            
+       if x > 0                                                                 
+       then weblist_file = substr(weblist_file,1,x-1)                           
+       x= index(weblist_file,'.zip')                                            
+       if x > 0                                                                 
+       then weblist_file = substr(weblist_file,1,x-1)                           
+       say 'weblist file:' weblist_file                                         
+                                                                                
+       /* is it in the newfiles. */                                             
+       do i = 1 to newfiles.0                                                   
+          if newfiles.i = weblist_file                                          
+          then do                                                               
+               say 'found it!'                                                  
+               line_count = line_count + 1                                      
+               line = "DELETE " word(weblist.1,10)                              
+               lines.line_count = line                                          
+               end                                                              
+       end                                                                      
+       end                                                                      
+                                                                                
+  "EXECIO 1 DISKR weblist (STEM weblist.)"                                      
+                                                                                
+  if rc ^= 0                                                                    
+  then more = 'N'                                                               
+                                                                                
+                                                                                
+end  /* do i */                                                                 
+                                                                                
+                                                                                
+                                                                                
+if line_count  > 0                                                              
+then do                                                                         
+     "MAKEBUF"                                                                  
+     "EXECIO * DISKW LINEF   (STEM lines. FINIS)"                               
+     "DROPBUF"                                                                  
+     end                                                                        
+                                                                                
+                                                                                
+return                                                                          
+                                                                                
+                                                                                

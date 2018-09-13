@@ -1,0 +1,65 @@
+/* Realloc: REXX  to add/drop or replace dsn to a dd                  r00feb    
+  ex:  "%REALLOC ISPLLIB ZSVRMCE.ZSVPCAM.ACCOUNTS.LINKLIB FIRST"                
+ -------------------------------------------------------*/                      
+ARG  DD1 DA  PLACE                                                              
+say sourceline(1)                                                               
+IF PLACE = 'LAST' | PLACE = 'DROP'                                              
+THEN nop                                                                        
+ELSE PLACE = 'FIRST'                                                            
+DO WHILE ( DD1   = ' ')                                                         
+  SAY "I nedd a search (DDNAME) string?"                                        
+  PULL DD1                                                                      
+END                                                                             
+DA = STRIP(DA,,"'")                                                             
+DO WHILE ( SYSDSN("'"DA"'") ^= OK & da ^= quit)                                 
+    SAY DA    SYSDSN("'"DA"'")                                                  
+    SAY "Enter DSN  or Quit"                                                    
+    PULL DA                                                                     
+END                                                                             
+if da = Quit                                                                    
+then return(13)                                                                 
+APOST = "'"                                                                     
+IF SUBSTR(DA,1,1) = APOST                                                       
+THEN DA = SUBSTR(DA,2,LENGTH(DA)-2)                                             
+X = OUTTRAP('DSN.')                                                             
+"LISTA ST"                                                                      
+DO I = DSN.0 TO 1 BY -1                                                         
+  IF LENGTH(DSN.I) >= 9                                                         
+  THEN                                                                          
+    IF SUBSTR(DSN.I,3,7) = DD1                                                  
+    THEN                                                                        
+      DO                                                                        
+        J = I - 1                                                               
+        IF DA  = DSN.J                                                          
+        THEN CONCAT = ' '                                                       
+        ELSE CONCAT = "'"DSN.J"'"                                               
+        LEAVE                                                                   
+      END                                                                       
+END                                                                             
+IF I >= 1                                                                       
+THEN                                                                            
+  DO I = I + 2 TO DSN.0  BY 2  WHILE (SUBSTR(DSN.I,1,3) = '  ')                 
+    J = I - 1                                                                   
+    IF DA  ^= DSN.J                                                             
+    THEN  CONCAT = CONCAT",'"DSN.J"'"                                           
+  END                                                                           
+ELSE                                                                            
+  DO                                                                            
+    SAY DD1 " not found in the allocated list"                                  
+    SAY "Do you want to allocate it now?   REPLY: YES/NO"                       
+    PARSE upper PULL REPLY                                                      
+    IF SUBSTR(REPLY,1,1) = 'Y'                                                  
+    THEN   "ALLOC DA( '"DA"') F("DD1") SHR "                                    
+    RETURN                                                                      
+  END                                                                           
+select                                                                          
+  when ( PLACE = 'DROP' ) then nop                                              
+  when ( PLACE = 'FIRST') THEN CONCAT = "'"DA"',"CONCAT                         
+  when ( PLACE = 'LAST' ) then CONCAT = CONCAT",'"DA"'"                         
+  otherwise exit                                                                
+end                                                                             
+upper  dd1                                                                      
+"free   file("dd1") "                                                           
+if rc > 0 then say   "failed to free " dd1   rc                                 
+"ALLOC  file("dd1") DA("CONCAT")  SHR REUSE"                                    
+if rc > 0 then say   "allocation failed for " dd1 " dataset " da   rc           

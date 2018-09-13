@@ -1,0 +1,14 @@
+/*REXX SNDANTH: REXX TO CREATE NDM PROCESS OVERRIDES*/                          
+ARG TESTID REMOTDSN LOCALDSN                                                    
+PROCCRDS = TESTID".SNDREMOT.DATASET.NAMES"                                      
+NOTIFYID = SYSVAR(SYSUID)                                                       
+/****************************************************/                          
+"FREE FI(PROCCRDS)"                                                             
+"DELETE '"PROCCRDS"'"                                                           
+"ALLOC FI(PROCCRDS) DA('"PROCCRDS"') NEW"                                       
+QUEUE "   SUB PROC=SNDANTH -"                                                   
+QUEUE "       &REMOTDSN="REMOTDSN" -"                                           
+QUEUE "       &LOCALDSN="LOCALDSN" -"                                           
+QUEUE "       &NOTIFYID="NOTIFYID" -"                                           
+"EXECIO * DISKW PROCCRDS (FINIS"                                                
+"FREE FI(PROCCRDS)"                                                             

@@ -1,0 +1,8 @@
+/*** MRAPPL2: REXX TO APPL TO MR 2 DIGIT APPL****/                              
+  ARG APPL                                                                      
+  SELECT                                                                        
+     WHEN APPL = 'BMG' THEN APPL2 = 'BG'                                        
+    OTHERWISE                                                                   
+        APPL2 = 'BG'                                                            
+  END                                                                           
+  RETURN APPL2                                                                  

@@ -1,0 +1,15 @@
+/*REXX UNLDSQL: REXX TO CREATE DB2 UNLOAD SQL*/                         00010000
+ARG BMGNY0PN OWNER TBLSPACE DB2SYS STATE ORIGSYST                       00020000
+CALL GETNAMEL TBLSPACE                                                  00030000
+TBLNAME = RESULT                                                        00040000
+UNLDCDS = BMGNY0PN"."DB2SYS"."TBLSPACE".UNLDSQL"                        00050000
+UNLDDSN = BMGNY0PN"."DB2SYS"."TBLSPACE".UNLD"ORIGSYST||STATE            00051000
+"FREE FI(UNLDCDS)"                                                      00060000
+"DELETE '"UNLDCDS"'"                                                    00070000
+"DELETE '"UNLDDSN"'"                                                    00071000
+"ALLOC FI(UNLDCDS) DA('"UNLDCDS"') NEW"                                 00080000
+QUEUE "   SELECT * "                                                    00081000
+QUEUE "          FROM "OWNER"."TBLNAME                                  00082000
+QUEUE "   ;"                                                            00087000
+"EXECIO * DISKW UNLDCDS (FINIS"                                         00170000
+"FREE FI(UNLDCDS)"                                                      00180000

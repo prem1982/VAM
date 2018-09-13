@@ -1,0 +1,30 @@
+SELECT SC1.WTN      WTN                                                         
+      ,SC1.CUST_ID  CUST_ID_CD                                                  
+      ,SC1.COL1     PLAN_ALLOWANCE                                              
+      ,SC1.COL2     PLAN_USE                                                    
+      ,SC1.COL3     IN_USE                                                      
+      ,SC1.COL4     NIGHT_WEEKEND_USE                                           
+      ,SC1.COL5     DATA_USE                                                    
+      ,SC1.COL6     ROAM_USE                                                    
+FROM                                                                            
+(SELECT 'Mobile Number' as  WTN                                                 
+      ,'User Name'     as  CUST_ID                                              
+      ,CASE WHEN CURRENT DATE > '2012-07-24'                                    
+            THEN 'Voice Plan Usage'                                             
+            ELSE 'Current Plan Allowance' END COL1                              
+      ,CASE WHEN CURRENT DATE > '2012-07-24'                                    
+            THEN 'Messaging Usage'                                              
+            ELSE 'Current Plan Usage'     END COL2                              
+      ,CASE WHEN CURRENT DATE > '2012-07-24'                                    
+            THEN 'Data Usage'                                                   
+            ELSE 'In Usage'               END COL3                              
+      ,CASE WHEN CURRENT DATE > '2012-07-24'                                    
+            THEN 'Voice Roaming'                                                
+            ELSE 'Night/Weekend Usage'    END COL4                              
+      ,CASE WHEN CURRENT DATE > '2012-07-24'                                    
+            THEN 'Messaging Roaming'                                            
+            ELSE 'Date Usage'             END COL5                              
+      ,CASE WHEN CURRENT DATE > '2012-07-24'                                    
+            THEN 'Data Roaming'                                                 
+            ELSE 'Roaming Usage'          END COL6                              
+FROM SYSIBM.SYSDUMMY1) SC1                                                      

@@ -1,0 +1,26 @@
+/*REXX UNLDINTL: REXX TO CREATE DB2 UNLOAD SQL*/                        00010000
+ARG BMGNY0PN OWNER TBLSPACE DB2SYS STATE ORIGSYST                       00020000
+CALL GETNAMEL TBLSPACE                                                  00030000
+TBLNAME = RESULT                                                        00040000
+UNLDCDS = BMGNY0PN"."DB2SYS"."TBLSPACE".UNLDSQL"                        00050000
+UNLDDSN = BMGNY0PN"."DB2SYS"."TBLSPACE".UNLD"ORIGSYST||STATE            00051000
+"FREE FI(UNLDCDS)"                                                      00052000
+"DELETE '"UNLDCDS"'"                                                    00053000
+"DELETE '"UNLDDSN"'"                                                    00054000
+"ALLOC FI(UNLDCDS) DA('"UNLDCDS"') NEW"                                 00055000
+QUEUE "   SELECT MAN,"                                                  00056000
+QUEUE "          MAN_BILL_DATE,"                                        00056100
+QUEUE "          ORIG_SYSTEM_ID,"                                       00056200
+QUEUE "          VZ450_SEQ_NBR,"                                        00056300
+QUEUE "          BAN,"                                                  00056400
+QUEUE "          WORKING_TEL_NBR"                                       00056500
+QUEUE "          FROM "OWNER".CONS_ITEM_CALLS_T"                        00057000
+QUEUE "        WHERE EMR_SETTLE_CODE = 'K'"                             00057100
+QUEUE "           OR EMR_SETTLE_CODE = 'L'"                             00057200
+QUEUE "           OR EMR_SETTLE_CODE = 'N'"                             00057300
+QUEUE "           OR EMR_SETTLE_CODE = 'P'"                             00057400
+QUEUE "           OR EMR_SETTLE_CODE = 'R'"                             00057500
+QUEUE "   ;"                                                            00058000
+QUEUE                                                                   00058100
+"EXECIO * DISKW UNLDCDS (FINIS"                                         00059000
+"FREE FI(UNLDCDS)"                                                      00060000

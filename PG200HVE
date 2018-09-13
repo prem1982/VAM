@@ -1,0 +1,15 @@
+   SELECT TB1.MAN                                                               
+     FROM CURR_CHAR_DAT_T TB1                                                   
+     INNER JOIN                                                                 
+     ACCT_SUM_T TB2                                                             
+     ON TB1.MAN = TB2.MAN                                                       
+    AND TB1.MAN_BILL_DATE = TB2.MAN_BILL_DATE                                   
+    AND TB1.BAN = TB2.BAN                                                       
+    AND TB1.ORIG_SYSTEM_ID = TB2.ORIG_SYSTEM_ID                                 
+     WHERE TB1.MAN = ?                                                          
+       AND TB1.MAN_BILL_DATE = ?                                                
+       AND TB1.ORIG_SYSTEM_ID = ?                                               
+       AND TB1.BAN = ?                                                          
+       AND TB1.BILL_DATE = ?                                                    
+       AND TB1.CHG_CD = '1943'                                                  
+       AND TB2.ACCT_ASSOC_CD <> 'A'                                             

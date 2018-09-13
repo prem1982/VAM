@@ -1,0 +1,46 @@
+   SELECT SC1.CHG_DESC                                                          
+         ,SC1.USAGE_PERIOD                                                      
+         ,SC1.ITEM_TYPE                                                         
+         ,SC1.ALLOWANCE                                                         
+         ,CHAR(SC1.USED) USED                                                   
+         ,CHAR(SC1.BILLABLE) BILLABLE                                           
+         ,CHAR(SC1.CHG_AMT) CHG_AMT                                             
+      FROM (                                                                    
+       SELECT V63.SUMMARY_DESC CHG_DESC                                         
+          ,CASE V63.CUR_DELAY_IND                                               
+                WHEN 2 THEN 'Previous' ELSE 'Current'                           
+            END USAGE_PERIOD                                                    
+          ,V63.USG_TYP_DESC ITEM_TYPE                                           
+          ,CASE WHEN V63.USG_DIS_PROP = 3 THEN X'60' || X'60'                   
+                WHEN V63.USG_DIS_PROP = 2 THEN '  '                             
+                WHEN V63.USG_COL_TXT <> ' '                                     
+                        THEN V63.USG_COL_TXT                                    
+                WHEN V63.GRD_ALLOWANCE > 0                                      
+                   THEN CHAR(INTEGER(V63.GRD_ALLOWANCE))                        
+                ELSE ' '                                                        
+             END ALLOWANCE                                                      
+          ,V63.USG_USED USED                                                    
+          ,V63.USG_BILLABLE BILLABLE                                            
+          ,V63.USG_COST CHG_AMT                                                 
+      FROM VZ450_6300_T V63                                                     
+       INNER JOIN (                                                             
+                      SELECT 1 LINE_NO                                          
+                       ,DATE(CASE WHEN FROM_DATE% = ' ' THEN                    
+                         SUBSTR(CHAR(CURRENT DATE),1,8)                         
+                              || '01'                                           
+                        ELSE FROM_DATE% END) FROM_DATE                          
+                       ,CASE WHEN THRU_DATE% = ' ' THEN                         
+                         DATE(SUBSTR(CHAR(CURRENT DATE),1,8)                    
+                              || '01') + 1 MONTH - 1 DAY                        
+                        ELSE DATE(THRU_DATE%) END THRU_DATE                     
+                        FROM SYSIBM.SYSDUMMY1                                   
+          ) DTS                                                                 
+         ON DTS.LINE_NO = 1                                                     
+        AND DTS.FROM_DATE <= V63.MAN_BILL_DATE                                  
+        AND DTS.THRU_DATE >= V63.MAN_BILL_DATE                                  
+     WHERE V63.MAN = ?                                                          
+       AND V63.ORIG_SYSTEM_ID = 'VW'                                            
+       AND V63.SUMM_TYPE_IND <> 6                                               
+       AND V63.WORKING_TEL_NBR = ?                                              
+      ) SC1                                                                     
+     WFILTER = ?                                                                

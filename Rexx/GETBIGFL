@@ -1,0 +1,23 @@
+/*REXX GETBIGFL: REXX TO CREATE NDM PROCESS OVERRIDES*/                         
+ARG TESTID REMOTDSN LOCALDSN NOTIFYID LBL                                       
+IF LBL = "" THEN LBL = "LBL"                                                    
+LBLDSN   = TESTID".GETBIGFL."LBL                                                
+PROCCRDS = TESTID".GETBIGFL.DATASET.NAMES"                                      
+NOTIFYID = SYSVAR(SYSUID)                                                       
+/****************************************************/                          
+"FREE FI(LBLDSN)"                                                               
+"DELETE '"LBLDSN"'"                                                             
+"ALLOC FI(LBLDSN) DA('"LBLDSN"') NEW DATACLAS(PSFB80)"                          
+QUEUE LOCALDSN                                                                  
+"EXECIO * DISKW LBLDSN (FINIS"                                                  
+"FREE FI(LBLDSN)"                                                               
+/****************************************************/                          
+"FREE FI(PROCCRDS)"                                                             
+"DELETE '"PROCCRDS"'"                                                           
+"ALLOC FI(PROCCRDS) DA('"PROCCRDS"') NEW"                                       
+QUEUE "   SUB PROC=GETBIGFL -"                                                  
+QUEUE "       &REMOTDSN="REMOTDSN" -"                                           
+QUEUE "       &LOCALDSN="LOCALDSN" -"                                           
+QUEUE "       &NOTIFYID="NOTIFYID" -"                                           
+"EXECIO * DISKW PROCCRDS (FINIS"                                                
+"FREE FI(PROCCRDS)"                                                             

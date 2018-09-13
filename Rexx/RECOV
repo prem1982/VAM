@@ -1,0 +1,12 @@
+/*REXX RECOV: REXX TO RECOVER RRSAF THREAD */                           00010000
+ARG TESTID DB2SYS THREAD                                                00020000
+DB2CNTL = TESTID".RECOVER.TK"THREAD"."DB2SYS                            00050000
+/****************************************************/                  00060000
+"FREE FI(DB2CNTL)"                                                      00070000
+"DELETE '"DB2CNTL"'"                                                    00080000
+"ALLOC FI(DB2CNTL) DA('"DB2CNTL"') NEW"                                 00090000
+QUEUE "  DSN SYSTEM("DB2SYS")"                                          00100000
+QUEUE "  -RECOVER ACTIVE (RRSAF) ACTION (ABORT) ID ("THREAD")"          00130000
+QUEUE "  END"                                                           00150000
+"EXECIO * DISKW DB2CNTL (FINIS"                                         00160000
+"FREE FI(DB2CNTL)"                                                      00170000

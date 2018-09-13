@@ -1,0 +1,9 @@
+/*REXX WRAPEND: REXX TO CREATE DSN SYSTEM CARD*/                        00010000
+ARG FILENAME                                                            00020000
+/****************************************************/                  00030000
+"FREE FI(CRDDSN)"                                                       00031000
+"DELETE '"FILENAME"'"                                                   00032000
+"ALLOC FI(CRDDSN) DA('"FILENAME"') NEW"                                 00033000
+QUEUE "  END"                                                           00034000
+"EXECIO * DISKW CRDDSN (FINIS"                                          00035000
+"FREE FI(CRDDSN)"                                                       00036000

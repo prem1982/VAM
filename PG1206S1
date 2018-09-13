@@ -1,0 +1,131 @@
+  SELECT SC1.DATA_DESC                                                          
+        ,CASE WHEN SC1.TITLE_IND = 'Y' THEN 'COL_INNER_HDR'                     
+           ELSE 'CHAR' END TARGET_FMT                                           
+        ,CASE WHEN SC1.TITLE_IND = 'Y' THEN ''                                  
+           ELSE SC1.BILL_INCREM END BILL_INCREM                                 
+        ,CASE WHEN SC1.TITLE_IND = 'Y' THEN ''                                  
+           ELSE SC1.ALLOWANCE END ALLOWANCE                                     
+        ,CASE WHEN SC1.TITLE_IND = 'Y' THEN ''                                  
+              WHEN SC1.USED_MIN = 0 THEN X'60' || X'60'                         
+           ELSE CHAR(SC1.USED_MIN) END USED_MIN                                 
+        ,(CASE WHEN SC1.TITLE_IND = 'Y' THEN ''                                 
+              WHEN SC1.BILL_AMT = 0 THEN X'60' || X'60'                         
+           ELSE CHAR(SC1.BILL_AMT) END) || SHOW_ASTERIK BILL_AMT                
+        ,CASE WHEN SC1.TITLE_IND = 'Y' THEN ''                                  
+              WHEN SC1.COST = 0 THEN X'60' || X'60'                             
+           ELSE CHAR(SC1.COST) END COST                                         
+     FROM (                                                                     
+      SELECT IN1.GRID_NBR                                                       
+            ,IN1.CURR_PREV_NBR                                                  
+            ,IN1.VZ450_SEQ_NBR                                                  
+            ,IN1.SUMM_TYPE_IND                                                  
+            ,CASE WHEN IN1.SUMMARY_DESC = ' ' THEN ' '                          
+              ELSE RTRIM(IN1.SUMMARY_DESC) END DATA_DESC                        
+            ,IN1.GRID_LN_IND                                                    
+            ,CASE WHEN IN1.USG_TYP_DESC = ' ' THEN ' '                          
+              ELSE RTRIM(IN1.USG_TYP_DESC) END BILL_INCREM                      
+            ,CASE WHEN IN1.USG_COL_TXT = ' ' THEN ' '                           
+              ELSE RTRIM(IN1.USG_COL_TXT) END ALLOWANCE                         
+            ,SUM(INTEGER(IN1.GRD_USED)) USED_MIN                                
+            ,SUM(INTEGER(IN1.GRD_BILLABLE)) BILL_AMT                            
+            ,SUM(IN1.GRD_COST) COST                                             
+            ,IN1.SHOW_ASTERIK                                                   
+            ,IN1.TITLE_IND                                                      
+        FROM (                                                                  
+    SELECT TB1.WORKING_TEL_NBR                                                  
+          ,CASE WHEN TB1.ASSOC_CHG_CD = '1935' THEN 1                           
+                WHEN TB1.ASSOC_CHG_CD = '1936' THEN 2                           
+                WHEN TB1.ASSOC_CHG_CD = '1942' THEN 3                           
+                ELSE 0 END GRID_NBR                                             
+          ,CASE WHEN TB1.CUR_DELAY_IND = 2 THEN 1                               
+                ELSE 2 END CURR_PREV_NBR                                        
+          ,TB1.SUMM_TYPE_IND                                                    
+          ,CASE WHEN (TB1.ASSOC_CHG_CD = '1935'                                 
+                      AND TB1.CUR_DELAY_IND = 2)                                
+                THEN 'Unbilled Usage from Previous Months'                      
+                WHEN (TB1.ASSOC_CHG_CD = '1935'                                 
+                      AND TB1.CUR_DELAY_IND <> 2)                               
+                THEN 'Current Voice Usage'                                      
+                WHEN (TB1.ASSOC_CHG_CD = '1936'                                 
+                      AND TB1.CUR_DELAY_IND = 2)                                
+                THEN 'Unbilled Usage from Previous Months'                      
+                WHEN (TB1.ASSOC_CHG_CD = '1936'                                 
+                      AND TB1.CUR_DELAY_IND <> 2)                               
+                THEN 'Current Data Usage'                                       
+                WHEN (TB1.ASSOC_CHG_CD = '1942'                                 
+                       AND TB1.CUR_DELAY_IND = 2                                
+                       AND TB1.SUMM_TYPE_IND = 3)                               
+                THEN 'Unbilled Voice Usage from Previous Months'                
+                WHEN (TB1.ASSOC_CHG_CD = '1942'                                 
+                       AND TB1.CUR_DELAY_IND = 2)                               
+                THEN 'Unbilled Data Usage from Previous Months'                 
+                WHEN (TB1.ASSOC_CHG_CD = '1942'                                 
+                       AND TB1.CUR_DELAY_IND <> 2                               
+                       AND TB1.SUMM_TYPE_IND = 3)                               
+                THEN 'Current Voice Usage'                                      
+                ELSE 'Current Data Usage' END SUMMARY_DESC                      
+          ,' ' USG_TYP_DESC                                                     
+          ,' ' USG_COL_TXT                                                      
+          ,0   GRD_USED                                                         
+          ,0   GRD_BILLABLE                                                     
+          ,0   GRD_COST                                                         
+          ,0   GRID_LN_IND                                                      
+          ,0   VZ450_SEQ_NBR                                                    
+          ,'' SHOW_ASTERIK                                                      
+          ,'Y' TITLE_IND                                                        
+      FROM VZ450_6300_T TB1                                                     
+     WHERE TB1.MAN = ?                                                          
+       AND TB1.MAN_BILL_DATE = ?                                                
+       AND TB1.ORIG_SYSTEM_ID = ?                                               
+       AND TB1.BAN = ?                                                          
+       AND TB1.BILL_DATE = ?                                                    
+       AND TB1.ASSOC_CHG_CD = '1944'                                            
+       AND TB1.WORKING_TEL_NBR = ?                                              
+     UNION ALL                                                                  
+    SELECT TB1.WORKING_TEL_NBR                                                  
+          ,CASE WHEN TB1.ASSOC_CHG_CD = '1935' THEN 1                           
+                WHEN TB1.ASSOC_CHG_CD = '1936' THEN 2                           
+                WHEN TB1.ASSOC_CHG_CD = '1942' THEN 3                           
+                ELSE 0 END GRID_NBR                                             
+          ,CASE WHEN TB1.CUR_DELAY_IND = 2 THEN 1                               
+                ELSE 2 END CURR_PREV_NBR                                        
+          ,TB1.SUMM_TYPE_IND                                                    
+          ,TB1.SUMMARY_DESC                                                     
+          ,TB1.USG_TYP_DESC                                                     
+          ,CASE WHEN TB1.USG_DIS_PROP = 3 THEN X'60' || X'60'                   
+                WHEN TB1.USG_DIS_PROP = 2 THEN '  '                             
+                WHEN TB1.USG_COL_TXT <> ' '                                     
+                        THEN TB1.USG_COL_TXT                                    
+                WHEN TB1.GRD_ALLOWANCE > 0                                      
+                   THEN CHAR(INTEGER(TB1.GRD_ALLOWANCE))                        
+                ELSE ' '                                                        
+             END USG_COL_TXT                                                    
+          ,TB1.GRD_USED                                                         
+          ,TB1.GRD_BILLABLE                                                     
+          ,TB1.GRD_COST                                                         
+          ,TB1.GRID_LN_IND                                                      
+          ,TB1.VZ450_SEQ_NBR                                                    
+          ,CASE WHEN TB1.USG_BILL_SYM_IND = 'Y'                                 
+             THEN '*' ELSE '' END SHOW_ASTERIK                                  
+          ,'N' TITLE_IND                                                        
+      FROM VZ450_6300_T TB1                                                     
+     WHERE TB1.MAN = ?                                                          
+       AND TB1.MAN_BILL_DATE = ?                                                
+       AND TB1.ORIG_SYSTEM_ID = ?                                               
+       AND TB1.BAN = ?                                                          
+       AND TB1.BILL_DATE = ?                                                    
+       AND TB1.ASSOC_CHG_CD = '1944'                                            
+       AND TB1.WORKING_TEL_NBR = ?                                              
+             ) IN1                                                              
+      GROUP BY IN1.GRID_NBR                                                     
+            ,IN1.CURR_PREV_NBR                                                  
+            ,IN1.SUMM_TYPE_IND                                                  
+            ,IN1.VZ450_SEQ_NBR                                                  
+            ,IN1.SUMMARY_DESC                                                   
+            ,IN1.GRID_LN_IND                                                    
+            ,IN1.USG_TYP_DESC                                                   
+            ,IN1.USG_COL_TXT                                                    
+            ,IN1.SHOW_ASTERIK                                                   
+            ,IN1.TITLE_IND                                                      
+         ) SC1                                                                  
+  WFILTER = ?                                                                   

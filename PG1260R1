@@ -1,0 +1,10 @@
+SELECT CASE WHEN BILL_DATE% >='2012-08-01'                                      
+            THEN '1275'                                                         
+            ELSE '1260' END TARGET_PAGE_ID                                      
+       ,'ALL'   AS TARGET_SUBSET                                                
+       ,'MAN = '|| X'7D' || MAN%|| X'7D' ||                                     
+     'AND MAN_BILL_DATE  = ' || X'7D' || MAN_BILL_DATE%  || X'7D' ||            
+     'AND ORIG_SYSTEM_ID = ' || X'7D' || ORIG_SYSTEM_ID% || X'7D' ||            
+     'AND BAN  =           ' || X'7D' || BAN%            || X'7D' ||            
+     'AND BILL_DATE      = ' || X'7D' || BILL_DATE%       || X'7D'              
+     AS TARGET_PARMS FROM SYSIBM.SYSDUMMY1                                      

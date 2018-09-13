@@ -1,0 +1,14 @@
+/*REXX*/                                                                        
+ARG TESTID DB2SYS TBLSPACE DB2RUNLB                                             
+DSNCDS = TESTID"."DB2SYS"."TBLSPACE".DSNTIAUL"                                  
+/****************************************************/                          
+"FREE FI(DSNCDS)"                                                               
+"DELETE '"DSNCDS"'"                                                             
+"ALLOC FI(DSNCDS) DA('"DSNCDS"') NEW"                                           
+QUEUE "  DSN SYSTEM ("DB2SYS")"                                                 
+QUEUE "    RUN PROGRAM(DSNTIAUL) PARMS('SQL') -"                                
+QUEUE "            PLAN(DSNTIAUL) -"                                            
+QUEUE "            LIB('"DB2RUNLB"')"                                           
+QUEUE "  END"                                                                   
+"EXECIO * DISKW DSNCDS (FINIS"                                                  
+"FREE FI(DSNCDS)"                                                               

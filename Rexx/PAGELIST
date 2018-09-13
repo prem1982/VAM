@@ -1,0 +1,30 @@
+/*REXX PAGELIST:CREATE SQL TO FIND LIST OF PAGE IDS*/                   00010000
+ARG LISTIN HILVL SQLFILE                                                00020000
+/***** FIRST READ IN THE LIST OF PAGES ******/                          00021000
+"ALLOC FI(LISTIN) DA('"LISTIN"')"                                       00022000
+"EXECIO * DISKR LISTIN (STEM LISTREC. FINIS"                            00023000
+"FREE FI(LISTIN)"                                                       00024000
+/********************************************/                          00025000
+/***** SECOND WRITE START OF SQL STRING *****/                          00026000
+QUEUE  "SELECT DISTINCT PGS.PAGE_ID"                                    00027000
+QUEUE  "  FROM "HILVL".IBRS_PAGES PGS"                                  00028000
+QUEUE  " WHERE PGS.PAGE_ID IN ("                                        00029000
+/***** THIRD WRITE FIRST PAGE OF LIST ******/                           00030000
+QUEUE  "       "RTRIM(LISTREC.1)" "                                     00040001
+/***** FOURTH WRITE REST OF PAGE LIST ******/                           00050000
+DO TX = 2 TO LISTREC.0                                                  00060000
+   QUEUE  "      ,"RTRIM(LISTREC.TX)" "                                 00070001
+END                                                                     00080000
+/***** FIFTH WRITE END OF SQL STRING ******/                            00080100
+QUEUE  "                      )"                                        00080200
+QUEUE  "  WITH UR"                                                      00080300
+QUEUE  "   ;"                                                           00080400
+QUEUE                                                                   00080500
+"FREE FI(SQLOUT)"                                                       00080600
+"DELETE '"SQLFILE"'"                                                    00080700
+"ALLOC FI(SQLOUT) DA('"SQLFILE"')",                                     00080800
+ " NEW CATALOG DATACLAS(PSFB80)",                                       00080900
+ " LRECL(80)"                                                           00081000
+"EXECIO * DISKW SQLOUT (FINIS"                                          00082000
+"FREE FI(SQLOUT)"                                                       00083000
+EXIT                                                                    00084000

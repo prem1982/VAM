@@ -1,0 +1,127 @@
+/* REXX */                                                                      
+/***********************************************************************        
+* THIS ROUTINE IS USED TO COMPARE OLD AND NEW VERSIONS OF THE SPLIT             
+* VZ450 FILES SO THAT WE CAN ENSURE THAT PROGRAM CHANGES RESULT IN              
+* OUTPUT FILE CHANGES ISOLATED TO THOSE THAT WE WANT - AND NO                   
+* UNINTENTIONAL CHANGES ELSEWHERE                                               
+* DD NAMES COMPFILE,OUTDD, DELTA MUST BE ALLOCATED PRIOR TO CALLING             
+* THIS ROUTINE                                                                  
+* COMPFILE CONTAINS THE LIST OF MID-LEVEL QUALIFIERS THAT HELP                  
+* MAKE UP THE FULL NEW AND OLD FILE NAMES                                       
+* OUTDD     WILL CONTAIN THE SUPERC RESULTS                                     
+* DELTA     WILL CONTAIN OUTDD RESULTS READ AND SUMMARIZED BY REXX              
+***********************************************************************/        
+ARG  OFILEID NFILEID OJULCYC NJULCYC HLQ OUTDD DELTA                            
+                                                                                
+   TRACE R                                                                      
+                                                                                
+ MSGS=MSG(ON)                                                                   
+/* FOR DEBUGGING  */                                                            
+SAY  "OFILEID " OFILEID                                                         
+SAY  "NFILEID " NFILEID                                                         
+SAY  "OJULCYC " OJULCYC                                                         
+SAY  "NJULCYC " NJULCYC                                                         
+SAY  "HLQ     " HLQ                                                             
+SAY  "OUTDD   " OUTDD                                                           
+SAY  "DELTA   " DELTA                                                           
+/* END DEBUGGING  */                                                            
+I = 0                                                                           
+X = 1                                                                           
+NUMBERDELTAS = 0                                                                
+RTNRC = 0                                                                       
+MAXRC = 0                                                                       
+/* MAKE SURE THE OUTPUT DDS ARE FREED */                                        
+"FREE   FI(OUTDD, DELTA) "                                                      
+/* now read the compfile to create to complete new and old file names */        
+"EXECIO * DISKR "COMPFILE" (STEM REC. FINIS"                                    
+"FREE FI(COMPFILE) "                                                            
+SAY 'NUMBER OF FILES TO COMPARE = ' REC.0                                       
+DO IX = 1 TO REC.0                                                              
+    COMPNAME = WORD(REC.IX,1)                                                   
+/*  AND DO SUPERC COMPARISION */                                                
+/*    SAY 'COMPARING ' COMPNAME */                                              
+      CALL COMPARE                                                              
+END                                                                             
+SAY 'NUMBER OF FILES COMPARED = ' I                                             
+SAY 'NUMBER OF DELTAS         = ' NUMBERDELTAS                                  
+RETURN MAXRC                                                                    
+/*---------------------------------------------------------------------         
+* CREATE DSNAMES AND MAKE SURE FILES EXIST                                      
+*--------------------------------------------------------------------*/         
+COMPARE:                                                                        
+NEWDD = HLQ"."NFILEID"."NJULCYC"."COMPNAME                                      
+OLDDD = HLQ"."OFILEID"."OJULCYC"."COMPNAME                                      
+OUTDD = HLQ".SUPERC."COMPNAME                                                   
+DELTA = HLQ".DELTA."COMPNAME                                                    
+                                                                                
+/* DELETE ANY OUTDD AND DELTA FILES */                                          
+"ALLOC DATASET('"OUTDD"') DDN(OUTDD) MOD,DELETE"                                
+"ALLOC DATASET('"DELTA"') DDN(DELTA) MOD,DELETE"                                
+                                                                                
+IF SYSDSN("'"NEWDD"'") = "OK" & ,                                               
+   SYSDSN("'"OLDDD"'") = "OK" THEN DO                                           
+      "ALLOC DATASET('"OLDDD"') DDN(OLDDD) SHR"                                 
+      "ALLOC DATASET('"NEWDD"') DDN(NEWDD) SHR"                                 
+      "ALLOC DATASET('"OUTDD"') DDN(OUTDD) NEW"                                 
+      "ALLOC DATASET('"DELTA"') DDN(DELTA) NEW"                                 
+      I = I + 1                                                                 
+/*---------------------------------------------------------------------         
+* INVOKE SUPERC ROUTINE                                                         
+*--------------------------------------------------------------------*/         
+/*  AND CALL SUPERC  */                                                         
+  "CALL 'SYS1.SISPLPA(ISRSUPC)' 'FILECMP,CHNGL'"                                
+   RTNRC = RC                                                                   
+   IF RTNRC = 0 THEN DO                                                         
+/*    DELETE DELTA FILE BECAUSE THE FILES ARE THE SAME */                       
+      "ALLOC DATASET('"DELTA"') DDN(DELTA) MOD,DELETE"                          
+   END                                                                          
+   IF RTNRC > 0 THEN DO                                                         
+      IF RTNRC > MAXRC  THEN DO                                                 
+           MAXRC = RTNRC                                                        
+      END                                                                       
+      NUMBERDELTAS = NUMBERDELTAS + 1                                           
+      SAY 'DELTA FOUND IN ' COMPNAME                                            
+   END                                                                          
+  "FREE   FI(NEWDD,OLDDD) "                                                     
+   CALL CHECKDELTA                                                              
+END                                                                             
+RETURN                                                                          
+                                                                                
+/*---------------------------------------------------------------------         
+* READ THE SUPERC OUTPUT AND SUMMARIZE                                          
+*--------------------------------------------------------------------*/         
+CHECKDELTA:                                                                     
+"EXECIO * DISKR OUTDD (STEM REC2. FINIS"                                        
+DO IX2 = X TO REC2.0                                                            
+/* SAY 'CHECKING ' REC2.IX2                                                     
+   SAY 'SUBSTR(REC2.IX2,2,4) = ' SUBSTR(REC2.IX2,2,4)   */                      
+   IF SUBSTR(REC2.IX2,2,4) = 'NEW:' THEN DO                                     
+      CALL GETSUMMARY                                                           
+      X = X + IX2                                                               
+      IX2 = REC2.0                                                              
+   END                                                                          
+END                                                                             
+RETURN                                                                          
+/*---------------------------------------------------------------------         
+* READ THE SUMMARY FOR THE COMPARISION                                          
+*--------------------------------------------------------------------*/         
+GETSUMMARY:                                                                     
+   IX3 = IX2 + 4                                                                
+   DIFFSAME  = SUBSTR(REC2.IX3,2,9)                                             
+/* SAY 'DIFFSAME  = ' DIFFSAME     */                                           
+   IF DIFFSAME  = 'DIFF SAME' THEN DO                                           
+      IX3 = IX3 + 2                                                             
+/*    SAY 'DELTA REC2 = ' REC.IX3    */                                         
+      IF SUBSTR(REC2.IX3,3,2) = '**' THEN DO                                    
+        SAY COMPNAME  ' FILES DIFFERNT'                                         
+        PUSH COMPNAME ' FILES DIFFERENT'                                        
+        "EXECIO * DISKW DELTA (STEM REC2. FINIS"                                
+        PUSH REC2.IX3                                                           
+        "EXECIO * DISKW DELTA (STEM REC2. FINIS"                                
+      END                                                                       
+      IF SUBSTR(REC2.IX3,8,2) = '**' THEN DO                                    
+        SAY COMPNAME  ' FILES IDENTICAL'                                        
+        PUSH COMPNAME ' FILES IDENTICAL '                                       
+      END                                                                       
+   END                                                                          
+RETURN                                                                          

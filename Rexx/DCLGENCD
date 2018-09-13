@@ -1,0 +1,18 @@
+/*REXX DCLGEN: REXX TO CREATE DB2 DCLGEN CARDS */                       00010000
+ARG TESTID TBLHILVL TBLNAME DB2SYS SUFFIX COPYLIB                       00020000
+CALL GETNAMEL TBLNAME                                                   00021000
+LONGNAME = RESULT                                                       00022000
+/****************************************************/                  00023000
+/****       CREATE DCLGEN TABLE CARDS             *****/                00024000
+/****************************************************/                  00025000
+DCLCDS = TESTID".DCLGEN."TBLNAME"."DB2SYS                               00026000
+"FREE FI(DCLCDS)"                                                       00027000
+"DELETE '"DCLCDS"'"                                                     00028000
+"ALLOC FI(DCLCDS) DA('"DCLCDS"') NEW"                                   00029000
+QUEUE "   DCLGEN TABLE("TBLHILVL"."LONGNAME") -"                        00030000
+QUEUE "          LIBRARY("COPYLIB"("TBLNAME")) -"                       00031000
+QUEUE "          ACTION(REPLACE) -"                                     00032000
+QUEUE "          QUOTE -"                                               00033000
+QUEUE "          COLSUFFIX(YES) NAMES("SUFFIX")"                        00034000
+"EXECIO * DISKW DCLCDS (FINIS"                                          00035000
+"FREE FI(DCLCDS)"                                                       00036000

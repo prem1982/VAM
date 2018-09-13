@@ -1,0 +1,20 @@
+/*REXX REPLACE: sample check for replace */                                     
+eof = 0                                                                         
+ Do Until eof                                                                   
+   "EXECIO 1 DISKR sysut1"                                                      
+   If rc <> 0 Then eof = 1                                                      
+   Else                                                                         
+     Do                                                                         
+       Pull rec                                                                 
+       offset = Pos("BMGNY0DN",rec)                                             
+       If offset > 0 Then                                                       
+         Do                                                                     
+           rec = Overlay("BMGNS0PN",rec,offset,08)                              
+         End                                                                    
+       Push rec                                                                 
+       "EXECIO 1 DISKW sysut2"                                                  
+     End                                                                        
+ End                                                                            
+  "EXECIO 0 DISKR sysut1 (FINIS"                                                
+  "EXECIO 0 DISKW sysut2 (FINIS"                                                
+ Exit 0                                                                         

@@ -1,0 +1,171 @@
+/*REXX CREATSTR: REXX TO CREATE DB2 STORED PROCEDURE */                         
+ARG TESTID DB2SYS OWNER COLLID MEMBER CURSORS                                   
+CALL GETPROCL MEMBER                                                            
+PROCNAME = RESULT                                                               
+DB2CNTL = TESTID".CREATSTR."MEMBER                                              
+PDSMEM = "BMGNS0CN.UNIT.SPCNTL("MEMBER")"                                       
+/****************************************************/                          
+"FREE FI(DB2CNTL)"                                                              
+"DELETE '"DB2CNTL"'"                                                            
+"ALLOC FI(DB2CNTL) DA('"DB2CNTL"') NEW"                                         
+QUEUE "  SET CURRENT SQLID='#DB2BMG';"                                          
+QUEUE "  COMMIT;"                                                               
+QUEUE "  CREATE PROCEDURE "OWNER"."PROCNAME" ( "                                
+QUEUE "         IN  APP_USER_ID   CHAR(20),"                                    
+QUEUE "         IN  DEBUG_LEVEL   CHAR(1),"                                     
+QUEUE "         OUT RETURN_CODE   INTEGER,"                                     
+QUEUE "         OUT REASON_CODE   CHAR(8),"                                     
+QUEUE "         OUT ERROR_TEXT    VARCHAR(2000),"                               
+QUEUE "         OUT SP_SQLCODE    INTEGER,"                                     
+QUEUE "         OUT SP_SQLTOKENS  CHAR(70),"                                    
+IF MEMBER <> 'BMGS309' THEN                                                     
+   DO                                                                           
+QUEUE "         OUT SP_SQLSTATE   CHAR(5),"                                     
+   END                                                                          
+IF (MEMBER <> 'BMGS310') & (MEMBER <> 'BMGS311') THEN                           
+   DO                                                                           
+QUEUE "         IN  CUST_NO         INTEGER,"                                   
+   END                                                                          
+/***  THE FOLLOWING LINES ARE VARIABLE BASED ON STORED PROCEDURE ***/           
+  SELECT                                                                        
+    WHEN MEMBER = 'BMGS300' THEN                                                
+     DO                                                                         
+QUEUE "         IN  CONFIG_NO       SMALLINT"                                   
+     END                                                                        
+    WHEN MEMBER = 'BMGS500' THEN                                                
+     DO                                                                         
+QUEUE "         IN  CONFIG_NO       SMALLINT"                                   
+     END                                                                        
+    WHEN MEMBER = 'BMGS302' THEN                                                
+     DO                                                                         
+QUEUE "         IN  CONFIG_NO       SMALLINT,"                                  
+QUEUE "         IN  LOAD_DATE       CHAR(10),"                                  
+QUEUE "         IN  ACCOUNT_ID      CHAR(16) "                                  
+     END                                                                        
+    WHEN MEMBER = 'BMGS702' THEN                                                
+     DO                                                                         
+QUEUE "         IN  CONFIG_NO       SMALLINT,"                                  
+QUEUE "         IN  LOAD_DATE       CHAR(10),"                                  
+QUEUE "         IN  ACCOUNT_ID      CHAR(16),"                                  
+QUEUE "         IN  TN_TYPE         CHAR(1),"                                   
+QUEUE "         IN  ENTITY_NAME     CHAR(40)"                                   
+     END                                                                        
+    WHEN MEMBER = 'BMGS301' THEN                                                
+     DO                                                                         
+QUEUE "         IN  CONFIG_NO       SMALLINT,"                                  
+QUEUE "         IN  LOAD_DATE       CHAR(10),"                                  
+QUEUE "         IN  ACCOUNT_ID      CHAR(16),"                                  
+QUEUE "         IN  TN_TYPE         CHAR(1),"                                   
+QUEUE "         IN  TOKEN_ST        CHAR(26),"                                  
+QUEUE "         IN  PAGE_OFFSET     INTEGER,"                                   
+QUEUE "         IN  PAGE_SIZE       SMALLINT,"                                  
+QUEUE "         OUT TOTAL_ROWS      INTEGER "                                   
+     END                                                                        
+    WHEN MEMBER = 'BMGS700' THEN                                                
+     DO                                                                         
+QUEUE "         IN  CONFIG_NO       SMALLINT,"                                  
+QUEUE "         IN  LOAD_DATE       CHAR(10),"                                  
+QUEUE "         IN  ACCOUNT_ID      CHAR(16),"                                  
+QUEUE "         IN  TN_TYPE         CHAR(1),"                                   
+QUEUE "         IN  SORT_ORDER      VARCHAR(500),"                              
+QUEUE "         IN  REORDER_FLAG    CHAR(1),"                                   
+QUEUE "         INOUT TOKEN_ST      CHAR(26),"                                  
+QUEUE "         IN  PAGE_OFFSET     INTEGER,"                                   
+QUEUE "         IN  PAGE_SIZE       SMALLINT,"                                  
+QUEUE "         OUT TOTAL_ROWS      INTEGER "                                   
+     END                                                                        
+    WHEN MEMBER = 'BMGS305' THEN                                                
+     DO                                                                         
+QUEUE "         IN  CONFIG_NO       SMALLINT,"                                  
+QUEUE "         IN  LOAD_DATE       CHAR(10),"                                  
+QUEUE "         IN  PAGE_OFFSET     INTEGER,"                                   
+QUEUE "         IN  PAGE_SIZE       INTEGER,"                                   
+QUEUE "         OUT TOTAL_ROWS      INTEGER "                                   
+     END                                                                        
+    WHEN MEMBER = 'BMGS307' THEN                                                
+     DO                                                                         
+QUEUE "         IN  CONFIG_NO       SMALLINT,"                                  
+QUEUE "         IN  LOAD_DATE       CHAR(10),"                                  
+QUEUE "         IN  PAGE_OFFSET     INTEGER,"                                   
+QUEUE "         IN  PAGE_SIZE       INTEGER,"                                   
+QUEUE "         OUT TOTAL_ROWS      INTEGER "                                   
+     END                                                                        
+    WHEN MEMBER = 'BMGS308' THEN                                                
+     DO                                                                         
+QUEUE "         IN  CONFIG_NO       SMALLINT,"                                  
+QUEUE "         IN  LOAD_DATE       CHAR(10),"                                  
+QUEUE "         IN  TN_TYPE         CHAR(1),"                                   
+QUEUE "         IN  ACCOUNT_ID      CHAR(16),"                                  
+QUEUE "         IN  ENTITY_CODE_5   CHAR(5),"                                   
+QUEUE "         IN  CHARGE_CODE     CHAR(4),"                                   
+QUEUE "         IN  RPT_NAME     VARCHAR(128) "                                 
+     END                                                                        
+    WHEN MEMBER = 'BMGS309' THEN                                                
+     DO                                                                         
+QUEUE "         OUT SP_SQLSTATE   CHAR(5) "                                     
+     END                                                                        
+    WHEN MEMBER = 'BMGS310' THEN                                                
+     DO                                                                         
+QUEUE "         IN  DSNAME        CHAR(44),"                                    
+QUEUE "         IN  MEMBER        CHAR(8),"                                     
+QUEUE "         IN  BEGIN_BYTE    INTEGER,"                                     
+QUEUE "         IN  NUM_BYTES     INTEGER,"                                     
+QUEUE "         OUT DATA_BYTES    VARCHAR(2000)"                                
+     END                                                                        
+    WHEN MEMBER = 'BMGS311' THEN                                                
+     DO                                                                         
+QUEUE "         IN  SUBTASK       CHAR(8),"                                     
+QUEUE "         IN  SUBTASK_PARMS VARCHAR(254)"                                 
+     END                                                                        
+    WHEN MEMBER = 'BMGA300' THEN                                                
+     DO                                                                         
+QUEUE "         IN  CONFIG_NO       SMALLINT,"                                  
+QUEUE "         IN  LOAD_DATE       CHAR(10),"                                  
+QUEUE "         IN  TN_TYPE         CHAR(1)"                                    
+     END                                                                        
+    WHEN MEMBER = 'BMGA301' THEN                                                
+     DO                                                                         
+QUEUE "         IN  CONFIG_NO       SMALLINT,"                                  
+QUEUE "         IN  LOAD_DATE       CHAR(10),"                                  
+QUEUE "         IN  TN_TYPE         CHAR(1)"                                    
+     END                                                                        
+    WHEN MEMBER = 'BMGA302' THEN                                                
+     DO                                                                         
+QUEUE "         IN  CONFIG_NO       SMALLINT,"                                  
+QUEUE "         IN  LOAD_DATE       CHAR(10),"                                  
+QUEUE "         IN  TN_TYPE         CHAR(1)"                                    
+     END                                                                        
+    WHEN MEMBER = 'BMGA304' THEN                                                
+     DO                                                                         
+QUEUE "         IN  CONFIG_NO       SMALLINT,"                                  
+QUEUE "         IN  LOAD_DATE       CHAR(10),"                                  
+QUEUE "         IN  IB_IND          CHAR(1)"                                    
+     END                                                                        
+    OTHERWISE                                                                   
+     DO                                                                         
+QUEUE "         IN  CONFIG_NO       SMALLINT,"                                  
+QUEUE "         IN  LOAD_DATE       CHAR(10)"                                   
+     END                                                                        
+  END                                                                           
+/***  THE PRECEDING LINES ARE VARIABLE BASED ON STORED PROCEDURE ***/           
+QUEUE "  ) "                                                                    
+QUEUE "    LANGUAGE COBOL "                                                     
+QUEUE "    EXTERNAL NAME "MEMBER" "                                             
+QUEUE "    PARAMETER STYLE GENERAL "                                            
+QUEUE "    MODIFIES SQL DATA "                                                  
+QUEUE "    NOT DETERMINISTIC "                                                  
+QUEUE "    COLLID "COLLID" "                                                    
+QUEUE "    WLM ENVIRONMENT BMGD38X "                                            
+QUEUE "    STAY RESIDENT NO  "                                                  
+QUEUE "    RUN OPTIONS 'STACK(,,BELOW),ALL31(OFF)' "                            
+/*                                                                              
+QUEUE "    RUN OPTIONS 'STACK(128K,128K,ANY,KEEP),ALL31(OFF)' "                 
+*/                                                                              
+QUEUE "    RESULT SETS "CURSORS";"                                              
+QUEUE "  COMMIT;"                                                               
+"EXECIO * DISKW DB2CNTL (FINIS"                                                 
+"FREE FI(PDSMEM)"                                                               
+"ALLOC FI(PDSMEM) DA('"PDSMEM"') SHR"                                           
+"REPRO INFILE(DB2CNTL) OUTFILE(PDSMEM)"                                         
+"FREE FI(PDSMEM)"                                                               
+"FREE FI(DB2CNTL)"                                                              

@@ -1,0 +1,31 @@
+/*REXX*/                                                                        
+ARG ACRVSAM MGMTCLAS VSAMFILE                                                   
+                                                                                
+/******** DELETE VSAM CLUSTER ******/                                           
+"DELETE ('"VSAMFILE"')"                                                         
+/*********** DEFINE CLUSTERS *******/                                           
+IF ACRVSAM = 'ACRCNTL' THEN DO                                                  
+   "DEFINE CLUSTER (NAME ('"VSAMFILE"') KEYS(7,1)                               
+      MGMTCLAS("MGMTCLAS") RECSZ(80,80) INDEXED IMBED                           
+      SHR(3,3) UNIQUE"                                                          
+                            END                                                 
+                                                                                
+IF ACRVSAM = 'ACRDEFN' THEN DO                                                  
+   "DEFINE CLUSTER (NAME ('"VSAMFILE"') KEYS(24,0)                              
+      MGMTCLAS("MGMTCLAS") RECSZ(128,128) INDEXED                               
+      SHR(1,3) UNIQUE"                                                          
+                            END                                                 
+                                                                                
+IF ACRVSAM = 'ACRHIST' THEN DO                                                  
+   "DEFINE CLUSTER (NAME ('"VSAMFILE"') UNIQUE ",                               
+   "DATACLAS(NUL15VOL) ",                                                       
+   "CYLINDERS(5,5) ",                                                           
+   "NUMBERED VOLUMES(SYSDA) SHR(3,3) ",                                         
+   "RECORDS(00072738) MGMTCLAS("MGMTCLAS"))",                                   
+   "DATA( NAME('"VSAMFILE".DATA') ",                                            
+   "BUFFERSPACE(10200) RECSZ(1020,1020))"                                       
+                            END                                                 
+/*********** REPRO CLUSTERS ********/                                           
+SAY "REPRO " ACRVSAM " FILE "                                                   
+"REPRO INFILE(FLATFILE) ODS('"VSAMFILE"')"                                      
+EXIT                                                                            

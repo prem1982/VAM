@@ -1,0 +1,88 @@
+/**REXX************************************************************/            
+ PARSE UPPER ARG FILE_HLQ TODAY_DATE YESTERDAY_DATE                             
+/************************************************************/                  
+/* THIS REXX ROUTINE WILL MAINTAIN A RUNNING LIST OF FILES  */                  
+/* BY SCANNING THE CATALOG BASED ON A SET OF HIGH LEVEL     */                  
+/* QUALIFIERS.  IT WILL SCAN FOR FILES ARRIVING IN THE LAST */                  
+/* 10 CYCLES, AND CREATE AS IT'S OUTPUT A FULLY QUALIFIED   */                  
+/* LIST OF ALL FILES THAT ARRIVED IN THOSE LAST 10 CYCLES.  */                  
+/* FILE_HLQ = BMGVZ0PN.BANKRUPT                             */                  
+/* TODAY_DATE = THE DATE OF TODAYS CYCLE, YYMMDD            */                  
+/* YESTERDAY_DATE = THE DATE OF THE PREVIOUS CYCLE, YYMMDD  */                  
+/************************************************************/                  
+                                                                                
+                                                                                
+  NEW_HLQ = FILE_HLQ || '.WIMS.D' || TODAY_DATE || '.*'                         
+  NOWFILE = FILE_HLQ || '.LOOKFOR.D' || TODAY_DATE                              
+  PREVFILE = FILE_HLQ || '.LOOKFOR.D' || YESTERDAY_DATE                         
+  TODAYFILE = FILE_HLQ || '.TODAY.D' || TODAY_DATE                              
+  SAY TODAYFILE                                                                 
+                                                                                
+  /* OPEN THE LOOKFOR FILE FROM YESTERDAY, AND LOAD CONTENTS TO ARRAY */        
+  "FREE FI(PREVFILE)"                                                           
+  ADDRESS TSO                                                                   
+  "ALLOC FI(PREVFILE) DA('"PREVFILE"')"                                         
+  "EXECIO * DISKR PREVFILE (STEM PREVREC. FINIS"                                
+  "FREE FI(PREVFILE)"                                                           
+                                                                                
+  NOWREC.0 = 10                                                                 
+  NOWREC.1 = NEW_HLQ                                                            
+  NWRC = 1                                                                      
+                                                                                
+  DO TX = 1 TO 9                                                                
+    NWRC = NWRC + 1                                                             
+    NOWREC.NWRC = PREVREC.TX                                                    
+  END                                                                           
+                                                                                
+  /* OPEN THE LOOKFOR FILE FOR TODAY, AND DUMP THE ARRAY INTO IT */             
+  "DELETE '"NOWFILE"'"                                                          
+  "ALLOC FI(NOWFILE) DA('"NOWFILE"') NEW CATALOG DATACLAS(PSFB80)",             
+   " LRECL(80)"                                                                 
+  "EXECIO * DISKW NOWFILE (STEM NOWREC. FINIS"                                  
+  "FREE FI(NOWFILE)"                                                            
+                                                                                
+  /* NOW PERFORM A LISTCAT COMMAND ON EACH OF THE HIGH LEVEL */                 
+  /* QUALIFIERS IN THE NOWREC ARRAY.  USE OUTTRAP TO GET THE */                 
+  /* RESULTS.                                                */                 
+                                                                                
+  FILE_IND = 'NONVSAM -----'                                                    
+  LIST1 =  "LISTC ENT('"STRIP(NOWREC.1)"')"                                     
+  LIST2 =  "LISTC ENT('"STRIP(NOWREC.2)"')"                                     
+  LIST3 =  "LISTC ENT('"STRIP(NOWREC.3)"')"                                     
+  LIST4 =  "LISTC ENT('"STRIP(NOWREC.4)"')"                                     
+  LIST5 =  "LISTC ENT('"STRIP(NOWREC.5)"')"                                     
+  LIST6 =  "LISTC ENT('"STRIP(NOWREC.6)"')"                                     
+  LIST7 =  "LISTC ENT('"STRIP(NOWREC.7)"')"                                     
+  LIST8 =  "LISTC ENT('"STRIP(NOWREC.8)"')"                                     
+  LIST9 =  "LISTC ENT('"STRIP(NOWREC.9)"')"                                     
+  LIST10 =  "LISTC ENT('"STRIP(NOWREC.10)"')"                                   
+  X=OUTTRAP(LISTC.)                                                             
+  ADDRESS TSO LIST1                                                             
+  ADDRESS TSO LIST2                                                             
+  ADDRESS TSO LIST3                                                             
+  ADDRESS TSO LIST4                                                             
+  ADDRESS TSO LIST5                                                             
+  ADDRESS TSO LIST6                                                             
+  ADDRESS TSO LIST7                                                             
+  ADDRESS TSO LIST8                                                             
+  ADDRESS TSO LIST9                                                             
+  ADDRESS TSO LIST10                                                            
+  X=OUTTRAP('OFF')                                                              
+  DO I = 1 TO LISTC.0                                                           
+     IF POS(FILE_IND,LISTC.I) > 0  THEN DO                                      
+        DATASET_NAME = WORD(LISTC.I,3)                                          
+        QUEUE DATASET_NAME                                                      
+     END                                                                        
+  END                                                                           
+  /* OPEN THE TODAYFILE, AND DUMP THE DSN LIST INTO IT */                       
+  "DELETE '"TODAYFILE"'"                                                        
+  "ALLOC FI(NOWFILE) DA('"TODAYFILE"') NEW CATALOG DATACLAS(PSFB80)",           
+   " LRECL(80)"                                                                 
+  "EXECIO * DISKW NOWFILE (FINIS"                                               
+  "FREE FI(NOWFILE)"                                                            
+                                                                                
+  RETURN                                                                        
+  /**/                                                                          
+                                                                                
+/*=============================== END ================================*/        
+/**********************************************************************/        

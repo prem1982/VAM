@@ -1,0 +1,18 @@
+/*REXX VZQRPTS:CALLS EDISTATS TO SUMMARIZE DETAILS AND CREATE STATS*/   00010000
+CALDATE  = DATE('S')                                                    00020005
+YYYY = SUBSTR(CALDATE,1,4)                                              00030005
+MM   = SUBSTR(CALDATE,5,2)                                              00030105
+DD   = SUBSTR(CALDATE,7,2)                                              00030205
+CALL EDISTATS BMGVZ0CN.VZQ YYYY MM                                      00031006
+IF MM = 1 THEN                                                          00032005
+   DO                                                                   00033005
+      MM = 12                                                           00034005
+      YYYY = YYYY - 1                                                   00035005
+   END                                                                  00036005
+ELSE                                                                    00037005
+   DO                                                                   00038005
+      MM = MM - 1                                                       00038105
+      IF LENGTH(MM) = 1 THEN MM = "0"MM                                 00038207
+   END                                                                  00039005
+CALL EDISTATS BMGVZ0CN.VZQ YYYY MM                                      00039106
+RETURN                                                                  00040000

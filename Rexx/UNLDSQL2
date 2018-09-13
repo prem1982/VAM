@@ -1,0 +1,29 @@
+/*REXX UNLDSQL: REXX TO CREATE DB2 UNLOAD SQL*/                         00010000
+ARG BMGNY0PN OWNER TBLSPACE DB2SYS STATE ORIGSYST                       00020000
+CALL GETNAMEL TBLSPACE                                                  00030000
+LOWDATE  = "2002-03-01"                                                 00040000
+HIGHDATE = "2002-03-31"                                                 00040100
+TBLNAME = RESULT                                                        00040200
+UNLDCDS = BMGNY0PN"."DB2SYS"."TBLSPACE".UNLDSQL"                        00040300
+UNLDDSN = BMGNY0PN"."DB2SYS"."TBLSPACE".UNLD"ORIGSYST||STATE            00040400
+"FREE FI(UNLDCDS)"                                                      00040500
+"DELETE '"UNLDCDS"'"                                                    00040600
+"DELETE '"UNLDDSN"'"                                                    00040700
+"ALLOC FI(UNLDCDS) DA('"UNLDCDS"') NEW"                                 00040800
+QUEUE "   SELECT TB1.*,"                                                00040900
+QUEUE "          TB2.MAN,"                                              00041000
+QUEUE "          TB2.MAN_BILL_DATE,"                                    00041100
+QUEUE "          TB2.ORIG_SYSTEM_ID,"                                   00041200
+QUEUE "          TB2.STATE_CODE"                                        00041300
+QUEUE "          FROM "OWNER"."TBLNAME" TB1"                            00041400
+QUEUE "    INNER JOIN "OWNER".BILLED_ACCT_NO_T TB2"                     00041501
+QUEUE "          ON TB1.BAN = TB2.BAN"                                  00041601
+QUEUE "             AND TB1.BILL_DATE = TB2.BILL_DATE"                  00041701
+QUEUE "             AND TB1.ORIG_SYSTEM_ID = TB2.ORIG_SYSTEM_ID"        00041801
+QUEUE "    INNER JOIN "OWNER".MASTER_ACCT_TEMP_T TB3"                   00041904
+QUEUE "          ON TB2.MAN = TB3.MAN"                                  00042004
+QUEUE "             AND TB2.MAN_BILL_DATE = TB3.MAN_BILL_DATE"          00042105
+QUEUE "             AND TB2.ORIG_SYSTEM_ID = TB3.ORIG_SYSTEM_ID"        00042204
+QUEUE "   ;"                                                            00046000
+"EXECIO * DISKW UNLDCDS (FINIS"                                         00047000
+"FREE FI(UNLDCDS)"                                                      00048000

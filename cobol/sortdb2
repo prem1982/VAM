@@ -1,0 +1,58 @@
+//WFASORTC JOB (T,JXQS,JKSD0020),ADOSSA.8561366,                        JOB44750
+//    CLASS=T,MSGCLASS=Z,NOTIFY=&SYSUID,REGION=3000K                    00002000
+/*JOBPARM S=(200R,200E)                                                 00003000
+/*ROUTE  PRINT RMT1                                                     00004000
+//SYSDAQL EXEC PGM=SYNCSORT,PARM='DB2=D71C'                             00005000
+//STEPLIB  DD DISP=SHR,DSN=DSND71X.LOADLIB                              00006000
+//         DD DISP=SHR,DSN=DSND71X.SDSNLOAD                             00007000
+//         DD DISP=SHR,DSN=DSND71X.RUNLIB.LOAD                          00008000
+//******************************************************************    00009000
+//*   DBAX.READSSMA.XK2A.UXVOSSMA.D111205A                              00010002
+//* 949 (NY3LI2200DO) LPC = 00B2E8  TO                                  00020000
+//* 453 (NY3LI2100DO) LPC = 00B2E7                                      00030000
+//*           MAINT_CENTER IN (X'00B2E8',X'00B2E7')                     00031000
+//******************************************************************    00032000
+//SYSOUT DD SYSOUT=*                                                    00033000
+//SORTOUT DD SYSOUT=*                                                   00034000
+//*SORTOF1 DD SYSOUT=*                                                  00035000
+//SORTOF1 DD DSN=WFCVZ0PN.OMAIL.REPORT.XK2A.D111205A,                   00036002
+//  DISP=(NEW,CATLG,DELETE),                                            00037000
+//*  DCB=(LRECL=80,RECFM=FB),                                           00038000
+//  STORCLAS=(STANDARD),                                                00039000
+//  SPACE=(CYL,(15,15),RLSE),                                           00040000
+//  MGMTCLAS=(LUSE180),DATACLAS=(VOLCNT03)                              00041000
+//*SORTOF2 DD DSN=S2ANA00.SORTOF2.CLLI.AFTER,                           00041100
+//*   DISP=(NEW,CATLG,DELETE),                                          00041200
+//*  DCB=(LRECL=80,RECFM=FB),                                           00041300
+//*  STORCLAS=(STANDARD),                                               00041400
+//*  SPACE=(CYL,(15,15),RLSE),                                          00041500
+//*  MGMTCLAS=(LUSE180),DATACLAS=(VOLCNT03)                             00041600
+//*SORTOF2 DD SYSOUT=*                                                  00041700
+//*SORTOF1 DD DSN=S2ANA00.OUT1,DISP=(NEW,CATLG),UNIT=3390,SPACE=(CYL,1) 00041800
+//SORTWK01 DD UNIT=SYSDA,SPACE=(CYL,20)                                 00041900
+//SORTWK02 DD UNIT=SYSDA,SPACE=(CYL,20)                                 00042000
+//*****,DECIMAL(COUNT(*),9,0) AS RECCOUNT                               00043000
+//SORTDBIN DD *                                                         00044000
+    SELECT "RECIP" ,  MIN(JUL_DATE) AS OLDEST,                          00045000
+        MAX(JUL_DATE) AS NEWEST                                         00045100
+       ,COUNT(*) AS RECCOUNT                                            00045200
+    FROM DBAX.WFCCP_OMAIL_T                                             00045301
+      GROUP BY RECIP                                                    00045400
+      ORDER BY 4 DESC ,2                                                00045500
+//SYSIN DD *                                                            00045600
+  SORT FIELDS=COPY                                                      00045700
+                                                                        00045800
+    OUTFIL FILES=1,                                                     00045900
+           OUTREC=(1:1,8,                                               00046000
+                10:9,7,                                                 00046100
+                19:17,7,                                                00046200
+                27:25,4,BI,EDIT=(TTTTTTT)),                             00046300
+          HEADER2=(01:'RECIP ',                                         00046400
+                   10:'OLDEST',                                         00046500
+                   19:'NEWEST',                                         00046600
+                   27:'#LETTER',                                        00046700
+                   /,                                                   00046800
+                   01:'========',                                       00046900
+                   10:'=======',                                        00047000
+                   19:'=======',                                        00047100
+                   27:'=======')                                        00047200

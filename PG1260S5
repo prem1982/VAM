@@ -1,0 +1,16 @@
+ SELECT SC1.DESCRIPTION                                                         
+    FROM (                                                                      
+      SELECT TB1.TEXT_1 DESCRIPTION                                             
+        FROM  TEXT_FYI_T TB1                                                    
+       WHERE TB1.MAN = ?                                                        
+         AND TB1.MAN_BILL_DATE = ?                                              
+         AND TB1.RECORD_NBR =  72                                               
+         AND TB1.TEXT_TYPE_CD = 'BOB'                                           
+UNION ALL                                                                       
+      SELECT TB2.TEXT_2 DESCRIPTION                                             
+        FROM  TEXT_FYI_T TB2                                                    
+       WHERE TB2.MAN = ?                                                        
+         AND TB2.MAN_BILL_DATE = ?                                              
+         AND TB2.TEXT_TYPE_CD = 'BOB'                                           
+    ) SC1                                                                       
+WFILTER = ?                                                                     

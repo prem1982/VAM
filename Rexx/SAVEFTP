@@ -1,0 +1,293 @@
+/******************************* REXX *********************************/        
+/* REXX EXEC testftp                                                  */        
+/*                                                                    */        
+/*                                                                    */        
+/******************************* REXX *********************************/        
+                                                                                
+ARG ds_hlq cycle .                                                              
+                                                                                
+ trace o                                                                        
+                                                                                
+ say 'hlq   = ' ds_hlq                                                          
+ say 'cycle = ' cycle                                                           
+                                                                                
+ odsname      = 'V275365.TEST.OUTPUT'                                           
+ mgmtclass    = 'NOBK35'                                                        
+ dataclass    = 'COMPRESS'                                                      
+ storage_type = 'CYLINDERS'                                                     
+ p_storage    = 1                                                               
+ s_storage    = 1                                                               
+ o_file_disp  = 'NEW'                                                           
+                                                                                
+ log_files    = 0                                                               
+ ftpcrd_name  = 'V275365.test.ftpcrds.J0123'                                    
+                                                                                
+ call read_ftp_address                                                          
+                                                                                
+                                                                                
+ "EXECIO * DISKR FILELST (STEM filelst.)"                                       
+ if RC ^= 0                                                                     
+ then do                                                                        
+      say error reading FILELST file                                            
+      exit 12                                                                   
+      end                                                                       
+                                                                                
+ say 'there are ' filelst.0 ' files to send'                                    
+                                                                                
+ processed.0 = filelst.0                                                        
+ do i = 1 to processed.0                                                        
+   processed.i = 'N'                                                            
+ end                                                                            
+                                                                                
+ /****************************************************************/             
+ /* now process the files                                        */             
+ /****************************************************************/             
+                                                                                
+ do i = 1 to filelst.0                                                          
+                                                                                
+   fname  = strip(word(filelst.i,1))                                            
+   dsname = strip(word(filelst.i,2))                                            
+                                                                                
+   say 'processing file  ' i ' name = ' fname                                   
+   say 'processing dsname' i ' name = ' dsname                                  
+                                                                                
+   call build_ftp_card                                                          
+   call alloc_input                                                             
+   call alloc_output                                                            
+                                                                                
+   ADDRESS TSO FTP '(EXIT'                                                      
+                                                                                
+   if rc = 0                                                                    
+   then do                                                                      
+        say 'good return code from FTP'                                         
+        processed.i = 'Y'                                                       
+        end                                                                     
+   else do                                                                      
+        say 'Bad return code from FTP'                                          
+        say rc                                                                  
+        end                                                                     
+                                                                                
+   ADDRESS TSO  "FREE  FI(INPUT)"                                               
+   ADDRESS TSO  "FREE  FI(OUTPUT)"                                              
+ end                                                                            
+                                                                                
+ num_good = 0                                                                   
+ do i = 1 to filelst.0                                                          
+   if processed.i = 'Y'                                                         
+   then num_good = num_good + 1                                                 
+ end                                                                            
+                                                                                
+ if num_good = filelst.0                                                        
+ then do                                                                        
+      say 'All files processed successfully'                                    
+      exit(0)                                                                   
+      end                                                                       
+ else do                                                                        
+      say 'Some failed, only ' num_good ' out of ' filelst.0 ' good'            
+      exit(2)                                                                   
+      end                                                                       
+                                                                                
+return                                                                          
+                                                                                
+/*********************************************************************/         
+/* NAME:     read_ftp_address                                        */         
+/*                                                                   */         
+/*********************************************************************/         
+read_ftp_address:                                                               
+                                                                                
+ "EXECIO * DISKR FTPADDR (STEM ftpadd.)"                                        
+ if RC ^= 0                                                                     
+ then do                                                                        
+      say error reading FTPADDR file                                            
+      exit 12                                                                   
+      end                                                                       
+                                                                                
+ if ftpadd.0 ^= 2                                                               
+ then do                                                                        
+      say error with FTPADDR file                                               
+      exit 12                                                                   
+      end                                                                       
+                                                                                
+ /* ftpaddr must be of the format                                               
+    INTERNAL 1 ip    id   p/w                                                   
+    INTERNAL 2 dir              */                                              
+                                                                                
+ int_num = 1                                                                    
+ int_dest     = word(ftpadd.int_num,3)                                          
+ int_user     = word(ftpadd.int_num,4)                                          
+ int_passw    = word(ftpadd.int_num,5)                                          
+ int_num      = int_num + 1                                                     
+ int_direct   = word(ftpadd.int_num,3)                                          
+ say 'Internal ip info'                                                         
+ say 'Ip address    :' int_dest                                                 
+ say 'Id            :' int_user                                                 
+ say 'p/w           :' int_passw                                                
+ say 'dir           :' int_direct                                               
+                                                                                
+ return                                                                         
+                                                                                
+/*********************************************************************/         
+/* NAME:     build_ftp_card                                          */         
+/*                                                                   */         
+/*********************************************************************/         
+build_ftp_card:                                                                 
+                                                                                
+ ADDRESS  TSO "LISTCAT ENT('"ftpcrd_name"')"                                    
+ IF RC = 0                                                                      
+ then do                                                                        
+      ADDRESS TSO "ALLOC F(FTPC) DA('"ftpcrd_name"') OLD"                       
+      if rc = 0                                                                 
+      then do                                                                   
+           say 'ftpcrd file allocated with disp of OLD'                         
+           end                                                                  
+      else do                                                                   
+           say 'Error allocating ftpcrd file'                                   
+           say rc                                                               
+           exit(12)                                                             
+           end                                                                  
+      end                                                                       
+ else do                                                                        
+      ADDRESS TSO "ALLOC F(FTPC) DA('"ftpcrd_name"')",                          
+      "mgmtclas("mgmtclass") lrecl(80) dataclas("dataclass")",                  
+      storage_type" space("p_storage","s_storage") NEW"                         
+                                                                                
+      if rc = 0                                                                 
+      then do                                                                   
+           say 'ftpcrd file allocated NEW'                                      
+           end                                                                  
+      else do                                                                   
+           say 'Error allocating ftpcrd file'                                   
+           say rc                                                               
+           exit(12)                                                             
+           end                                                                  
+      end                                                                       
+                                                                                
+                                                                                
+ dest   = int_dest                                                              
+ user   = int_user                                                              
+ passw  = int_passw                                                             
+ direct = int_direct                                                            
+                                                                                
+ ftpcrds_cnt = 0                                                                
+                                                                                
+ /*  say 'dest   = ' dest */                                                    
+                                                                                
+ if (ftpcrds_cnt = 0) THEN DO                                                   
+    /* ftp destination */                                                       
+    ftpcrds_cnt = ftpcrds_cnt + 1                                               
+    ftpcrds.ftpcrds_cnt = dest                                                  
+                                                                                
+    /* user            */                                                       
+    ftpcrds_cnt = ftpcrds_cnt + 1                                               
+    ftpcrds.ftpcrds_cnt = user                                                  
+ end                                                                            
+ else do                                                                        
+    /* ftp destination */                                                       
+    ftpcrds_cnt = ftpcrds_cnt + 1                                               
+    ftpcrds.ftpcrds_cnt = "OPEN " || dest                                       
+                                                                                
+    /* user            */                                                       
+    ftpcrds_cnt = ftpcrds_cnt + 1                                               
+    ftpcrds.ftpcrds_cnt = "USER " || user                                       
+ end                                                                            
+                                                                                
+ /* password        */                                                          
+ ftpcrds_cnt = ftpcrds_cnt + 1                                                  
+ ftpcrds.ftpcrds_cnt = passw                                                    
+                                                                                
+ /* debug           */                                                          
+ if (debug > 0 & debug <= 9) | debug = 'Y' then do                              
+    ftpcrds_cnt = ftpcrds_cnt + 1                                               
+    ftpcrds.ftpcrds_cnt = "LOCSTAT"                                             
+    ftpcrds_cnt = ftpcrds_cnt + 1                                               
+    ftpcrds.ftpcrds_cnt = "DEBUG ALL TIME"                                      
+ end                                                                            
+                                                                                
+ /* directory       */                                                          
+ ftpcrds_cnt = ftpcrds_cnt + 1                                                  
+ ftpcrds.ftpcrds_cnt = 'CD ' direct                                             
+                                                                                
+ /* put             */                                                          
+ ftpcrds_cnt = ftpcrds_cnt + 1                                                  
+ ftpcrds.ftpcrds_cnt = "PUT '"dsname"' +"                                       
+                                                                                
+ /* dest file name  */                                                          
+ ftpcrds_cnt = ftpcrds_cnt + 1                                                  
+ ftpcrds.ftpcrds_cnt = "     " fname                                            
+                                                                                
+ /* CLOSE           */                                                          
+ ftpcrds_cnt = ftpcrds_cnt + 1                                                  
+ ftpcrds.ftpcrds_cnt = 'CLOSE'                                                  
+                                                                                
+ /* QUIT           */                                                           
+ ftpcrds_cnt = ftpcrds_cnt + 1                                                  
+ ftpcrds.ftpcrds_cnt = 'QUIT'                                                   
+                                                                                
+ if ftpcrds_cnt > 0                                                             
+ then do                                                                        
+    "MAKEBUF"                                                                   
+    "EXECIO * DISKW FTPC (STEM ftpcrds. FINIS)"                                 
+    "DROPBUF"                                                                   
+ end                                                                            
+                                                                                
+ ADDRESS TSO  "FREE  FI(FTPC)"                                                  
+                                                                                
+return                                                                          
+                                                                                
+/*********************************************************************/         
+/* NAME:     ALLOC input                                             */         
+/*                                                                   */         
+/*********************************************************************/         
+alloc_input:                                                                    
+                                                                                
+ ADDRESS TSO "ALLOC F(input) DA('"ftpcrd_name"') REUSE SHR"                     
+ if rc = 0                                                                      
+ then do                                                                        
+      say 'INPUT file allocated'                                                
+      end                                                                       
+ else do                                                                        
+      say 'Error allocating input file'                                         
+      say rc                                                                    
+      exit(12)                                                                  
+      end                                                                       
+                                                                                
+ return                                                                         
+                                                                                
+/*********************************************************************/         
+/* NAME:     ALLOC output                                            */         
+/*                                                                   */         
+/*********************************************************************/         
+alloc_output:                                                                   
+                                                                                
+ ADDRESS  TSO "LISTCAT ENT('"odsname"')"                                        
+ IF RC = 0                                                                      
+ then do                                                                        
+      ADDRESS TSO "ALLOC F(output) DA('"odsname"') MOD"                         
+      if rc = 0                                                                 
+      then do                                                                   
+           say 'OUTPUT file allocated with disp of MOD'                         
+           end                                                                  
+      else do                                                                   
+           say 'Error allocating output file'                                   
+           say rc                                                               
+           exit(12)                                                             
+           end                                                                  
+      end                                                                       
+ else do                                                                        
+      ADDRESS TSO "ALLOC F(output) DA('"odsname"')",                            
+      "mgmtclas("mgmtclass") lrecl(133) dataclas("dataclass")",                 
+      storage_type" space("p_storage","s_storage") NEW"                         
+                                                                                
+      if rc = 0                                                                 
+      then do                                                                   
+           say 'OUTPUT file allocated NEW'                                      
+           end                                                                  
+      else do                                                                   
+           say 'Error allocating output file'                                   
+           say rc                                                               
+           exit(12)                                                             
+           end                                                                  
+      end                                                                       
+                                                                                
+ return                                                                         
+                                                                                

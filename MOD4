@@ -1,0 +1,96 @@
+           SELECT INR.WTN                                                       
+                 ,INR.TAX_DESC                                                  
+                 ,INR.TAX_DESC2                                                 
+                 ,INR.FROM_DATE                                                 
+                 ,SUM(INR.ACCT_LVL_CHGS) ACCT_LVL_CHGS                          
+                 ,SUM(INR.MONTHLY_CHGS) MONTHLY_CHGS                            
+                 ,SUM(INR.EQUIP_CHGS) EQUIP_CHGS                                
+                 ,SUM(INR.OCC_CHGS) OCC_CHGS                                    
+                 ,SUM(INR.TAX_SURCHGS) TAX_SURCHGS                              
+                 ,SUM(INR.THIRD_PARTY_CHGS) THIRD_PARTY_CHGS                    
+                 ,INR.CHG_TYPE_CD_MOD109                                        
+                 ,SUM(INR.CHG_AMT_MOD109) CHG_AMT_MOD109                        
+             FROM (                                                             
+            SELECT WTNX.WORKING_TEL_NBR WTN                                     
+                  ,' ' TAX_DESC                                                 
+                  ,' ' TAX_DESC2                                                
+                  ,' ' FROM_DATE                                                
+                  ,0.00 ACCT_LVL_CHGS                                           
+                  ,0.00 MONTHLY_CHGS                                            
+                  ,0.00 EQUIP_CHGS                                              
+                  ,0.00 OCC_CHGS                                                
+                  ,0.00 TAX_SURCHGS                                             
+                  ,0.00 THIRD_PARTY_CHGS                                        
+                  ,' '  CHG_TYPE_CD_MOD109                                      
+                  ,0.00 CHG_AMT_MOD109                                          
+              FROM BMGVZP.WTN_T WTNX                                            
+           WHERE WTNX.BAN = '73AI326TD'                                         
+             AND WTNX.BILL_DATE = '2012-02-01'                                  
+             AND WTNX.ORIG_SYSTEM_ID = 'VW'                                     
+            UNION ALL                                                           
+            SELECT V72.WORKING_TEL_NBR WTN                                      
+                  ,CASE WHEN V72.ASSOC_CHG_CD = '1938'                          
+                        THEN V72.DESCRIPTION1                                   
+                        WHEN (V72.ASSOC_CHG_CD = '1937'                         
+                               AND V72.OC_C_TYP = 'V')                          
+                        THEN V72.DESCRIPTION1                                   
+                        WHEN (V72.ASSOC_CHG_CD = '1930'                         
+                               AND V72.RECORD_IND = 8)                          
+                        THEN V72.DESCRIPTION1                                   
+                        ELSE ' ' END TAX_DESC                                   
+                  ,V72.DESCRIPTION2  TAX_DESC2                                  
+                  ,V72.FROM_DATE     FROM_DATE                                  
+                  ,SUM(CASE WHEN V72.ASSOC_CHG_CD = '1930'                      
+                             AND V72.RECORD_IND  <> 8                           
+                            THEN (V72.CHARGE + V72.DISCOUNT)                    
+                            ELSE 0 END) ACCT_LVL_CHGS                           
+                  ,SUM(CASE WHEN V72.ASSOC_CHG_CD = '1931'                      
+                        THEN (V72.CHARGE + V72.DISCOUNT)                        
+                        ELSE 0 END) MONTHLY_CHGS                                
+                  ,SUM(CASE WHEN V72.ASSOC_CHG_CD = '1940'                      
+                        THEN (V72.CHARGE + V72.DISCOUNT)                        
+                        ELSE 0 END) EQUIP_CHGS                                  
+                  ,SUM(CASE WHEN (V72.ASSOC_CHG_CD = '1937'                     
+                              AND V72.OC_C_TYP <> 'V')                          
+                            THEN (V72.CHARGE + V72.DISCOUNT)                    
+                            ELSE 0 END) OCC_CHGS                                
+                  ,SUM(CASE WHEN V72.ASSOC_CHG_CD = '1938'                      
+                         THEN (V72.CHARGE + V72.DISCOUNT)                       
+                         WHEN (V72.ASSOC_CHG_CD = '1937'                        
+                                AND V72.OC_C_TYP = 'V')                         
+                         THEN (V72.CHARGE + V72.DISCOUNT)                       
+                         ELSE 0 END) TAX_SURCHGS                                
+                  ,SUM(CASE WHEN V72.ASSOC_CHG_CD = '1930'                      
+                             AND V72.RECORD_IND   = 8                           
+                            THEN V72.CHARGE                                     
+                            ELSE 0 END) THIRD_PARTY_CHGS                        
+                  ,VMOD.CHG_TYPE_CD  CHG_TYPE_CD_MOD109                         
+                  ,SUM(VMOD.CHG_AMT) CHG_AMT_MOD109                             
+            FROM BMGVZP.VZ450_7200_T V72                                        
+            LEFT OUTER JOIN                                                     
+                 BMGVZP.VZ450_MOD_109_T VMOD                                    
+              ON V72.MAN =VMOD.MAN                                              
+             AND V72.MAN_BILL_DATE  = VMOD.MAN_BILL_DATE                        
+             AND V72.ORIG_SYSTEM_ID = VMOD.ORIG_SYSTEM_ID                       
+             AND V72.VZ450_SEQ_NBR  = VMOD.VZ450_SEQ_NBR                        
+           WHERE V72.MAN = '73AI326TD'                                          
+             AND V72.MAN_BILL_DATE = '2012-02-01'                               
+             AND V72.ORIG_SYSTEM_ID = 'VW'                                      
+           GROUP BY V72.WORKING_TEL_NBR                                         
+                   ,V72.DESCRIPTION1                                            
+                   ,V72.DESCRIPTION2                                            
+                   ,V72.FROM_DATE                                               
+                   ,V72.ASSOC_CHG_CD                                            
+                   ,V72.OC_C_TYP                                                
+                   ,V72.RECORD_IND                                              
+                   ,VMOD.CHG_TYPE_CD                                            
+                  ) INR                                                         
+             INNER JOIN BMGVZP.STAGE_BMGS321 STG                                
+                ON STG.REPORT_ID_TS = '2012-02-08-13.35.29.972580'              
+               AND STG.MAN = '73AI326TD'                                        
+               AND STG.WTN = INR.WTN                                            
+           GROUP BY INR.WTN                                                     
+                 ,INR.TAX_DESC                                                  
+                 ,INR.TAX_DESC2                                                 
+                 ,INR.FROM_DATE                                                 
+                 ,INR.CHG_TYPE_CD_MOD109                                        

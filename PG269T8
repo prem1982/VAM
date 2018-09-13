@@ -1,0 +1,28 @@
+  SELECT 'Total Other Charges and Credits' CHG_TYPE                             
+       ,' ' CHG_DESC                                                            
+       ,' ' FROM_DATE                                                           
+       ,' ' TO_DATE                                                             
+       ,CHAR(SUM(SC1.CHG_AMT)) CHG_AMT                                          
+   FROM (                                                                       
+    SELECT (V72.CHARGE + V72.DISCOUNT) AS CHG_AMT                               
+     FROM VZ450_7200_T V72                                                      
+     WHERE V72.MAN = ?                                                          
+       AND V72.MAN_BILL_DATE = ?                                                
+       AND V72.ORIG_SYSTEM_ID = ?                                               
+       AND V72.BAN = ?                                                          
+       AND V72.BILL_DATE = ?                                                    
+       AND V72.WORKING_TEL_NBR = ?                                              
+       AND (V72.ASSOC_CHG_CD = '1937'                                           
+             AND V72.OC_C_TYP <> 'V')                                           
+      UNION ALL                                                                 
+    SELECT V20.TX_AMT CHG_AMT                                                   
+      FROM PAYMENT_ADJUST_T V20                                                 
+     WHERE V20.MAN = ?                                                          
+       AND V20.MAN_BILL_DATE = ?                                                
+       AND V20.ORIG_SYSTEM_ID = ?                                               
+       AND V20.BAN = ?                                                          
+       AND V20.BILL_DATE = ?                                                    
+       AND V20.ADJ_XFER_TEL_NBR = WTN%                                          
+       AND V20.TX_CATEGORY_CD = '2'                                             
+        ) SC1                                                                   
+   WFILTER = ?                                                                  

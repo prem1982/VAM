@@ -1,0 +1,1726 @@
+000100******************************************************************00010000
+000200 IDENTIFICATION DIVISION.                                         00020000
+000300******************************************************************00030000
+000400 PROGRAM-ID. BMGBM3A.                                             00040000
+000500******************************************************************00050000
+000600*   THIS MODULE TAKES THE INPUT FROM THE BILL MANAGER           * 00060000
+000700*   AND INSERTS INTO THE BM_CONFIG_T AND BM_CONFIG_MAN_T TABLES * 00070000
+000800******************************************************************00080000
+000900 ENVIRONMENT DIVISION.                                            00090000
+001000******************************************************************00100000
+001100 CONFIGURATION SECTION.                                           00110000
+001200 SOURCE-COMPUTER. IBM-370.                                        00120000
+001300 OBJECT-COMPUTER. IBM-370.                                        00130000
+001400******************************************************************00140000
+001500 INPUT-OUTPUT SECTION.                                            00150000
+001600******************************************************************00160000
+001700 FILE-CONTROL.                                                    00170000
+001800******************************************************************00180000
+001900*  INPUT FILE FROM BILL MANAGER                                   00190000
+002000        SELECT BILL-INP ASSIGN TO CUSTFLAT.                       00200000
+002100******************************************************************00210000
+002200 DATA DIVISION.                                                   00220000
+002300******************************************************************00230000
+002400 FILE SECTION.                                                    00240000
+002500******************************************************************00250000
+002600 FD  BILL-INP                                                     00260000
+002700      BLOCK CONTAINS 0 RECORDS                                    00270000
+002800      LABEL RECORDS ARE STANDARD                                  00280000
+002900      RECORDING MODE IS F                                         00290000
+003000      DATA RECORD IS FD-BILL-INP.                                 00300000
+003100 01  FD-BILL-INP     PIC X(450).                                  00310000
+003200******************************************************************00320000
+003300 WORKING-STORAGE SECTION.                                         00330000
+003400******************************************************************00340000
+003500 COPY LKSTRPIO.                                                   00350000
+003600 COPY PARSLNKC.                                                   00360000
+003700 COPY THREADLK.                                                   00370000
+003800 COPY ALLOPARM.                                                   00380000
+003900     EXEC SQL                                                     00390000
+004000          INCLUDE SQLCA                                           00400000
+004100     END-EXEC.                                                    00410000
+004200     EXEC SQL                                                     00420000
+004300          INCLUDE BMCONFGT                                        00430000
+004400     END-EXEC.                                                    00440000
+004500     EXEC SQL                                                     00450000
+004600          INCLUDE BMCONMAN                                        00460000
+004700     END-EXEC.                                                    00470000
+004800     EXEC SQL                                                     00480000
+004900          INCLUDE BMCONPRC                                        00490000
+005000     END-EXEC.                                                    00500000
+005010     EXEC SQL                                                     00501000
+005020          INCLUDE BMCFMANC                                        00502000
+005030     END-EXEC.                                                    00503000
+005100     EXEC SQL                                                     00510000
+005200          DECLARE  CUST_CSR CURSOR FOR                            00520000
+005300        SELECT A.CUSTOMER_ID,                                     00530000
+005400               A.CONFIG_ID,                                       00540000
+005500               A.BILL_PERIOD,                                     00550000
+005600               B.MAN,                                             00560000
+005700               A.LOB,                                             00570000
+005800               A.NATL_IND,                                        00580000
+005900               A.LARG_CUST,                                       00590000
+006000               B.ORIG_SYSTEM_ID,                                  00600000
+006100               A.CUSTOMER_NAME,A.CONFIG_NAME,A.CUSTOMER_STATUS,   00610000
+006200      A.CAS_IND,A.REG_IND,A.SBU,                                  00620000
+006300      A.CONFIG_STATUS,A.MEDIA,A.COPIES,                           00630000
+006400      A.CONTACT_NAME,A.CONTACT_PHONE,A.CONTACT_TITLE,             00640000
+006500      A.ACCT_EXECUTIVE,A.AE_PHONE,A.MAILING,                      00650000
+006600      A.ADDRESS1,A.ADDRESS2,A.CITY,                               00660000
+006700      A.STATE,A.ZIP,A.ZIP_EXTN,                                   00670000
+006800      A.SIN_PER_IND,A.GROUP_ID                                    00680000
+006900           FROM BM_CONFIG_T A,                                    00690000
+007000                BM_CONFIG_MAN_T B                                 00700000
+007100           WHERE                                                  00710000
+007200                 A.CUSTOMER_ID = B.CUSTOMER_ID AND                00720000
+007300                 A.CONFIG_ID   = B.CONFIG_ID AND                  00730000
+007400                 A.EFFECTIVE_DT = (SELECT MAX(EFFECTIVE_DT) FROM  00740000
+007500                          BM_CONFIG_T C                           00750000
+007600                          WHERE C.CUSTOMER_ID = A.CUSTOMER_ID     00760000
+007700                           AND C.CONFIG_ID   = A.CONFIG_ID        00770000
+007800                         ) AND                                    00780000
+007900                 A.EFFECTIVE_DT = B.EFFECTIVE_DT                  00790000
+008000             AND A.VALID_FLAG   = 'Y'                             00800000
+008100           ORDER BY 1 desc,2 desc,4 desc                          00810000
+008200     END-EXEC.                                                    00820000
+008300     EXEC SQL                                                     00830000
+008400          DECLARE  UPDATE_CSR CURSOR FOR                          00840000
+008500       SELECT B.CUSTOMER_ID,B.CONFIG_ID,B.MAN ,                   00850000
+008600       B.MAN_BILL_DATE,                                           00860000
+008700       B.ORIG_SYSTEM_ID ,                                         00870000
+008800       X.VALID_FLAG ,                                             00880000
+008900       B.VALID_FLAG                                               00890000
+009000        FROM (                                                    00900000
+009100       SELECT A.MAN , A.CONFIG_ID , A.CUSTOMER_ID , A.VALID_FLAG  00910000
+009200        FROM BM_CONFIG_MAN_T A                                    00920000
+009300       WHERE EFFECTIVE_DT = (                                     00930000
+009400        SELECT MAX(EFFECTIVE_DT)                                  00940000
+009500        FROM BM_CONFIG_MAN_T C                                    00950000
+009600        WHERE C.CUSTOMER_ID = A.CUSTOMER_ID AND                   00960000
+009700              C.CONFIG_ID = A.CONFIG_ID                           00970000
+009800       )) X                                                       00980000
+009900       RIGHT OUTER JOIN BM_CONFIG_PROC_T B                        00990000
+010000       ON X.MAN = B.MAN AND                                       01000000
+010100          X.CONFIG_ID = B.CONFIG_ID AND                           01010000
+010200          X.CUSTOMER_ID = B.CUSTOMER_ID                           01020000
+010300       WHERE                                                      01030000
+010400          B.ACCT_SENT_DT = '9999-12-31-00.00.00.000000'           01040000
+010500     END-EXEC.                                                    01050000
+010600****************                                                  01060000
+010700 01  WS-EOF-UPD-CSR            PIC X(1) VALUE 'N'.                01070000
+010710 01  WS-EOF-BM-MAN-CSR         PIC X(1) VALUE 'N'.                01071000
+010720 01  WS-EOF-BM-MAN-CSRI        PIC X(1) VALUE 'N'.                01072000
+010721 01  EOF-DEL                   PIC X(1) VALUE 'N'.                01072100
+010730 01  WS-BMFCG-COUNT            PIC S9(8) COMP.                    01073000
+010800 01  NUL1-INDS.                                                   01080000
+010900     05 NUL1-IND-1            PIC S9(4) COMP.                     01090000
+011000     05 NUL1-IND-2            PIC S9(4) COMP.                     01100000
+011100 01  UPDATE-IND               PIC X(01).                          01110000
+011200 01 ARRAY-CUSTOMER-NAME.                                          01120000
+011300    49 ARRAY-CUSTOMER-NAME-LEN        PIC S9(4) USAGE COMP.       01130000
+011400    49 ARRAY-CUSTOMER-NAME-TEXT       PIC X(200).                 01140000
+011500 01 ARRAY-CONFIG-NAME.                                            01150000
+011600    49 ARRAY-CONFIG-NAME-LEN          PIC S9(4) USAGE COMP.       01160000
+011700    49 ARRAY-CONFIG-NAME-TEXT         PIC X(200).                 01170000
+011800 01 ARRAY-SBU.                                                    01180000
+011900    49 ARRAY-SBU-LEN                  PIC S9(4) USAGE COMP.       01190000
+012000    49 ARRAY-SBU-TEXT                 PIC X(100).                 01200000
+012100 01 ARRAY-CONTACT-NAME.                                           01210000
+012200    49 ARRAY-CONTACT-NAME-LEN         PIC S9(4) USAGE COMP.       01220000
+012300    49 ARRAY-CONTACT-NAME-TEXT        PIC X(200).                 01230000
+012400 01 ARRAY-CONTACT-TITLE.                                          01240000
+012500    49 ARRAY-CONTACT-TITLE-LEN        PIC S9(4) USAGE COMP.       01250000
+012600    49 ARRAY-CONTACT-TITLE-TEXT       PIC X(200).                 01260000
+012700 01 ARRAY-ACCT-EXECUTIVE.                                         01270000
+012800    49 ARRAY-ACCT-EXECUTIVE-LEN       PIC S9(4) USAGE COMP.       01280000
+012900    49 ARRAY-ACCT-EXECUTIVE-TEXT      PIC X(200).                 01290000
+013000 01 ARRAY-MAILING.                                                01300000
+013100    49 ARRAY-MAILING-LEN              PIC S9(4) USAGE COMP.       01310000
+013200    49 ARRAY-MAILING-TEXT             PIC X(200).                 01320000
+013300 01 ARRAY-ADDRESS1.                                               01330000
+013400    49 ARRAY-ADDRESS1-LEN             PIC S9(4) USAGE COMP.       01340000
+013500    49 ARRAY-ADDRESS1-TEXT            PIC X(200).                 01350000
+013600 01 ARRAY-ADDRESS2.                                               01360000
+013700    49 ARRAY-ADDRESS2-LEN             PIC S9(4) USAGE COMP.       01370000
+013800    49 ARRAY-ADDRESS2-TEXT            PIC X(200).                 01380000
+013900 01 ARRAY-CITY.                                                   01390000
+014000    49 ARRAY-CITY-LEN                 PIC S9(4) USAGE COMP.       01400000
+014100    49 ARRAY-CITY-TEXT                PIC X(100).                 01410000
+014200 01 ARRAY-STATE.                                                  01420000
+014300    49 ARRAY-STATE-LEN                PIC S9(4) USAGE COMP.       01430000
+014400    49 ARRAY-STATE-TEXT               PIC X(30).                  01440000
+014500                                                                  01450000
+014600 01 ARRAY-CUSTOMER-NAME1.                                         01460000
+014700    49 ARRAY-CUSTOMER-NAME-LEN1        PIC S9(4) USAGE COMP.      01470000
+014800    49 ARRAY-CUSTOMER-NAME-TEXT1       PIC X(200).                01480000
+014900 01 ARRAY-CONFIG-NAME1.                                           01490000
+015000    49 ARRAY-CONFIG-NAME-LEN1          PIC S9(4) USAGE COMP.      01500000
+015100    49 ARRAY-CONFIG-NAME-TEXT1         PIC X(200).                01510000
+015200 01 ARRAY-SBU1.                                                   01520000
+015300    49 ARRAY-SBU-LEN1                  PIC S9(4) USAGE COMP.      01530000
+015400    49 ARRAY-SBU-TEXT1                 PIC X(100).                01540000
+015500 01 ARRAY-CONTACT-NAME1.                                          01550000
+015600    49 ARRAY-CONTACT-NAME-LEN1         PIC S9(4) USAGE COMP.      01560000
+015700    49 ARRAY-CONTACT-NAME-TEXT1        PIC X(200).                01570000
+015800 01 ARRAY-CONTACT-TITLE1.                                         01580000
+015900    49 ARRAY-CONTACT-TITLE-LEN1        PIC S9(4) USAGE COMP.      01590000
+016000    49 ARRAY-CONTACT-TITLE-TEXT1       PIC X(200).                01600000
+016100 01 ARRAY-ACCT-EXECUTIVE1.                                        01610000
+016200    49 ARRAY-ACCT-EXECUTIVE-LEN1       PIC S9(4) USAGE COMP.      01620000
+016300    49 ARRAY-ACCT-EXECUTIVE-TEXT1      PIC X(200).                01630000
+016400 01 ARRAY-MAILING1.                                               01640000
+016500    49 ARRAY-MAILING-LEN1              PIC S9(4) USAGE COMP.      01650000
+016600    49 ARRAY-MAILING-TEXT1             PIC X(200).                01660000
+016700 01 ARRAY-ADDRESS11.                                              01670000
+016800    49 ARRAY-ADDRESS1-LEN1             PIC S9(4) USAGE COMP.      01680000
+016900    49 ARRAY-ADDRESS1-TEXT1            PIC X(200).                01690000
+017000 01 ARRAY-ADDRESS21.                                              01700000
+017100    49 ARRAY-ADDRESS2-LEN1             PIC S9(4) USAGE COMP.      01710000
+017200    49 ARRAY-ADDRESS2-TEXT1            PIC X(200).                01720000
+017300 01 ARRAY-CITY1.                                                  01730000
+017400    49 ARRAY-CITY-LEN1                 PIC S9(4) USAGE COMP.      01740000
+017500    49 ARRAY-CITY-TEXT1                PIC X(100).                01750000
+017600 01 ARRAY-STATE1.                                                 01760000
+017700    49 ARRAY-STATE-LEN1                PIC S9(4) USAGE COMP.      01770000
+017800    49 ARRAY-STATE-TEXT1               PIC X(30).                 01780000
+017801                                                                  01780100
+017802 01  MAX-INPARR-IX                     PIC S9(8) COMP.            01780200
+017803 01  MAX-TABARR-IX                     PIC S9(8) COMP.            01780300
+017804 01  INPARR-INSERT                     PIC X(1) VALUE ' '.        01780400
+017805 01  TABARR-INSERT                     PIC X(1) VALUE ' '.        01780500
+017806 01  FIRST-TIME-READ                   PIC X(1).                  01780600
+017807 01  FIRST-TIME-FETCH                  PIC X(1).                  01780700
+017808 01  READ-INPUT                        PIC X(1).                  01780800
+017809 01  READ-FETCH                        PIC X(1).                  01780900
+017810 01  END-INSERT                        PIC X(1).                  01781000
+017811 01  EOF                               PIC X(1).                  01781100
+017812 01  EOF-CUR                           PIC X(1).                  01781200
+017813 01  PROCESS-INPUT                     PIC X(1).                  01781300
+017814 01  PROCESS-FETCH                     PIC X(1).                  01781400
+017815 01  INP-CUST-CHANGED                  PIC X(1).                  01781500
+017816 01  TAB-CUST-CHANGED                  PIC X(1).                  01781600
+017817 01  TAB-CURR-CUST                     PIC X(7).                  01781700
+017818 01  TAB-PREV-CUST                     PIC X(7).                  01781800
+017819 01  CURR-CUST                         PIC X(7).                  01781900
+017820 01  CURRENT-TIMESTAMP                 PIC X(26).                 01782000
+017821 01  PREV-CUST                         PIC X(7).                  01782100
+017822 01  MISMATCH-IND                      PIC X(1) VALUE 'N'.        01782200
+017823 01  INSERT-CUST-CONFIG                 PIC X(1) VALUE ' '.       01782300
+017824 01  FROM-DB2-PROCESS                  PIC X(1) VALUE 'N'.        01782400
+017825 01  FROM-CUR-PROCESS                  PIC X(1) VALUE 'N'.        01782500
+017826 01  NULL-INDS.                                                   01782600
+017827     05 NULL-IND-1                   PIC S9(4) COMP.              01782700
+017828     05 NULL-IND-2                   PIC S9(4) COMP.              01782800
+017829 01  WS-BILL-RECORD.                                              01782900
+017830     05 BILL-MAN                       PIC X(13).                 01783000
+017840     05 FILLER                         PIC X(04).                 01784000
+017850     05 BILL-CUST-ID                   PIC X(05).                 01785000
+017860     05 FILLER                         PIC X(02).                 01786000
+017870     05 BILL-CONFIG-ID                 PIC X(02).                 01787000
+017880     05 FILLER                         PIC X(01).                 01788000
+017890     05 BILL-ADDRESS                   PIC X(426).                01789000
+017900 01  WS-TEMP-MAX                     PIC 9(6) VALUE 5000.         01790000
+018000 01  WS-DUMMY1                       PIC X(2) VALUE SPACES.       01800000
+018100 01  WS-DUMMY2                       PIC X(2) VALUE SPACES.       01810000
+018200 01  INPARR-TABLE.                                                01820000
+018300      10 INPARR-ITEM       OCCURS 1 TO 7000      TIMES            01830000
+018400                           DEPENDING ON MAX-INPARR-IX             01840000
+018500                           INDEXED BY INPARR-IX.                  01850000
+018600          15 INPARR-CUSTOMER-ID        PIC X(5).                  01860000
+018700          15 INPARR-CONFIG-ID          PIC X(2).                  01870000
+018800          15 INPARR-ORIG-SYSTEM-ID     PIC X(2).                  01880000
+018900          15 INPARR-MAN                PIC X(13).                 01890000
+019000          15 INPARR-LOB                PIC X(18).                 01900000
+019100          15 INPARR-CUSTOMER-NAME.                                01910000
+019200             49 INPARR-CUSTOMER-NAME-LEN     PIC S9(4) USAGE COMP.01920000
+019300             49 INPARR-CUSTOMER-NAME-TEXT    PIC X(200).          01930000
+019400          15 INPARR-CONFIG-NAME.                                  01940000
+019500             49 INPARR-CONFIG-NAME-LEN       PIC S9(4) USAGE COMP.01950000
+019600             49 INPARR-CONFIG-NAME-TEXT      PIC X(200).          01960000
+019700          15 INPARR-CUSTOMER-STATUS    PIC X(20).                 01970000
+019800          15 INPARR-CAS-IND            PIC X(20).                 01980000
+019900          15 INPARR-REG-IND            PIC X(20).                 01990000
+020000          15 INPARR-SBU.                                          02000000
+020100             49 INPARR-SBU-LEN     PIC S9(4) USAGE COMP.          02010000
+020200             49 INPARR-SBU-TEXT    PIC X(100).                    02020000
+020300          15 INPARR-CONFIG-STATUS      PIC X(20).                 02030000
+020400          15 INPARR-MEDIA              PIC X(20).                 02040000
+020500          15 INPARR-COPIES             PIC X(20).                 02050000
+020600          15 INPARR-CONTACT-NAME.                                 02060000
+020700             49 INPARR-CONTACT-NAME-LEN    PIC S9(4) USAGE COMP.  02070000
+020800             49 INPARR-CONTACT-NAME-TEXT    PIC X(200).           02080000
+020900          15 INPARR-CONTACT-PHONE      PIC X(20).                 02090000
+021000          15 INPARR-CONTACT-TITLE.                                02100000
+021100             49 INPARR-CONTACT-TITLE-LEN    PIC S9(4) USAGE COMP. 02110000
+021200             49 INPARR-CONTACT-TITLE-TEXT    PIC X(200).          02120000
+021300          15 INPARR-ACCT-EXECUTIVE.                               02130000
+021400             49 INPARR-ACCT-EXECUTIVE-LEN    PIC S9(4) USAGE COMP.02140000
+021500             49 INPARR-ACCT-EXECUTIVE-TEXT    PIC X(200).         02150000
+021600          15 INPARR-AE-PHONE           PIC X(20).                 02160000
+021700          15 INPARR-MAILING.                                      02170000
+021800             49 INPARR-MAILING-LEN     PIC S9(4) USAGE COMP.      02180000
+021900             49 INPARR-MAILING-TEXT    PIC X(200).                02190000
+022000          15 INPARR-ADDRESS1.                                     02200000
+022100             49 INPARR-ADDRESS1-LEN    PIC S9(4) USAGE COMP.      02210000
+022200             49 INPARR-ADDRESS1-TEXT PIC X(200).                  02220000
+022300          15 INPARR-ADDRESS2.                                     02230000
+022400             49 INPARR-ADDRESS2-LEN    PIC S9(4) USAGE COMP.      02240000
+022500             49 INPARR-ADDRESS2-TEXT PIC X(200).                  02250000
+022600          15 INPARR-CITY.                                         02260000
+022700             49 INPARR-CITY-LEN    PIC S9(4) USAGE COMP.          02270000
+022800             49 INPARR-CITY-TEXT PIC X(100).                      02280000
+022900          15 INPARR-STATE.                                        02290000
+023000             49 INPARR-STATE-LEN    PIC S9(4) USAGE COMP.         02300000
+023100             49 INPARR-STATE-TEXT    PIC X(30).                   02310000
+023200          15 INPARR-ZIP             PIC X(20).                    02320000
+023300          15 INPARR-ZIP-EXTN        PIC X(20).                    02330000
+023400          15 INPARR-BILL-PERIOD     PIC X(10).                    02340000
+023500          15 INPARR-SIN-PER-IND     PIC X(20).                    02350000
+023600          15 INPARR-GROUP-ID        PIC X(20).                    02360000
+023700          15 INPARR-NATL-IND        PIC X(1).                     02370000
+023701          15 INPARR-LARG-CUST       PIC X(1).                     02370100
+023702 01  TABARR-TABLE.                                                02370200
+023703      10 TABARR-ITEM       OCCURS 1 TO 7000      TIMES            02370300
+023704                           DEPENDING ON MAX-TABARR-IX             02370400
+023705                           INDEXED BY TABARR-IX.                  02370500
+023706          15 TABARR-CUSTOMER-ID        PIC X(5).                  02370600
+023707          15 TABARR-CONFIG-ID          PIC X(2).                  02370700
+023708          15 TABARR-ORIG-SYSTEM-ID     PIC X(2).                  02370800
+023709          15 TABARR-MAN                PIC X(13).                 02370900
+023710          15 TABARR-LOB                PIC X(18).                 02371000
+023720          15 TABARR-CUSTOMER-NAME.                                02372000
+023730             49 TABARR-CUSTOMER-NAME-LEN     PIC S9(4) USAGE COMP.02373000
+023740             49 TABARR-CUSTOMER-NAME-TEXT    PIC X(200).          02374000
+023750          15 TABARR-CONFIG-NAME.                                  02375000
+023760             49 TABARR-CONFIG-NAME-LEN       PIC S9(4) USAGE COMP.02376000
+023770             49 TABARR-CONFIG-NAME-TEXT      PIC X(200).          02377000
+023780          15 TABARR-CUSTOMER-STATUS    PIC X(20).                 02378000
+023790          15 TABARR-CAS-IND            PIC X(20).                 02379000
+023800          15 TABARR-REG-IND            PIC X(20).                 02380000
+023900          15 TABARR-SBU.                                          02390000
+024000             49 TABARR-SBU-LEN     PIC S9(4) USAGE COMP.          02400000
+024100             49 TABARR-SBU-TEXT    PIC X(100).                    02410000
+024200          15 TABARR-CONFIG-STATUS      PIC X(20).                 02420000
+024300          15 TABARR-MEDIA              PIC X(20).                 02430000
+024400          15 TABARR-COPIES             PIC X(20).                 02440000
+024500          15 TABARR-CONTACT-NAME.                                 02450000
+024600             49 TABARR-CONTACT-NAME-LEN    PIC S9(4) USAGE COMP.  02460000
+024700             49 TABARR-CONTACT-NAME-TEXT    PIC X(200).           02470000
+024800          15 TABARR-CONTACT-PHONE      PIC X(20).                 02480000
+024900          15 TABARR-CONTACT-TITLE.                                02490000
+025000             49 TABARR-CONTACT-TITLE-LEN    PIC S9(4) USAGE COMP. 02500000
+025100             49 TABARR-CONTACT-TITLE-TEXT    PIC X(200).          02510000
+025200          15 TABARR-ACCT-EXECUTIVE.                               02520000
+025300             49 TABARR-ACCT-EXECUTIVE-LEN    PIC S9(4) USAGE COMP.02530000
+025400             49 TABARR-ACCT-EXECUTIVE-TEXT    PIC X(200).         02540000
+025500          15 TABARR-AE-PHONE           PIC X(20).                 02550000
+025600          15 TABARR-MAILING.                                      02560000
+025700             49 TABARR-MAILING-LEN     PIC S9(4) USAGE COMP.      02570000
+025800             49 TABARR-MAILING-TEXT    PIC X(200).                02580000
+025900          15 TABARR-ADDRESS1.                                     02590000
+026000             49 TABARR-ADDRESS1-LEN    PIC S9(4) USAGE COMP.      02600000
+026100             49 TABARR-ADDRESS1-TEXT PIC X(200).                  02610000
+026200          15 TABARR-ADDRESS2.                                     02620000
+026300             49 TABARR-ADDRESS2-LEN    PIC S9(4) USAGE COMP.      02630000
+026400             49 TABARR-ADDRESS2-TEXT PIC X(200).                  02640000
+026500          15 TABARR-CITY.                                         02650000
+026600             49 TABARR-CITY-LEN    PIC S9(4) USAGE COMP.          02660000
+026700             49 TABARR-CITY-TEXT PIC X(100).                      02670000
+026800          15 TABARR-STATE.                                        02680000
+026900             49 TABARR-STATE-LEN    PIC S9(4) USAGE COMP.         02690000
+027000             49 TABARR-STATE-TEXT    PIC X(30).                   02700000
+027100          15 TABARR-ZIP             PIC X(20).                    02710000
+027200          15 TABARR-ZIP-EXTN        PIC X(20).                    02720000
+027300          15 TABARR-BILL-PERIOD     PIC X(10).                    02730000
+027400          15 TABARR-SIN-PER-IND     PIC X(20).                    02740000
+027500          15 TABARR-GROUP-ID        PIC X(20).                    02750000
+027600          15 TABARR-NATL-IND        PIC X(1).                     02760000
+027700          15 TABARR-LARG-CUST       PIC X(1).                     02770000
+027800 01  UNSTRING-RECORD.                                             02780000
+027900     10 UNSTRING-CUSTOMER-ID      PIC X(5).                       02790000
+028000     10 UNSTRING-CONFIG-ID        PIC X(2).                       02800000
+028100     10 UNSTRING-ORIG-SYSTEM-ID   PIC X(2).                       02810000
+028200     10 UNSTRING-MAN              PIC X(13).                      02820000
+028300     10 UNSTRING-LOB              PIC X(18).                      02830000
+028400     10 UNSTRING-CUSTOMER-NAME.                                   02840000
+028500        49 UNSTRING-CUSTOMER-NAME-LEN   PIC S9(4) USAGE COMP.     02850000
+028600        49 UNSTRING-CUSTOMER-NAME-TEXT  PIC X(200).               02860000
+028700     10 UNSTRING-CONFIG-NAME.                                     02870000
+028800        49 UNSTRING-CONFIG-NAME-LEN     PIC S9(4) USAGE COMP.     02880000
+028900        49 UNSTRING-CONFIG-NAME-TEXT    PIC X(200).               02890000
+029000     10 UNSTRING-CUSTOMER-STATUS  PIC X(20).                      02900000
+029100     10 UNSTRING-CAS-IND          PIC X(20).                      02910000
+029200     10 UNSTRING-REG-IND          PIC X(20).                      02920000
+029300     10 UNSTRING-SBU.                                             02930000
+029400        49 UNSTRING-SBU-LEN       PIC S9(4) USAGE COMP.           02940000
+029500        49 UNSTRING-SBU-TEXT      PIC X(100).                     02950000
+029600     10 UNSTRING-CONFIG-STATUS    PIC X(20).                      02960000
+029700     10 UNSTRING-MEDIA            PIC X(20).                      02970000
+029800     10 UNSTRING-COPIES           PIC X(20).                      02980000
+029900     10 UNSTRING-CONTACT-NAME.                                    02990000
+030000        49 UNSTRING-CONTACT-NAME-LEN   PIC S9(4) USAGE COMP.      03000000
+030100        49 UNSTRING-CONTACT-NAME-TEXT  PIC X(200).                03010000
+030200     10 UNSTRING-CONTACT-PHONE         PIC X(20).                 03020000
+030300     10 UNSTRING-CONTACT-TITLE.                                   03030000
+030400        49 UNSTRING-CONTACT-TITLE-LEN  PIC S9(4) USAGE COMP.      03040000
+030500        49 UNSTRING-CONTACT-TITLE-TEXT PIC X(200).                03050000
+030600     10 UNSTRING-ACCT-EXECUTIVE.                                  03060000
+030700        49 UNSTRING-ACCT-EXECUTIVE-LEN  PIC S9(4) USAGE COMP.     03070000
+030800        49 UNSTRING-ACCT-EXECUTIVE-TEXT PIC X(200).               03080000
+030900     10 UNSTRING-AE-PHONE         PIC X(20).                      03090000
+031000     10 UNSTRING-MAILING.                                         03100000
+031100        49 UNSTRING-MAILING-LEN   PIC S9(4) USAGE COMP.           03110000
+031200        49 UNSTRING-MAILING-TEXT  PIC X(200).                     03120000
+031300     10 UNSTRING-ADDRESS1.                                        03130000
+031400        49 UNSTRING-ADDRESS1-LEN  PIC S9(4) USAGE COMP.           03140000
+031500        49 UNSTRING-ADDRESS1-TEXT PIC X(200).                     03150000
+031600     10 UNSTRING-ADDRESS2.                                        03160000
+031700        49 UNSTRING-ADDRESS2-LEN  PIC S9(4) USAGE COMP.           03170000
+031800        49 UNSTRING-ADDRESS2-TEXT PIC X(200).                     03180000
+031900     10 UNSTRING-CITY.                                            03190000
+032000        49 UNSTRING-CITY-LEN  PIC S9(4) USAGE COMP.               03200000
+032100        49 UNSTRING-CITY-TEXT PIC X(100).                         03210000
+032200     10 UNSTRING-STATE.                                           03220000
+032300        49 UNSTRING-STATE-LEN  PIC S9(4) USAGE COMP.              03230000
+032400        49 UNSTRING-STATE-TEXT PIC X(30).                         03240000
+032500     10 UNSTRING-ZIP           PIC X(20).                         03250000
+032600     10 UNSTRING-ZIP-EXTN      PIC X(20).                         03260000
+032700     10 UNSTRING-BILL-PERIOD   PIC X(10).                         03270000
+032800     10 UNSTRING-SIN-PER-IND   PIC X(20).                         03280000
+032900     10 UNSTRING-GROUP-ID      PIC X(20).                         03290000
+033000     10 UNSTRING-NATL-IND      PIC X(1).                          03300000
+033100     10 UNSTRING-LARG-CUST     PIC X(1).                          03310000
+033200 01  FETCH-RECORD.                                                03320000
+033300     10 FETCH-CUSTOMER-ID         PIC X(5).                       03330000
+033400     10 FETCH-CONFIG-ID           PIC X(2).                       03340000
+033500     10 FETCH-ORIG-SYSTEM-ID      PIC X(2).                       03350000
+033600     10 FETCH-MAN                 PIC X(13).                      03360000
+033700     10 FETCH-LOB                 PIC X(18).                      03370000
+033800     10 FETCH-CUSTOMER-NAME.                                      03380000
+033900        49 FETCH-CUSTOMER-NAME-LEN      PIC S9(4) USAGE COMP.     03390000
+034000        49 FETCH-CUSTOMER-NAME-TEXT     PIC X(200).               03400000
+034100     10 FETCH-CONFIG-NAME.                                        03410000
+034200        49 FETCH-CONFIG-NAME-LEN        PIC S9(4) USAGE COMP.     03420000
+034300        49 FETCH-CONFIG-NAME-TEXT       PIC X(200).               03430000
+034400     10 FETCH-CUSTOMER-STATUS     PIC X(20).                      03440000
+034500     10 FETCH-CAS-IND             PIC X(20).                      03450000
+034600     10 FETCH-REG-IND             PIC X(20).                      03460000
+034700     10 FETCH-SBU.                                                03470000
+034800        49 FETCH-SBU-LEN          PIC S9(4) USAGE COMP.           03480000
+034900        49 FETCH-SBU-TEXT         PIC X(100).                     03490000
+035000     10 FETCH-CONFIG-STATUS       PIC X(20).                      03500000
+035100     10 FETCH-MEDIA               PIC X(20).                      03510000
+035200     10 FETCH-COPIES              PIC X(20).                      03520000
+035300     10 FETCH-CONTACT-NAME.                                       03530000
+035400        49 FETCH-CONTACT-NAME-LEN     PIC S9(4) USAGE COMP.       03540000
+035500        49 FETCH-CONTACT-NAME-TEXT    PIC X(200).                 03550000
+035600     10 FETCH-CONTACT-PHONE           PIC X(20).                  03560000
+035700     10 FETCH-CONTACT-TITLE.                                      03570000
+035800        49 FETCH-CONTACT-TITLE-LEN    PIC S9(4) USAGE COMP.       03580000
+035900        49 FETCH-CONTACT-TITLE-TEXT   PIC X(200).                 03590000
+036000     10 FETCH-ACCT-EXECUTIVE.                                     03600000
+036100        49 FETCH-ACCT-EXECUTIVE-LEN   PIC S9(4) USAGE COMP.       03610000
+036200        49 FETCH-ACCT-EXECUTIVE-TEXT  PIC X(200).                 03620000
+036300     10 FETCH-AE-PHONE                PIC X(20).                  03630000
+036400     10 FETCH-MAILING.                                            03640000
+036500        49 FETCH-MAILING-LEN      PIC S9(4) USAGE COMP.           03650000
+036600        49 FETCH-MAILING-TEXT     PIC X(200).                     03660000
+036700     10 FETCH-ADDRESS1.                                           03670000
+036800        49 FETCH-ADDRESS1-LEN     PIC S9(4) USAGE COMP.           03680000
+036900        49 FETCH-ADDRESS1-TEXT    PIC X(200).                     03690000
+037000     10 FETCH-ADDRESS2.                                           03700000
+037100        49 FETCH-ADDRESS2-LEN     PIC S9(4) USAGE COMP.           03710000
+037200        49 FETCH-ADDRESS2-TEXT    PIC X(200).                     03720000
+037300     10 FETCH-CITY.                                               03730000
+037400        49 FETCH-CITY-LEN         PIC S9(4) USAGE COMP.           03740000
+037500        49 FETCH-CITY-TEXT        PIC X(100).                     03750000
+037600     10 FETCH-STATE.                                              03760000
+037700        49 FETCH-STATE-LEN        PIC S9(4) USAGE COMP.           03770000
+037800        49 FETCH-STATE-TEXT       PIC X(30).                      03780000
+037900     10 FETCH-ZIP                 PIC X(20).                      03790000
+038000     10 FETCH-ZIP-EXTN            PIC X(20).                      03800000
+038100     10 FETCH-BILL-PERIOD         PIC X(10).                      03810000
+038200     10 FETCH-SIN-PER-IND         PIC X(20).                      03820000
+038300     10 FETCH-GROUP-ID            PIC X(20).                      03830000
+038400     10 FETCH-NATL-IND            PIC X(1).                       03840000
+038500     10 FETCH-LARG-CUST           PIC X(1).                       03850000
+038570 01  FETCH-CURRENT-CUST-ID        PIC X(5).                       03857000
+038580 01  FETCH-CURRENT-CON-ID         PIC X(2).                       03858000
+038581 01  FETCH-PREV-CUST-ID           PIC X(5).                       03858100
+038582 01  FETCH-PREV-CON-ID            PIC X(2).                       03858200
+038593                                                                  03859300
+038600 01  DISPLAY-SQLCODE           PIC ZZZ,ZZ9-.                      03860000
+038700 01  DISPLAY-SQLSTATE          PIC ZZZ,ZZ9-.                      03870000
+038800 01  ERROR-MESSAGE.                                               03880000
+038900     02 ERROR-LEN   PIC S9(4)  COMP VALUE +960.                   03890000
+039000     02 ERROR-TEXT  PIC X(80) OCCURS 12 TIMES                     03900000
+039100                              INDEXED BY ERROR-INDEX.             03910000
+039200 77  ERROR-TEXT-LEN      PIC S9(8)  COMP VALUE +80.               03920000
+039300 77  DSNTIAR-PGM         PIC X(8) VALUE 'DSNTIAR'.                03930000
+039400                                                                  03940000
+039500*************************************************************     03950000
+039600 LINKAGE SECTION.                                                 03960000
+039700*************************************************************     03970000
+039800* LK-DATA IS COMMA DELIMITED - 1ST PARM IS DB2 SUBSYSTEM ID       03980000
+039900*                            - 2ND PARM IS DB2 PLAN NAME          03990000
+040000 01  LINKAGE-PARMS.                                               04000000
+040100     05 LK-LNG                   PIC S9(4) COMP.                  04010000
+040200     05 LK-DATA                  PIC X(254).                      04020000
+040300 EJECT                                                            04030000
+040400*************************************************************     04040000
+040500 PROCEDURE DIVISION USING LINKAGE-PARMS.                          04050000
+040501*************************************************************     04050100
+040502     DISPLAY 'STARTING BMGBM3A PROGRAM '.                         04050200
+040503                                                                  04050300
+040504     PERFORM A000-SET-UP-PGM                                      04050400
+040505        THRU A000-SET-UP-PGM-X.                                   04050500
+040506                                                                  04050600
+040507     PERFORM B000-MAIN-PROCESS                                    04050700
+040508        THRU B000-MAIN-PROCESS-X.                                 04050800
+040509                                                                  04050900
+040510     PERFORM C000-UPDATE-PROCESS                                  04051000
+040511        THRU C000-UPDATE-PROCESS-X.                               04051100
+040512                                                                  04051200
+040513     PERFORM C300-INSERT-PROCESS                                  04051300
+040514        THRU C300-INSERT-PROCESS-X.                               04051400
+040515                                                                  04051500
+040516     PERFORM D000-FINISH-PGM                                      04051600
+040517        THRU D000-FINISH-PGM-X.                                   04051700
+040518                                                                  04051800
+040519     GOBACK.                                                      04051900
+040520 EJECT                                                            04052000
+040521 A000-SET-UP-PGM.                                                 04052100
+040522     OPEN INPUT  BILL-INP.                                        04052200
+040523     MOVE 'Y' TO PROCESS-INPUT                                    04052300
+040524     MOVE 'Y' TO PROCESS-FETCH                                    04052400
+040525     MOVE 'Y' TO FIRST-TIME-READ                                  04052500
+040526     MOVE 'Y' TO READ-INPUT                                       04052600
+040527     MOVE 'Y' TO READ-FETCH                                       04052700
+040528     MOVE 'N' TO INP-CUST-CHANGED                                 04052800
+040529     MOVE 'N' TO EOF                                              04052900
+040530     MOVE 'N' TO EOF-CUR                                          04053000
+040531     INITIALIZE TAB-CUST-CHANGED                                  04053100
+040532     INITIALIZE TAB-CURR-CUST                                     04053200
+040533     INITIALIZE TAB-PREV-CUST                                     04053300
+040534     INITIALIZE CURR-CUST                                         04053400
+040535     INITIALIZE PREV-CUST                                         04053500
+040536     INITIALIZE FETCH-PREV-CUST-ID                                04053600
+040537     INITIALIZE FETCH-PREV-CON-ID                                 04053700
+040538     INITIALIZE CURRENT-TIMESTAMP                                 04053800
+040539     INITIALIZE WS-EOF-BM-MAN-CSR                                 04053900
+040540     INITIALIZE WS-EOF-BM-MAN-CSRI                                04054000
+040541     SET  INPARR-IX TO 1                                          04054100
+040542     SET  TABARR-IX TO 1                                          04054200
+040543        IF (SQLCODE NOT = 0)                                      04054300
+040544            PERFORM 9999-DB2-ERR-MESSAGE                          04054400
+040545               THRU 9999-EXIT                                     04054500
+040546        END-IF.                                                   04054600
+040547     MOVE 1 TO  MAX-INPARR-IX                                     04054700
+040548     MOVE 1 TO  MAX-TABARR-IX                                     04054800
+040549     PERFORM A010-PARSE-LINKAGE                                   04054900
+040550        THRU A010-PARSE-LINKAGE-X.                                04055000
+040551                                                                  04055100
+040552                                                                  04055200
+040553     MOVE 'CREATE' TO THREADIO-ENTRY.                             04055300
+040554     CALL THREADIO-PGM USING THREADIO-PARMS.                      04055400
+040555        EXEC SQL                                                  04055500
+040556           SELECT                                                 04055600
+040557             CURRENT_TIMESTAMP                                    04055700
+040558           INTO                                                   04055800
+040559             :CURRENT-TIMESTAMP                                   04055900
+040560           FROM                                                   04056000
+040561             SYSIBM.SYSDUMMY1                                     04056100
+040562        END-EXEC.                                                 04056200
+040563     DISPLAY ' THE CURRENT TIMESTAMP IS ' CURRENT-TIMESTAMP.      04056300
+040564     IF SQLCODE NOT = 0                                           04056400
+040565        DISPLAY 'ERROR GETTING CURRENT TIMESTAMP'                 04056500
+040570        PERFORM 9999-DB2-ERR-MESSAGE                              04057000
+040580           THRU 9999-EXIT                                         04058000
+040581     END-IF                                                       04058100
+040582     PERFORM A020-OPEN-TABCURR                                    04058200
+040583        THRU A020-OPEN-TABCURR-X.                                 04058300
+040584 A000-SET-UP-PGM-X.                                               04058400
+040585     EXIT.                                                        04058500
+040586                                                                  04058600
+040587 A010-PARSE-LINKAGE.                                              04058700
+040588     MOVE LK-LNG        TO PARSLNKG-LNG.                          04058800
+040589     MOVE LK-DATA       TO PARSLNKG-DATA.                         04058900
+040590                                                                  04059000
+040591     CALL PARSLNKG-PGM USING PARSLNKG-PARMS.                      04059100
+040592                                                                  04059200
+040593     MOVE PARSLNKG-LK-PARM (1) TO THREADIO-DB2-SUBSYSTEM.         04059300
+040594     MOVE PARSLNKG-LK-PARM (2) TO THREADIO-PLAN.                  04059400
+040595     MOVE PARSLNKG-LK-PARM (3) TO THREADIO-COLLECTION.            04059500
+040596 A010-PARSE-LINKAGE-X.                                            04059600
+040597     EXIT.                                                        04059700
+040598                                                                  04059800
+040600 A020-OPEN-TABCURR.                                               04060000
+040700      EXEC SQL                                                    04070000
+040800          OPEN CUST_CSR                                           04080000
+040900      END-EXEC.                                                   04090000
+041000      EVALUATE SQLCODE                                            04100000
+041100      WHEN +000                                                   04110000
+041200           CONTINUE                                               04120000
+041300      WHEN OTHER                                                  04130000
+041310           DISPLAY 'ERROR OPENING CSR'                            04131000
+041400           PERFORM 9999-DB2-ERR-MESSAGE                           04140000
+041500              THRU 9999-EXIT                                      04150000
+041600      END-EVALUATE.                                               04160000
+041700 A020-OPEN-TABCURR-X.                                             04170000
+041800      EXIT.                                                       04180000
+041900                                                                  04190000
+042800                                                                  04280000
+042900 B000-MAIN-PROCESS.                                               04290000
+043000          MOVE CURRENT-TIMESTAMP  TO BMCONFGT-EFFECTIVE-DT        04300000
+043010                                                                  04301000
+043100          PERFORM UNTIL EOF = 'Y'                                 04310000
+043200                                                                  04320000
+043300          IF PROCESS-INPUT = 'Y'                                  04330000
+043400             MOVE 'Y' TO FIRST-TIME-READ                          04340000
+043500             PERFORM UNTIL INP-CUST-CHANGED = 'Y' OR EOF = 'Y'    04350000
+043600                IF READ-INPUT = 'Y'                               04360000
+043700                   READ BILL-INP INTO WS-BILL-RECORD              04370000
+043710                   AT END MOVE 'Y' TO EOF                         04371000
+043800                END-IF                                            04380000
+043900                MOVE 'Y' TO READ-INPUT                            04390000
+044000                IF (EOF = 'N' AND                                 04400000
+044010                    BILL-MAN NOT = SPACES)                        04401000
+044100                   PERFORM B100-UNSTRING-INP                      04410000
+044200                      THRU B100-UNSTRING-INP-X                    04420000
+044300                END-IF                                            04430000
+044400             END-PERFORM                                          04440000
+044401             MOVE 'N' TO INP-CUST-CHANGED                         04440100
+044402             MOVE 'N' TO READ-INPUT                               04440200
+044500          END-IF                                                  04450000
+044600                                                                  04460000
+044700          IF PROCESS-FETCH = 'Y'                                  04470000
+044800             MOVE 'Y' TO FIRST-TIME-FETCH                         04480000
+044900             PERFORM B200-FETCH-TABCURR                           04490000
+045000                THRU B200-FETCH-TABCURR-X UNTIL                   04500000
+045100                     TAB-CUST-CHANGED = 'Y' OR                    04510000
+045200                     EOF-CUR = 'Y'                                04520000
+045201             MOVE 'N' TO TAB-CUST-CHANGED                         04520100
+045202             MOVE 'N' TO READ-FETCH                               04520200
+045300          END-IF                                                  04530000
+045400                                                                  04540000
+045500          PERFORM B300-EVALUATE-CUST                              04550000
+045600             THRU B300-EVALUATE-CUST-X                            04560000
+045900          END-PERFORM.                                            04590000
+046000                                                                  04600000
+046100          IF EOF = 'Y'                                            04610000
+046200             IF EOF-CUR NOT EQUAL 'Y'                             04620000
+046300               IF TABARR-IX > 1                                   04630000
+046400                   MOVE 'N' TO INPARR-INSERT                      04640000
+046500                   PERFORM B500-PREPARE-INSERT                    04650000
+046600                      THRU B500-PREPARE-INSERT-X                  04660000
+046700                     SET TABARR-IX TO 1                           04670000
+046800                     PERFORM UNTIL                                04680000
+046900                              TABARR-IX > WS-TEMP-MAX             04690000
+047000                       INITIALIZE TABARR-ITEM (TABARR-IX)         04700000
+047100                       SET     TABARR-IX         UP BY 1          04710000
+047200                     END-PERFORM                                  04720000
+047300                     SET TABARR-IX TO 1                           04730000
+047400                     MOVE 1 TO  MAX-TABARR-IX                     04740000
+047500               END-IF                                             04750000
+047600               IF MAX-INPARR-IX = 1                               04760000
+047700                  INITIALIZE PREV-CUST                            04770000
+047800               END-IF                                             04780000
+047900               PERFORM UNTIL EOF-CUR = 'Y'                        04790000
+048000                  MOVE 'Y' TO FIRST-TIME-FETCH                    04800000
+048100                  PERFORM B200-FETCH-TABCURR                      04810000
+048200                     THRU B200-FETCH-TABCURR-X UNTIL              04820000
+048300                          TAB-CUST-CHANGED = 'Y' OR               04830000
+048400                          EOF-CUR = 'Y'                           04840000
+048500                  IF PREV-CUST > TAB-PREV-CUST                    04850000
+048600                     IF INPARR-IX > 1                             04860000
+048700                        MOVE 'Y' TO INPARR-INSERT                 04870000
+048800                        PERFORM B500-PREPARE-INSERT               04880000
+048900                           THRU B500-PREPARE-INSERT-X             04890000
+049000                        SET INPARR-IX TO 1                        04900000
+049100                        PERFORM UNTIL                             04910000
+049200                              INPARR-IX > WS-TEMP-MAX             04920000
+049300                            INITIALIZE INPARR-ITEM (INPARR-IX)    04930000
+049400                            SET     INPARR-IX         UP BY 1     04940000
+049500                        END-PERFORM                               04950000
+049600                        SET INPARR-IX TO 1                        04960000
+049700                        MOVE 1 TO  MAX-INPARR-IX                  04970000
+049800                     END-IF                                       04980000
+049900                     IF TABARR-IX > 1                             04990000
+050000                        MOVE 'N' TO INPARR-INSERT                 05000000
+050100                        PERFORM B500-PREPARE-INSERT               05010000
+050200                           THRU B500-PREPARE-INSERT-X             05020000
+050300                        SET TABARR-IX TO 1                        05030000
+050400                        PERFORM UNTIL                             05040000
+050500                              TABARR-IX > WS-TEMP-MAX             05050000
+050600                           INITIALIZE TABARR-ITEM (TABARR-IX)     05060000
+050700                           SET     TABARR-IX         UP BY 1      05070000
+050800                        END-PERFORM                               05080000
+050900                        SET TABARR-IX TO 1                        05090000
+051000                        MOVE 1 TO  MAX-TABARR-IX                  05100000
+051100                     END-IF                                       05110000
+051200                     INITIALIZE PREV-CUST                         05120000
+051300                  ELSE                                            05130000
+051400                     MOVE 'Y' TO FROM-DB2-PROCESS                 05140000
+051500                     PERFORM B300-EVALUATE-CUST                   05150000
+051600                         THRU B300-EVALUATE-CUST-X                05160000
+051700*                   INITIALIZE PREV-EBID                          05170000
+051800                     SET TABARR-IX TO 1                           05180000
+051900                     PERFORM UNTIL                                05190000
+052000                             TABARR-IX > WS-TEMP-MAX              05200000
+052100                        INITIALIZE TABARR-ITEM (TABARR-IX)        05210000
+052200                        SET     TABARR-IX         UP BY 1         05220000
+052300                     END-PERFORM                                  05230000
+052400                     SET TABARR-IX TO 1                           05240000
+052500                     MOVE 1 TO  MAX-TABARR-IX                     05250000
+052600                  END-IF                                          05260000
+052700                  MOVE 'N' TO TAB-CUST-CHANGED                    05270000
+052800                  MOVE 'N' TO READ-FETCH                          05280000
+052900               END-PERFORM                                        05290000
+053000          END-IF.                                                 05300000
+053100          IF EOF = 'Y'                                            05310000
+053200             IF EOF-CUR = 'Y'                                     05320000
+053300                IF INPARR-IX > 1                                  05330000
+053400                   MOVE 'Y' TO INPARR-INSERT                      05340000
+053500                   PERFORM B500-PREPARE-INSERT                    05350000
+053600                      THRU B500-PREPARE-INSERT-X                  05360000
+053700                     SET INPARR-IX TO 1                           05370000
+053800                     PERFORM UNTIL                                05380000
+053900                              INPARR-IX > WS-TEMP-MAX             05390000
+054000                       INITIALIZE INPARR-ITEM (INPARR-IX)         05400000
+054100                       SET     INPARR-IX         UP BY 1          05410000
+054200                     END-PERFORM                                  05420000
+054300                     SET INPARR-IX TO 1                           05430000
+054400                     MOVE 1 TO  MAX-INPARR-IX                     05440000
+054500                END-IF                                            05450000
+054600                IF TABARR-IX > 1                                  05460000
+054700                   MOVE 'N' TO INPARR-INSERT                      05470000
+054800                   PERFORM B500-PREPARE-INSERT                    05480000
+054900                      THRU B500-PREPARE-INSERT-X                  05490000
+055000                     SET TABARR-IX TO 1                           05500000
+055100                     PERFORM UNTIL                                05510000
+055200                              TABARR-IX > WS-TEMP-MAX             05520000
+055300                       INITIALIZE TABARR-ITEM (TABARR-IX)         05530000
+055400                       SET     TABARR-IX         UP BY 1          05540000
+055500                     END-PERFORM                                  05550000
+055600                     SET TABARR-IX TO 1                           05560000
+055700                     MOVE 1 TO  MAX-TABARR-IX                     05570000
+055800                END-IF                                            05580000
+055900             END-IF                                               05590000
+056000          END-IF.                                                 05600000
+056100          EXEC SQL                                                05610000
+056200              COMMIT                                              05620000
+056201          END-EXEC.                                               05620100
+056202 B000-MAIN-PROCESS-X.                                             05620200
+056203      EXIT.                                                       05620300
+056204                                                                  05620400
+056205 B100-UNSTRING-INP.                                               05620500
+056206      MOVE BILL-CUST-ID   TO CURR-CUST     (1:5)                  05620600
+056207                             UNSTRING-CUSTOMER-ID                 05620700
+056208      MOVE BILL-CONFIG-ID TO CURR-CUST     (6:2)                  05620800
+056209                             UNSTRING-CONFIG-ID                   05620900
+056210      MOVE BILL-MAN       TO UNSTRING-MAN                         05621000
+056211      IF FIRST-TIME-READ = 'Y'                                    05621100
+056212         MOVE CURR-CUST TO PREV-CUST                              05621200
+056213      END-IF                                                      05621300
+056214      MOVE 'N' TO FIRST-TIME-READ                                 05621400
+056215      IF CURR-CUST = PREV-CUST                                    05621500
+056216          UNSTRING BILL-ADDRESS                                   05621600
+056217           DELIMITED BY  '{'                                      05621700
+056218              INTO UNSTRING-LOB,                                  05621800
+056219                   UNSTRING-CUSTOMER-NAME-TEXT,                   05621900
+056220                      COUNT IN UNSTRING-CUSTOMER-NAME-LEN         05622000
+056221                   UNSTRING-CONFIG-NAME-TEXT,                     05622100
+056222                      COUNT IN UNSTRING-CONFIG-NAME-LEN           05622200
+056223                   UNSTRING-CUSTOMER-STATUS,                      05622300
+056224                   UNSTRING-CAS-IND,                              05622400
+056225                   UNSTRING-REG-IND,                              05622500
+056226                   UNSTRING-SBU-TEXT,                             05622600
+056227                      COUNT IN UNSTRING-SBU-LEN                   05622700
+056228                   UNSTRING-CONFIG-STATUS,                        05622800
+056229                   UNSTRING-MEDIA,                                05622900
+056230                   UNSTRING-COPIES,                               05623000
+056231                   UNSTRING-CONTACT-NAME-TEXT,                    05623100
+056232                      COUNT UNSTRING-CONTACT-NAME-LEN             05623200
+056233                   UNSTRING-CONTACT-PHONE,                        05623300
+056234                   UNSTRING-CONTACT-TITLE-TEXT,                   05623400
+056235                      COUNT UNSTRING-CONTACT-TITLE-LEN            05623500
+056236                   UNSTRING-ACCT-EXECUTIVE-TEXT,                  05623600
+056237                      COUNT UNSTRING-ACCT-EXECUTIVE-LEN           05623700
+056238                   UNSTRING-AE-PHONE,                             05623800
+056239                   UNSTRING-MAILING-TEXT,                         05623900
+056240                      COUNT UNSTRING-MAILING-LEN                  05624000
+056241                   UNSTRING-ADDRESS1-TEXT,                        05624100
+056242                      COUNT UNSTRING-ADDRESS1-LEN                 05624200
+056243                   UNSTRING-ADDRESS2-TEXT,                        05624300
+056244                      COUNT UNSTRING-ADDRESS2-LEN                 05624400
+056245                   UNSTRING-CITY-TEXT,                            05624500
+056246                      COUNT UNSTRING-CITY-LEN                     05624600
+056247                   UNSTRING-STATE-TEXT,                           05624700
+056248                      COUNT UNSTRING-STATE-LEN                    05624800
+056249                   UNSTRING-ZIP,                                  05624900
+056250                   UNSTRING-ZIP-EXTN,                             05625000
+056251                   UNSTRING-BILL-PERIOD,                          05625100
+056252                   UNSTRING-SIN-PER-IND,                          05625200
+056253                   UNSTRING-GROUP-ID,                             05625300
+056254                   WS-DUMMY1,                                     05625400
+056255                   UNSTRING-NATL-IND,                             05625500
+056256                   WS-DUMMY2,                                     05625600
+056257                   UNSTRING-ORIG-SYSTEM-ID,                       05625700
+056258                   UNSTRING-LARG-CUST                             05625800
+056259          END-UNSTRING                                            05625900
+056260          INSPECT UNSTRING-CUSTOMER-NAME-TEXT                     05626000
+056270          converting "abcdefghijklmnopqrstuvwxyz" to              05627000
+056280                     "ABCDEFGHIJKLMNOPQRSTUVWXYZ"                 05628000
+056290          IF BILL-CUST-ID(1:1) = '4'                              05629000
+056300             MOVE 'N'    TO UNSTRING-NATL-IND                     05630000
+056400             MOVE 'N'    TO UNSTRING-LARG-CUST                    05640000
+056500*            MOVE SPACES TO UNSTRING-ORIG-SYSTEM-ID               05650001
+056501          END-IF                                                  05650100
+056502          MOVE UNSTRING-RECORD TO INPARR-ITEM (INPARR-IX)         05650200
+056503          SET INPARR-IX UP BY 1                                   05650300
+056504          SET MAX-INPARR-IX TO INPARR-IX                          05650400
+056505          MOVE CURR-CUST TO PREV-CUST                             05650500
+056506      ELSE                                                        05650600
+056507          MOVE 'Y' TO INP-CUST-CHANGED                            05650700
+056508      END-IF.                                                     05650800
+056509 B100-UNSTRING-INP-X.                                             05650900
+056510      EXIT.                                                       05651000
+056511                                                                  05651100
+056512 B200-FETCH-TABCURR.                                              05651200
+056513      IF READ-FETCH = 'Y'                                         05651300
+056514      EXEC SQL                                                    05651400
+056515          FETCH CUST_CSR INTO :FETCH-CUSTOMER-ID                  05651500
+056516                             ,:FETCH-CONFIG-ID                    05651600
+056517                             ,:FETCH-BILL-PERIOD                  05651700
+056518                             ,:FETCH-MAN                          05651800
+056519                             ,:FETCH-LOB                          05651900
+056520                             ,:FETCH-NATL-IND                     05652000
+056521                             ,:FETCH-LARG-CUST                    05652100
+056522                             ,:FETCH-ORIG-SYSTEM-ID               05652200
+056523                             ,:FETCH-CUSTOMER-NAME                05652300
+056524                             ,:FETCH-CONFIG-NAME                  05652400
+056525                             ,:FETCH-CUSTOMER-STATUS              05652500
+056526                             ,:FETCH-CAS-IND                      05652600
+056527                             ,:FETCH-REG-IND                      05652700
+056528                             ,:FETCH-SBU                          05652800
+056529                             ,:FETCH-CONFIG-STATUS                05652900
+056530                             ,:FETCH-MEDIA                        05653000
+056531                             ,:FETCH-COPIES                       05653100
+056532                             ,:FETCH-CONTACT-NAME                 05653200
+056533                             ,:FETCH-CONTACT-PHONE                05653300
+056534                             ,:FETCH-CONTACT-TITLE                05653400
+056535                             ,:FETCH-ACCT-EXECUTIVE               05653500
+056536                             ,:FETCH-AE-PHONE                     05653600
+056537                             ,:FETCH-MAILING                      05653700
+056538                             ,:FETCH-ADDRESS1                     05653800
+056539                             ,:FETCH-ADDRESS2                     05653900
+056540                             ,:FETCH-CITY                         05654000
+056541                             ,:FETCH-STATE                        05654100
+056542                             ,:FETCH-ZIP                          05654200
+056543                             ,:FETCH-ZIP-EXTN                     05654300
+056544                             ,:FETCH-SIN-PER-IND                  05654400
+056545                             ,:FETCH-GROUP-ID                     05654500
+058000      END-EXEC                                                    05800000
+058100      END-IF.                                                     05810000
+058200      EVALUATE SQLCODE                                            05820000
+058300      WHEN +000                                                   05830000
+058301          MOVE 'Y' TO READ-FETCH                                  05830100
+058302          MOVE FETCH-CUSTOMER-ID TO TAB-CURR-CUST(1:5)            05830200
+058303          MOVE FETCH-CONFIG-ID   TO TAB-CURR-CUST(6:2)            05830300
+058400          IF FIRST-TIME-FETCH = 'Y'                               05840000
+058500             MOVE TAB-CURR-CUST TO TAB-PREV-CUST                  05850000
+058600          END-IF                                                  05860000
+058610          MOVE 'N' TO FIRST-TIME-FETCH                            05861000
+058700          IF TAB-CURR-CUST = TAB-PREV-CUST                        05870000
+058800             MOVE FETCH-RECORD TO TABARR-ITEM (TABARR-IX)         05880000
+058900             SET TABARR-IX UP BY 1                                05890000
+059000             SET MAX-TABARR-IX TO TABARR-IX                       05900000
+059710             MOVE TAB-CURR-CUST TO TAB-PREV-CUST                  05971000
+059711          ELSE                                                    05971100
+059712             MOVE 'Y' TO TAB-CUST-CHANGED                         05971200
+059713          END-IF                                                  05971300
+059714      WHEN +100                                                   05971400
+059715          MOVE 'Y' TO EOF-CUR                                     05971500
+059716          MOVE 'Y' TO FROM-CUR-PROCESS                            05971600
+059717      WHEN OTHER                                                  05971700
+059718           DISPLAY 'ERROR B200-FETCH'                             05971800
+059719           PERFORM 9999-DB2-ERR-MESSAGE                           05971900
+059720              THRU 9999-EXIT                                      05972000
+059730      END-EVALUATE.                                               05973000
+059800 B200-FETCH-TABCURR-X.                                            05980000
+059900      EXIT.                                                       05990000
+059901                                                                  05990100
+059902 B300-EVALUATE-CUST.                                              05990200
+059903      IF PREV-CUST > TAB-PREV-CUST                                05990300
+059904         MOVE 'Y' TO INPARR-INSERT                                05990400
+059905         PERFORM B500-PREPARE-INSERT                              05990500
+059906            THRU B500-PREPARE-INSERT-X                            05990600
+059907         SET INPARR-IX TO 1                                       05990700
+059908         PERFORM UNTIL                                            05990800
+059909                  INPARR-IX > WS-TEMP-MAX                         05990900
+059910           INITIALIZE INPARR-ITEM (INPARR-IX)                     05991000
+059920           SET     INPARR-IX         UP BY 1                      05992000
+059930         END-PERFORM                                              05993000
+059940         SET INPARR-IX TO 1                                       05994000
+059950         MOVE 1 TO MAX-INPARR-IX                                  05995000
+059960         MOVE 'Y' TO PROCESS-INPUT                                05996000
+059961         MOVE 'N' TO PROCESS-FETCH                                05996100
+059962      ELSE                                                        05996200
+059963         IF PREV-CUST < TAB-PREV-CUST                             05996300
+059964            MOVE 'N' TO INPARR-INSERT                             05996400
+059965            PERFORM B500-PREPARE-INSERT                           05996500
+059966               THRU B500-PREPARE-INSERT-X                         05996600
+059967         SET TABARR-IX TO 1                                       05996700
+059968         PERFORM UNTIL                                            05996800
+059969                  TABARR-IX > WS-TEMP-MAX                         05996900
+059970           INITIALIZE TABARR-ITEM (TABARR-IX)                     05997000
+059980           SET     TABARR-IX         UP BY 1                      05998000
+059990         END-PERFORM                                              05999000
+060000            SET TABARR-IX TO 1                                    06000000
+060100            MOVE 1 TO MAX-TABARR-IX                               06010000
+060200            MOVE 'N' TO PROCESS-INPUT                             06020000
+060300            MOVE 'Y' TO PROCESS-FETCH                             06030000
+060400            IF EOF-CUR = 'Y'                                      06040000
+060500                 MOVE 'Y' TO INPARR-INSERT                        06050000
+060600                 PERFORM B500-PREPARE-INSERT                      06060000
+060700                    THRU B500-PREPARE-INSERT-X                    06070000
+060800                 SET INPARR-IX TO 1                               06080000
+060900                 PERFORM UNTIL                                    06090000
+061000                       INPARR-IX > WS-TEMP-MAX                    06100000
+061100                   INITIALIZE INPARR-ITEM (INPARR-IX)             06110000
+061200                   SET     INPARR-IX         UP BY 1              06120000
+061300                 END-PERFORM                                      06130000
+061400                 SET INPARR-IX TO 1                               06140000
+061500                 MOVE 1 TO MAX-INPARR-IX                          06150000
+061600                 MOVE 'Y' TO PROCESS-INPUT                        06160000
+061700                 MOVE 'N' TO PROCESS-FETCH                        06170000
+061800                INITIALIZE TAB-PREV-cust                          06180000
+061801            END-IF                                                06180100
+061802         ELSE                                                     06180200
+061803            IF PREV-CUST = TAB-PREV-CUST                          06180300
+061804               MOVE 'Y' TO INPARR-INSERT                          06180400
+061805               PERFORM B400-COMPARE-cust                          06180500
+061806                  THRU B400-COMPARE-cust-X                        06180600
+061807               SET INPARR-IX TO 1                                 06180700
+061808               PERFORM UNTIL                                      06180800
+061809                        INPARR-IX > WS-TEMP-MAX                   06180900
+061810                 INITIALIZE INPARR-ITEM (INPARR-IX)               06181000
+061820                 SET     INPARR-IX         UP BY 1                06182000
+061830               END-PERFORM                                        06183000
+061840               SET TABARR-IX TO 1                                 06184000
+061850               PERFORM UNTIL                                      06185000
+061860                        TABARR-IX > WS-TEMP-MAX                   06186000
+061870                 INITIALIZE TABARR-ITEM (TABARR-IX)               06187000
+061880                 SET     TABARR-IX         UP BY 1                06188000
+061890               END-PERFORM                                        06189000
+061900               SET INPARR-IX TO 1                                 06190000
+062000               SET TABARR-IX TO 1                                 06200000
+062100               MOVE 1 TO  MAX-INPARR-IX                           06210000
+062200               MOVE 1 TO  MAX-TABARR-IX                           06220000
+062300               MOVE 'Y' TO PROCESS-INPUT                          06230000
+062301               MOVE 'Y' TO PROCESS-FETCH                          06230100
+062302            END-IF                                                06230200
+062303         END-IF                                                   06230300
+062304      END-IF.                                                     06230400
+062305 B300-EVALUATE-cust-X.                                            06230500
+062306      EXIT.                                                       06230600
+062307                                                                  06230700
+062308 B400-COMPARE-CUST.                                               06230800
+062309      SET INPARR-IX TO 1                                          06230900
+062310      SET TABARR-IX TO 1                                          06231000
+062311      IF MAX-INPARR-IX = MAX-TABARR-IX                            06231100
+062312         PERFORM VARYING INPARR-IX FROM INPARR-IX BY 1            06231200
+062313                 UNTIL INPARR-IX = MAX-INPARR-IX OR               06231300
+062314                       MISMATCH-IND = 'Y'                         06231400
+062315                                                                  06231500
+062316            MOVE INPARR-CUSTOMER-NAME  (INPARR-IX) TO             06231600
+062317                 ARRAY-CUSTOMER-NAME                              06231700
+062318            MOVE INPARR-CONFIG-NAME    (INPARR-IX) TO             06231800
+062319                 ARRAY-CONFIG-NAME                                06231900
+062320            MOVE INPARR-SBU            (INPARR-IX) TO ARRAY-SBU   06232000
+062330            MOVE INPARR-CONTACT-NAME   (INPARR-IX) TO             06233000
+062340                 ARRAY-CONTACT-NAME                               06234000
+062350            MOVE INPARR-CONTACT-TITLE  (INPARR-IX) TO             06235000
+062360                 ARRAY-CONTACT-TITLE                              06236000
+062370            MOVE INPARR-ACCT-EXECUTIVE (INPARR-IX) TO             06237000
+062380                 ARRAY-ACCT-EXECUTIVE                             06238000
+062390            MOVE INPARR-MAILING   (INPARR-IX) TO ARRAY-MAILING    06239000
+062400            MOVE INPARR-ADDRESS1  (INPARR-IX) TO ARRAY-ADDRESS1   06240000
+062500            MOVE INPARR-ADDRESS2  (INPARR-IX) TO ARRAY-ADDRESS2   06250000
+062600            MOVE INPARR-CITY      (INPARR-IX) TO ARRAY-CITY       06260000
+062700            MOVE INPARR-STATE     (INPARR-IX) TO ARRAY-STATE      06270000
+062800                                                                  06280000
+062900            MOVE TABARR-CUSTOMER-NAME  (TABARR-IX) TO             06290000
+063000                 ARRAY-CUSTOMER-NAME1                             06300000
+063100            MOVE TABARR-CONFIG-NAME    (TABARR-IX) TO             06310000
+063200                 ARRAY-CONFIG-NAME1                               06320000
+063300            MOVE TABARR-SBU           (TABARR-IX) TO ARRAY-SBU1   06330000
+063400            MOVE TABARR-CONTACT-NAME   (TABARR-IX) TO             06340000
+063500                 ARRAY-CONTACT-NAME1                              06350000
+063600            MOVE TABARR-CONTACT-TITLE  (TABARR-IX) TO             06360000
+063700                 ARRAY-CONTACT-TITLE1                             06370000
+063800            MOVE TABARR-ACCT-EXECUTIVE (TABARR-IX) TO             06380000
+063900                 ARRAY-ACCT-EXECUTIVE1                            06390000
+064000            MOVE TABARR-MAILING   (TABARR-IX) TO ARRAY-MAILING1   06400000
+064100            MOVE TABARR-ADDRESS1  (TABARR-IX) TO ARRAY-ADDRESS11  06410000
+064200            MOVE TABARR-ADDRESS2  (TABARR-IX) TO ARRAY-ADDRESS21  06420000
+064300            MOVE TABARR-CITY      (TABARR-IX) TO ARRAY-CITY1      06430000
+064400            MOVE TABARR-STATE     (TABARR-IX) TO ARRAY-STATE1     06440000
+064401                                                                  06440100
+064402           IF (INPARR-CUSTOMER-ID     (INPARR-IX) =               06440200
+064403               TABARR-CUSTOMER-ID     (TABARR-IX)    ) AND        06440300
+064404                                                                  06440400
+064405              (INPARR-CONFIG-ID       (INPARR-IX) =               06440500
+064406               TABARR-CONFIG-ID       (TABARR-IX)    ) AND        06440600
+064407                                                                  06440700
+064408              (INPARR-LOB             (INPARR-IX) =               06440800
+064409               TABARR-LOB             (TABARR-IX)    ) AND        06440900
+064410                                                                  06441000
+064420              (INPARR-MAN             (INPARR-IX) =               06442000
+064430               TABARR-MAN             (TABARR-IX)    ) AND        06443000
+064440                                                                  06444000
+064450              (INPARR-ORIG-SYSTEM-ID  (INPARR-IX) =               06445000
+064460               TABARR-ORIG-SYSTEM-ID  (TABARR-IX)    ) AND        06446000
+064470                                                                  06447000
+064480              (ARRAY-CUSTOMER-NAME-TEXT(1:                        06448000
+064490                ARRAY-CUSTOMER-NAME-LEN) =                        06449000
+064500               ARRAY-CUSTOMER-NAME-TEXT1(1:                       06450000
+064600                ARRAY-CUSTOMER-NAME-LEN1) )  AND                  06460000
+064700                                                                  06470000
+064800              (ARRAY-CONFIG-NAME-TEXT  (1:                        06480000
+064900                  ARRAY-CONFIG-NAME-LEN)    =                     06490000
+065000               ARRAY-CONFIG-NAME-TEXT1 (1:                        06500000
+065100                  ARRAY-CONFIG-NAME-LEN1) )  AND                  06510000
+065200                                                                  06520000
+065300              (ARRAY-SBU-TEXT  (1:                                06530000
+065400                  ARRAY-SBU-LEN)    =                             06540000
+065500               ARRAY-SBU-TEXT1 (1:                                06550000
+065600                  ARRAY-SBU-LEN1) )  AND                          06560000
+065700                                                                  06570000
+065800              (ARRAY-CONTACT-NAME-TEXT  (1:                       06580000
+065900                  ARRAY-CONTACT-NAME-LEN)    =                    06590000
+066000               ARRAY-CONTACT-NAME-TEXT1 (1:                       06600000
+066100                  ARRAY-CONTACT-NAME-LEN1) )  AND                 06610000
+066200                                                                  06620000
+066300              (ARRAY-CONTACT-TITLE-TEXT  (1:                      06630000
+066400                  ARRAY-CONTACT-TITLE-LEN)    =                   06640000
+066500               ARRAY-CONTACT-TITLE-TEXT1 (1:                      06650000
+066600                  ARRAY-CONTACT-TITLE-LEN1) )  AND                06660000
+066700                                                                  06670000
+066800              (ARRAY-ACCT-EXECUTIVE-TEXT  (1:                     06680000
+066900                  ARRAY-ACCT-EXECUTIVE-LEN)    =                  06690000
+067000               ARRAY-ACCT-EXECUTIVE-TEXT1 (1:                     06700000
+067100                  ARRAY-ACCT-EXECUTIVE-LEN1) )  AND               06710000
+067200                                                                  06720000
+067300              (ARRAY-MAILING-TEXT  (1:                            06730000
+067400                  ARRAY-MAILING-LEN)    =                         06740000
+067500               ARRAY-MAILING-TEXT1 (1:                            06750000
+067600                  ARRAY-MAILING-LEN1) )  AND                      06760000
+067700                                                                  06770000
+067800              (ARRAY-ADDRESS1-TEXT  (1:                           06780000
+067900                  ARRAY-ADDRESS1-LEN)    =                        06790000
+068000               ARRAY-ADDRESS1-TEXT1 (1:                           06800000
+068100                  ARRAY-ADDRESS1-LEN1) )  AND                     06810000
+068200                                                                  06820000
+068300              (ARRAY-ADDRESS2-TEXT  (1:                           06830000
+068400                  ARRAY-ADDRESS2-LEN)    =                        06840000
+068500               ARRAY-ADDRESS2-TEXT1 (1:                           06850000
+068600                  ARRAY-ADDRESS2-LEN1) )  AND                     06860000
+068700                                                                  06870000
+068800              (ARRAY-CITY-TEXT  (1:                               06880000
+068900                  ARRAY-CITY-LEN)    =                            06890000
+069000               ARRAY-CITY-TEXT1 (1:                               06900000
+069100                  ARRAY-CITY-LEN1) )  AND                         06910000
+069200                                                                  06920000
+069300              (ARRAY-STATE-TEXT  (1:                              06930000
+069400                  ARRAY-STATE-LEN)    =                           06940000
+069500               ARRAY-STATE-TEXT1 (1:                              06950000
+069600                  ARRAY-STATE-LEN1) )  AND                        06960000
+069700                                                                  06970000
+069800              (INPARR-CUSTOMER-STATUS (INPARR-IX) =               06980000
+069900               TABARR-CUSTOMER-STATUS (TABARR-IX)     ) AND       06990000
+070000                                                                  07000000
+070100              (INPARR-CAS-IND         (INPARR-IX) =               07010000
+070200               TABARR-CAS-IND         (TABARR-IX)     ) AND       07020000
+070300                                                                  07030000
+070400              (INPARR-REG-IND         (INPARR-IX) =               07040000
+070500               TABARR-REG-IND         (TABARR-IX)     ) AND       07050000
+070600                                                                  07060000
+070700              (INPARR-CONFIG-STATUS   (INPARR-IX) =               07070000
+070800               TABARR-CONFIG-STATUS   (TABARR-IX)     ) AND       07080000
+070900                                                                  07090000
+071000              (INPARR-MEDIA           (INPARR-IX) =               07100000
+071100               TABARR-MEDIA           (TABARR-IX)     ) AND       07110000
+071200                                                                  07120000
+071300              (INPARR-COPIES          (INPARR-IX) =               07130000
+071400               TABARR-COPIES          (TABARR-IX)     ) AND       07140000
+071500                                                                  07150000
+071600              (INPARR-CONTACT-PHONE   (INPARR-IX) =               07160000
+071700               TABARR-CONTACT-PHONE   (TABARR-IX)     ) AND       07170000
+071800                                                                  07180000
+071900              (INPARR-AE-PHONE        (INPARR-IX) =               07190000
+072000               TABARR-AE-PHONE        (TABARR-IX)  ) AND          07200000
+072100                                                                  07210000
+072200              (INPARR-ZIP             (INPARR-IX) =               07220000
+072300               TABARR-ZIP             (TABARR-IX) ) AND           07230000
+072400                                                                  07240000
+072500              (INPARR-ZIP-EXTN        (INPARR-IX) =               07250000
+072600               TABARR-ZIP-EXTN        (TABARR-IX) ) AND           07260000
+072700                                                                  07270000
+072800                                                                  07280000
+072900              (INPARR-BILL-PERIOD     (INPARR-IX) =               07290000
+073000               TABARR-BILL-PERIOD     (TABARR-IX) ) AND           07300000
+073100                                                                  07310000
+073200              (INPARR-SIN-PER-IND     (INPARR-IX) =               07320000
+073300               TABARR-SIN-PER-IND     (TABARR-IX) ) AND           07330000
+073400                                                                  07340000
+073500              (INPARR-GROUP-ID        (INPARR-IX) =               07350000
+073501               TABARR-GROUP-ID        (TABARR-IX) ) AND           07350100
+073502                                                                  07350200
+073503              (INPARR-NATL-IND        (INPARR-IX) =               07350300
+073504               TABARR-NATL-IND        (TABARR-IX) ) AND           07350400
+073505                                                                  07350500
+073506              (INPARR-LARG-CUST       (INPARR-IX) =               07350600
+073507               TABARR-LARG-CUST       (TABARR-IX) )               07350700
+073508                                                                  07350800
+073509              MOVE 'N' TO MISMATCH-IND                            07350900
+073510           ELSE                                                   07351000
+073511              MOVE 'Y' TO MISMATCH-IND                            07351100
+073512           END-IF                                                 07351200
+073513           SET TABARR-IX UP BY 1                                  07351300
+073514         END-PERFORM                                              07351400
+073515      ELSE                                                        07351500
+073516         PERFORM B500-PREPARE-INSERT                              07351600
+073517            THRU B500-PREPARE-INSERT-X                            07351700
+073518      END-IF.                                                     07351800
+073519                                                                  07351900
+073520      IF MISMATCH-IND = 'Y'                                       07352000
+073521         MOVE 'N' TO MISMATCH-IND                                 07352100
+073522         PERFORM B500-PREPARE-INSERT                              07352200
+073523            THRU B500-PREPARE-INSERT-X                            07352300
+073524      END-IF.                                                     07352400
+073525      IF FROM-DB2-PROCESS = 'Y'                                   07352500
+073526         INITIALIZE PREV-CUST                                     07352600
+073527      END-IF.                                                     07352700
+073528      IF FROM-CUR-PROCESS = 'Y'                                   07352800
+073529         INITIALIZE TAB-PREV-CUST                                 07352900
+073530      END-IF.                                                     07353000
+073531 B400-COMPARE-CUST-X.                                             07353100
+073532      EXIT.                                                       07353200
+073533                                                                  07353300
+073534 B500-PREPARE-INSERT.                                             07353400
+073535      IF INPARR-INSERT = 'Y'                                      07353500
+073536      MOVE 'Y' TO INSERT-CUST-CONFIG                              07353600
+073537      SET INPARR-IX TO 1                                          07353700
+073538      PERFORM VARYING INPARR-IX FROM INPARR-IX BY 1               07353800
+073539                  UNTIL INPARR-IX = MAX-INPARR-IX                 07353900
+073540      MOVE 'Y'                                TO                  07354000
+073550                       BMCONFGT-VALID-FLAG                        07355000
+073560      MOVE INPARR-CUSTOMER-ID     (INPARR-IX) TO                  07356000
+073570           BMCONFGT-CUSTOMER-ID                                   07357000
+073580      MOVE INPARR-CONFIG-ID       (INPARR-IX) TO                  07358000
+073590           BMCONFGT-CONFIG-ID                                     07359000
+073600      MOVE INPARR-MAN             (INPARR-IX) TO                  07360000
+073700           BMCONMAN-MAN                                           07370000
+073800      MOVE INPARR-LOB             (INPARR-IX) TO                  07380000
+073900           BMCONFGT-LOB                                           07390000
+074000      MOVE INPARR-CUSTOMER-NAME   (INPARR-IX) TO                  07400000
+074100           BMCONFGT-CUSTOMER-NAME                                 07410000
+074200      MOVE INPARR-CONFIG-NAME     (INPARR-IX) TO                  07420000
+074300           BMCONFGT-CONFIG-NAME                                   07430000
+074400      MOVE INPARR-CUSTOMER-STATUS (INPARR-IX) TO                  07440000
+074500           BMCONFGT-CUSTOMER-STATUS                               07450000
+074600      MOVE INPARR-CAS-IND         (INPARR-IX) TO                  07460000
+074700           BMCONFGT-CAS-IND                                       07470000
+074800      MOVE INPARR-REG-IND         (INPARR-IX) TO                  07480000
+074900           BMCONFGT-REG-IND                                       07490000
+075000      MOVE INPARR-SBU             (INPARR-IX) TO                  07500000
+075100           BMCONFGT-SBU                                           07510000
+075200      MOVE INPARR-CONFIG-STATUS   (INPARR-IX) TO                  07520000
+075300           BMCONFGT-CONFIG-STATUS                                 07530000
+075400      MOVE INPARR-MEDIA           (INPARR-IX) TO                  07540000
+075500           BMCONFGT-MEDIA                                         07550000
+075600      MOVE INPARR-COPIES          (INPARR-IX) TO                  07560000
+075700           BMCONFGT-COPIES                                        07570000
+075800      MOVE INPARR-CONTACT-NAME    (INPARR-IX) TO                  07580000
+075900           BMCONFGT-CONTACT-NAME                                  07590000
+076000      MOVE INPARR-CONTACT-PHONE   (INPARR-IX) TO                  07600000
+076100           BMCONFGT-CONTACT-PHONE                                 07610000
+076200      MOVE INPARR-CONTACT-TITLE   (INPARR-IX) TO                  07620000
+076300           BMCONFGT-CONTACT-TITLE                                 07630000
+076400      MOVE INPARR-ACCT-EXECUTIVE  (INPARR-IX) TO                  07640000
+076500           BMCONFGT-ACCT-EXECUTIVE                                07650000
+076600      MOVE INPARR-AE-PHONE        (INPARR-IX) TO                  07660000
+076700           BMCONFGT-AE-PHONE                                      07670000
+076800      MOVE INPARR-MAILING         (INPARR-IX) TO                  07680000
+076900           BMCONFGT-MAILING                                       07690000
+077000      MOVE INPARR-ADDRESS1        (INPARR-IX) TO                  07700000
+077100           BMCONFGT-ADDRESS1                                      07710000
+077200      MOVE INPARR-ADDRESS2        (INPARR-IX) TO                  07720000
+077300           BMCONFGT-ADDRESS2                                      07730000
+077400      MOVE INPARR-CITY            (INPARR-IX) TO                  07740000
+077500           BMCONFGT-CITY                                          07750000
+077600      MOVE INPARR-STATE           (INPARR-IX) TO                  07760000
+077700           BMCONFGT-STATE                                         07770000
+077800      MOVE INPARR-ZIP             (INPARR-IX) TO                  07780000
+077900           BMCONFGT-ZIP                                           07790000
+078000      MOVE INPARR-ZIP-EXTN        (INPARR-IX) TO                  07800000
+078100           BMCONFGT-ZIP-EXTN                                      07810000
+078200      MOVE INPARR-BILL-PERIOD     (INPARR-IX) TO                  07820000
+078300           BMCONFGT-BILL-PERIOD                                   07830000
+078400      MOVE INPARR-SIN-PER-IND     (INPARR-IX) TO                  07840000
+078500           BMCONFGT-SIN-PER-IND                                   07850000
+078600      MOVE INPARR-GROUP-ID        (INPARR-IX) TO                  07860000
+078700           BMCONFGT-GROUP-ID                                      07870000
+078800      MOVE INPARR-NATL-IND        (INPARR-IX) TO                  07880000
+078900           BMCONFGT-NATL-IND                                      07890000
+079000      MOVE INPARR-LARG-CUST       (INPARR-IX) TO                  07900000
+079100           BMCONFGT-LARG-CUST                                     07910000
+079200      MOVE INPARR-ORIG-SYSTEM-ID  (INPARR-IX) TO                  07920000
+079300           BMCONMAN-ORIG-SYSTEM-ID                                07930000
+079400                                                                  07940000
+079500       PERFORM B600-INSERT-CUSTID                                 07950000
+079600          THRU B600-INSERT-CUSTID-X                               07960000
+079700      END-PERFORM                                                 07970000
+079800      ELSE                                                        07980000
+079900       MOVE 'Y' TO INSERT-CUST-CONFIG                             07990000
+080000       SET TABARR-IX TO 1                                         08000000
+080100       PERFORM VARYING TABARR-IX FROM TABARR-IX BY 1              08010000
+080200                  UNTIL TABARR-IX = MAX-TABARR-IX                 08020000
+080300       MOVE 'N'                               TO                  08030000
+080400                       BMCONFGT-VALID-FLAG                        08040000
+080500       MOVE TABARR-CUSTOMER-ID     (TABARR-IX) TO                 08050000
+080600       BMCONFGT-CUSTOMER-ID                                       08060000
+080700       MOVE TABARR-CONFIG-ID       (TABARR-IX) TO                 08070000
+080800       BMCONFGT-CONFIG-ID                                         08080000
+080900       MOVE TABARR-MAN             (TABARR-IX) TO                 08090000
+081000       BMCONMAN-MAN                                               08100000
+081100       MOVE TABARR-LOB             (TABARR-IX) TO                 08110000
+081200       BMCONFGT-LOB                                               08120000
+081300       MOVE TABARR-CUSTOMER-NAME   (TABARR-IX) TO                 08130000
+081400       BMCONFGT-CUSTOMER-NAME                                     08140000
+081500       MOVE TABARR-CONFIG-NAME     (TABARR-IX) TO                 08150000
+081600       BMCONFGT-CONFIG-NAME                                       08160000
+081700       MOVE TABARR-CUSTOMER-STATUS (TABARR-IX) TO                 08170000
+081800       BMCONFGT-CUSTOMER-STATUS                                   08180000
+081900       MOVE TABARR-CAS-IND         (TABARR-IX) TO                 08190000
+082000       BMCONFGT-CAS-IND                                           08200000
+082100       MOVE TABARR-REG-IND         (TABARR-IX) TO                 08210000
+082200       BMCONFGT-REG-IND                                           08220000
+082300       MOVE TABARR-SBU             (TABARR-IX) TO                 08230000
+082400       BMCONFGT-SBU                                               08240000
+082500       MOVE TABARR-CONFIG-STATUS   (TABARR-IX) TO                 08250000
+082600       BMCONFGT-CONFIG-STATUS                                     08260000
+082700       MOVE TABARR-MEDIA           (TABARR-IX) TO                 08270000
+082800       BMCONFGT-MEDIA                                             08280000
+082900       MOVE TABARR-COPIES          (TABARR-IX) TO                 08290000
+083000       BMCONFGT-COPIES                                            08300000
+083100       MOVE TABARR-CONTACT-NAME    (TABARR-IX) TO                 08310000
+083200       BMCONFGT-CONTACT-NAME                                      08320000
+083300       MOVE TABARR-CONTACT-PHONE   (TABARR-IX) TO                 08330000
+083400       BMCONFGT-CONTACT-PHONE                                     08340000
+083500       MOVE TABARR-CONTACT-TITLE   (TABARR-IX) TO                 08350000
+083600       BMCONFGT-CONTACT-TITLE                                     08360000
+083700       MOVE TABARR-ACCT-EXECUTIVE  (TABARR-IX) TO                 08370000
+083800       BMCONFGT-ACCT-EXECUTIVE                                    08380000
+083900       MOVE TABARR-AE-PHONE        (TABARR-IX) TO                 08390000
+084000       BMCONFGT-AE-PHONE                                          08400000
+084100       MOVE TABARR-MAILING         (TABARR-IX) TO                 08410000
+084200       BMCONFGT-MAILING                                           08420000
+084300       MOVE TABARR-ADDRESS1        (TABARR-IX) TO                 08430000
+084400       BMCONFGT-ADDRESS1                                          08440000
+084500       MOVE TABARR-ADDRESS2        (TABARR-IX) TO                 08450000
+084600       BMCONFGT-ADDRESS2                                          08460000
+084700       MOVE TABARR-CITY            (TABARR-IX) TO                 08470000
+084800       BMCONFGT-CITY                                              08480000
+084900       MOVE TABARR-STATE           (TABARR-IX) TO                 08490000
+085000       BMCONFGT-STATE                                             08500000
+085100       MOVE TABARR-ZIP             (TABARR-IX) TO                 08510000
+085200       BMCONFGT-ZIP                                               08520000
+085300       MOVE TABARR-ZIP-EXTN        (TABARR-IX) TO                 08530000
+085400       BMCONFGT-ZIP-EXTN                                          08540000
+085500       MOVE TABARR-BILL-PERIOD     (TABARR-IX) TO                 08550000
+085600       BMCONFGT-BILL-PERIOD                                       08560000
+085700       MOVE TABARR-SIN-PER-IND     (TABARR-IX) TO                 08570000
+085800       BMCONFGT-SIN-PER-IND                                       08580000
+085900       MOVE TABARR-GROUP-ID        (TABARR-IX) TO                 08590000
+086000       BMCONFGT-GROUP-ID                                          08600000
+086100       MOVE TABARR-NATL-IND        (TABARR-IX) TO                 08610000
+086200       BMCONFGT-NATL-IND                                          08620000
+086300       MOVE TABARR-LARG-CUST       (TABARR-IX) TO                 08630000
+086400       BMCONFGT-LARG-CUST                                         08640000
+086500       MOVE TABARR-ORIG-SYSTEM-ID  (TABARR-IX) TO                 08650000
+086600       BMCONMAN-ORIG-SYSTEM-ID                                    08660000
+086700       PERFORM B600-INSERT-CUSTID                                 08670000
+086701          THRU B600-INSERT-CUSTID-X                               08670100
+086702      END-PERFORM                                                 08670200
+086703      END-IF.                                                     08670300
+086704 B500-PREPARE-INSERT-X.                                           08670400
+086705      EXIT.                                                       08670500
+086706                                                                  08670600
+086707 B600-INSERT-CUSTID.                                              08670700
+086708      IF INSERT-CUST-CONFIG = 'Y'                                 08670800
+086709         MOVE 'N' TO INSERT-CUST-CONFIG                           08670900
+086710       EXEC SQL                                                   08671000
+086720         INSERT INTO BM_CONFIG_T (CUSTOMER_ID,                    08672000
+086730                                  CONFIG_ID,                      08673000
+086740                                  EFFECTIVE_DT,                   08674000
+086750                                  VALID_FLAG,                     08675000
+086760                                  LOB,                            08676000
+086770                                  NATL_IND,                       08677000
+086780                                  CUSTOMER_NAME,                  08678000
+086790                                  CONFIG_NAME,                    08679000
+086800                                  CUSTOMER_STATUS,                08680000
+086900                                  CAS_IND,                        08690000
+087000                                  REG_IND,                        08700000
+087100                                  SBU,                            08710000
+087200                                  CONFIG_STATUS,                  08720000
+087300                                  MEDIA,                          08730000
+087400                                  COPIES,                         08740000
+087500                                  CONTACT_NAME,                   08750000
+087600                                  CONTACT_PHONE,                  08760000
+087700                                  CONTACT_TITLE,                  08770000
+087800                                  ACCT_EXECUTIVE,                 08780000
+087900                                  AE_PHONE,                       08790000
+088000                                  MAILING,                        08800000
+088100                                  ADDRESS1,                       08810000
+088200                                  ADDRESS2,                       08820000
+088300                                  CITY,                           08830000
+088400                                  STATE,                          08840000
+088500                                  ZIP,                            08850000
+088600                                  ZIP_EXTN,                       08860000
+088700                                  SIN_PER_IND,                    08870000
+088800                                  GROUP_ID,                       08880000
+088900                                  BILL_PERIOD,                    08890000
+089000                                  LARG_CUST                       08900000
+089100                                  )                               08910000
+089200                                     VALUES (                     08920000
+089300                          :BMCONFGT-CUSTOMER-ID                   08930000
+089400                         ,:BMCONFGT-CONFIG-ID                     08940000
+089500                         ,:BMCONFGT-EFFECTIVE-DT                  08950000
+089600                         ,:BMCONFGT-VALID-FLAG                    08960000
+089700                         ,:BMCONFGT-LOB                           08970000
+089800                         ,:BMCONFGT-NATL-IND                      08980000
+089900                         ,:BMCONFGT-CUSTOMER-NAME                 08990000
+090000                         ,:BMCONFGT-CONFIG-NAME                   09000000
+090100                         ,:BMCONFGT-CUSTOMER-STATUS               09010000
+090200                         ,:BMCONFGT-CAS-IND                       09020000
+090300                         ,:BMCONFGT-REG-IND                       09030000
+090400                         ,:BMCONFGT-SBU                           09040000
+090500                         ,:BMCONFGT-CONFIG-STATUS                 09050000
+090600                         ,:BMCONFGT-MEDIA                         09060000
+090700                         ,:BMCONFGT-COPIES                        09070000
+090800                         ,:BMCONFGT-CONTACT-NAME                  09080000
+090900                         ,:BMCONFGT-CONTACT-PHONE                 09090000
+091000                         ,:BMCONFGT-CONTACT-TITLE                 09100000
+091100                         ,:BMCONFGT-ACCT-EXECUTIVE                09110000
+091200                         ,:BMCONFGT-AE-PHONE                      09120000
+091300                         ,:BMCONFGT-MAILING                       09130000
+091400                         ,:BMCONFGT-ADDRESS1                      09140000
+091500                         ,:BMCONFGT-ADDRESS2                      09150000
+091600                         ,:BMCONFGT-CITY                          09160000
+091700                         ,:BMCONFGT-STATE                         09170000
+091800                         ,:BMCONFGT-ZIP                           09180000
+091900                         ,:BMCONFGT-ZIP-EXTN                      09190000
+092000                         ,:BMCONFGT-SIN-PER-IND                   09200000
+092100                         ,:BMCONFGT-GROUP-ID                      09210000
+092200                         ,:BMCONFGT-BILL-PERIOD                   09220000
+092300                         ,:BMCONFGT-LARG-CUST                     09230000
+092400                                       )                          09240000
+092500       END-EXEC                                                   09250000
+092600         IF (SQLCODE NOT = 0 AND 100)                             09260000
+092700            DISPLAY 'ERROR INSERT BM_CONFIG_T'                    09270000
+092800            PERFORM 9999-DB2-ERR-MESSAGE                          09280000
+092900               THRU 9999-EXIT                                     09290000
+093000            MOVE ZEROES TO SQLCODE                                09300000
+093100         END-IF                                                   09310000
+093200       END-IF                                                     09320000
+093300       EXEC SQL                                                   09330000
+093400         INSERT INTO BM_CONFIG_MAN_T (CUSTOMER_ID,                09340000
+093500                                  CONFIG_ID,                      09350000
+093600                                  EFFECTIVE_DT,                   09360000
+093700                                  MAN,                            09370000
+093800                                  VALID_FLAG,                     09380000
+093900                                  ORIG_SYSTEM_ID)                 09390000
+094000                    VALUES (                                      09400000
+094100                          :BMCONFGT-CUSTOMER-ID,                  09410000
+094200                          :BMCONFGT-CONFIG-ID,                    09420000
+094300                          :BMCONFGT-EFFECTIVE-DT,                 09430000
+094400                          :BMCONMAN-MAN,                          09440000
+094500                          :BMCONFGT-VALID-FLAG,                   09450000
+094600                          :BMCONMAN-ORIG-SYSTEM-ID                09460000
+094700                           )                                      09470000
+094800       END-EXEC.                                                  09480000
+094900                                                                  09490000
+095000       IF (SQLCODE NOT = 0 AND 100)                               09500000
+095100           DISPLAY 'ERROR INSERT BM_CONFIG_MAN_T'                 09510000
+095200           DISPLAY 'BMCONFGT-CUSTOMER-ID=' BMCONFGT-CUSTOMER-ID   09520000
+095300           DISPLAY 'BMCONFGT-CONFIG-ID=' BMCONFGT-CONFIG-ID       09530000
+095400           DISPLAY 'BMCONMAN-MAN=' BMCONMAN-MAN                   09540000
+095500          PERFORM 9999-DB2-ERR-MESSAGE                            09550000
+095600             THRU 9999-EXIT                                       09560000
+095700            MOVE ZEROES TO SQLCODE                                09570000
+095701       END-IF.                                                    09570100
+095702 B600-INSERT-CUSTID-X.                                            09570200
+095703      EXIT.                                                       09570300
+095704                                                                  09570400
+095705 C000-UPDATE-PROCESS.                                             09570500
+095706      EXEC SQL                                                    09570600
+095707          OPEN UPDATE_CSR                                         09570700
+095708      END-EXEC.                                                   09570800
+095709      EVALUATE SQLCODE                                            09570900
+095710      WHEN +000                                                   09571000
+095720          PERFORM C100-FETCH-CSR                                  09572000
+095730             THRU C100-FETCH-CSR-X  UNTIL WS-EOF-UPD-CSR = 'Y'    09573000
+095740      WHEN OTHER                                                  09574000
+095750          DISPLAY 'ERROR C100-UPDATE-PROCESS'                     09575000
+095760          PERFORM 9999-DB2-ERR-MESSAGE                            09576000
+095770             THRU 9999-EXIT                                       09577000
+095771      END-EVALUATE.                                               09577100
+095772 C000-UPDATE-PROCESS-X.                                           09577200
+095773      EXIT.                                                       09577300
+095774                                                                  09577400
+095775 C100-FETCH-CSR.                                                  09577500
+095776      EXEC SQL                                                    09577600
+095777       FETCH UPDATE_CSR INTO :BMCONPRC-CUSTOMER-ID,               09577700
+095778                             :BMCONPRC-CONFIG-ID,                 09577800
+095779                             :BMCONPRC-MAN,                       09577900
+095780                             :BMCONPRC-MAN-BILL-DATE,             09578000
+095790                             :BMCONPRC-ORIG-SYSTEM-ID,            09579000
+095800                             :BMCONMAN-VALID-FLAG:NUL1-IND-1,     09580000
+095900                             :BMCONPRC-VALID-FLAG                 09590000
+096000      END-EXEC.                                                   09600000
+096100      EVALUATE SQLCODE                                            09610000
+096200      WHEN +000                                                   09620000
+096300      IF (BMCONMAN-VALID-FLAG = 'N') OR (NUL1-IND-1 < 0)          09630000
+096400           MOVE 'N' TO UPDATE-IND                                 09640000
+096500           PERFORM C200-UPDATE-CSR                                09650000
+096600              THRU C200-UPDATE-CSR-X                              09660000
+096700      END-IF                                                      09670000
+096800      IF (BMCONMAN-VALID-FLAG = 'Y') AND                          09680000
+096900         (BMCONPRC-VALID-FLAG = 'N')  AND                         09690000
+097000         (NUL1-IND-1 = 0)                                         09700000
+097100           MOVE 'Y' TO UPDATE-IND                                 09710000
+097200           PERFORM C200-UPDATE-CSR                                09720000
+097300              THRU C200-UPDATE-CSR-X                              09730000
+097400      END-IF                                                      09740000
+097500      WHEN +100                                                   09750000
+097600           MOVE 'Y' TO WS-EOF-UPD-CSR                             09760000
+097700      WHEN OTHER                                                  09770000
+097800           DISPLAY 'ERROR C100-FETCH-CSR'                         09780000
+097900           PERFORM 9999-DB2-ERR-MESSAGE                           09790000
+098000              THRU 9999-EXIT                                      09800000
+098001      END-EVALUATE.                                               09800100
+098002 C100-FETCH-CSR-X.                                                09800200
+098003      EXIT.                                                       09800300
+098004                                                                  09800400
+098005 C200-UPDATE-CSR.                                                 09800500
+098006      EXEC SQL                                                    09800600
+098007              UPDATE BM_CONFIG_PROC_T                             09800700
+098008              SET VALID_FLAG = :UPDATE-IND                        09800800
+098009              WHERE CUSTOMER_ID    = :BMCONPRC-CUSTOMER-ID        09800900
+098010              AND   CONFIG_ID      = :BMCONPRC-CONFIG-ID          09801000
+098020              AND   MAN            = :BMCONPRC-MAN                09802000
+098030              AND   MAN_BILL_DATE  = :BMCONPRC-MAN-BILL-DATE      09803000
+098040              AND   ORIG_SYSTEM_ID = :BMCONPRC-ORIG-SYSTEM-ID     09804000
+098050      END-EXEC.                                                   09805000
+098060      EVALUATE SQLCODE                                            09806000
+098070      WHEN +000                                                   09807000
+098080           CONTINUE                                               09808000
+098090      WHEN OTHER                                                  09809000
+098100           PERFORM 9999-DB2-ERR-MESSAGE                           09810000
+098200              THRU 9999-EXIT                                      09820000
+098300      END-EVALUATE.                                               09830000
+098400 C200-UPDATE-CSR-X.                                               09840000
+098500      EXIT.                                                       09850000
+098600                                                                  09860000
+098601 C300-INSERT-PROCESS.                                             09860100
+098603      EXEC SQL                                                    09860300
+098604         SELECT COUNT(*) INTO :WS-BMFCG-COUNT                     09860400
+098605         FROM BMCFG_MAN_CURR_T                                    09860500
+098606      END-EXEC.                                                   09860600
+098607      EVALUATE SQLCODE                                            09860700
+098608        WHEN +000                                                 09860800
+098609          IF WS-BMFCG-COUNT = 0                                   09860900
+098610             PERFORM C400-INITIAL-INSERT                          09861000
+098611             THRU    C400-INITIAL-INSERT-X                        09861100
+098612          ELSE                                                    09861200
+098613             PERFORM C500-BMCFG-INSERT                            09861300
+098614             THRU    C500-BMCFG-INSERT-X                          09861400
+098615          END-IF                                                  09861500
+098616        WHEN OTHER                                                09861600
+098618           PERFORM 9999-DB2-ERR-MESSAGE                           09861800
+098619              THRU 9999-EXIT                                      09861900
+098620      END-EVALUATE.                                               09862000
+098621 C300-INSERT-PROCESS-X.                                           09862100
+098622      EXIT.                                                       09862200
+098623                                                                  09862300
+098624 C400-INITIAL-INSERT.                                             09862400
+098626     EXEC SQL                                                     09862600
+098627       DECLARE BM_MAN_CUR CURSOR WITH HOLD FOR                    09862700
+098628            SELECT  A.CUSTOMER_ID                                 09862800
+098629                   ,A.CONFIG_ID                                   09862900
+098630                   ,A.EFFECTIVE_DT                                09863000
+098631                   ,A.MAN                                         09863100
+098632                   ,A.VALID_FLAG                                  09863200
+098640                   ,A.ORIG_SYSTEM_ID                              09864000
+098650              FROM BM_CONFIG_MAN_T A                              09865000
+098651             WHERE A.EFFECTIVE_DT IN (SELECT MAX(EFFECTIVE_DT)    09865100
+098652                   FROM BM_CONFIG_MAN_T B                         09865200
+098653                WHERE A.CUSTOMER_ID    = B.CUSTOMER_ID AND        09865300
+098654                         A.CONFIG_ID   = B.CONFIG_ID)             09865400
+098655            AND   A.VALID_FLAG = 'Y'                              09865500
+098656            ORDER BY 1,2,3,4 ASC                                  09865600
+098658     END-EXEC.                                                    09865800
+098659                                                                  09865900
+098660     EXEC SQL                                                     09866000
+098661         COMMIT                                                   09866100
+098662     END-EXEC.                                                    09866200
+098663     EXEC SQL                                                     09866300
+098664         OPEN BM_MAN_CUR                                          09866400
+098665     END-EXEC.                                                    09866500
+098666     EVALUATE SQLCODE                                             09866600
+098667      WHEN +000                                                   09866700
+098668          PERFORM C450-FETCH-CSR                                  09866800
+098669             THRU C450-FETCH-CSR-X  UNTIL WS-EOF-BM-MAN-CSR = 'Y' 09866900
+098670          EXEC SQL                                                09867000
+098671             CLOSE BM_MAN_CUR                                     09867100
+098672          END-EXEC                                                09867200
+098673      WHEN OTHER                                                  09867300
+098674          DISPLAY 'ERROR C400-INITIAL-INSERT'                     09867400
+098675          PERFORM 9999-DB2-ERR-MESSAGE                            09867500
+098676             THRU 9999-EXIT                                       09867600
+098677     END-EVALUATE.                                                09867700
+098678                                                                  09867800
+098679 C400-INITIAL-INSERT-X.                                           09867900
+098680      EXIT.                                                       09868000
+098681                                                                  09868100
+098682 C450-FETCH-CSR.                                                  09868200
+098683                                                                  09868300
+098684      EXEC SQL                                                    09868400
+098685          FETCH BM_MAN_CUR INTO :BMCFMANC-CUSTOMER-ID             09868500
+098686                               ,:BMCFMANC-CONFIG-ID               09868600
+098687                               ,:BMCFMANC-EFFECTIVE-DT            09868700
+098688                               ,:BMCFMANC-MAN                     09868800
+098689                               ,:BMCFMANC-VALID-FLAG              09868900
+098690                               ,:BMCFMANC-ORIG-SYSTEM-ID          09869000
+098712      END-EXEC.                                                   09871200
+098714      EVALUATE SQLCODE                                            09871400
+098715      WHEN +000                                                   09871500
+098716      PERFORM C475-BMFCG-INSERT                                   09871600
+098717      THRU    C475-BMFCG-INSERT-X                                 09871700
+098744      WHEN +100                                                   09874400
+098745          MOVE 'Y' TO WS-EOF-BM-MAN-CSR                           09874500
+098746      WHEN OTHER                                                  09874600
+098747           MOVE 'Y' TO WS-EOF-BM-MAN-CSR                          09874700
+098748           DISPLAY 'ERROR c450-FETCH'                             09874800
+098749           PERFORM 9999-DB2-ERR-MESSAGE                           09874900
+098750              THRU 9999-EXIT                                      09875000
+098751      END-EVALUATE.                                               09875100
+098752 C450-FETCH-CSR-X.                                                09875200
+098753      EXIT.                                                       09875300
+098754                                                                  09875400
+098755 C475-BMFCG-INSERT.                                               09875500
+098756      EXEC SQL                                                    09875600
+098757        INSERT INTO BMCFG_MAN_CURR_T (                            09875700
+098758                                      CUSTOMER_ID                 09875800
+098759                                     ,CONFIG_ID                   09875900
+098760                                     ,EFFECTIVE_DT                09876000
+098761                                     ,MAN                         09876100
+098762                                     ,VALID_FLAG                  09876200
+098763                                     ,ORIG_SYSTEM_ID)             09876300
+098764        VALUES (                                                  09876400
+098765                 :BMCFMANC-CUSTOMER-ID                            09876500
+098766                ,:BMCFMANC-CONFIG-ID                              09876600
+098767                ,:BMCFMANC-EFFECTIVE-DT                           09876700
+098768                ,:BMCFMANC-MAN                                    09876800
+098769                ,:BMCFMANC-VALID-FLAG                             09876900
+098770                ,:BMCFMANC-ORIG-SYSTEM-ID                         09877000
+098771               )                                                  09877100
+098772      END-EXEC.                                                   09877200
+098773      IF (SQLCODE NOT = 0 AND 100)                                09877300
+098776           DISPLAY 'ERROR INSERTING VALUES INTO',                 09877600
+098777                   'BMCFG_MAN_CURR_T'                             09877700
+098778           PERFORM 9999-DB2-ERR-MESSAGE                           09877800
+098779              THRU 9999-EXIT                                      09877900
+098780      END-IF.                                                     09878000
+098781 C475-BMFCG-INSERT-X.                                             09878100
+098782      EXIT.                                                       09878200
+098783                                                                  09878300
+098784 C500-BMCFG-INSERT.                                               09878400
+098787     EXEC SQL                                                     09878700
+098788              DECLARE BM_MAN_CURI CURSOR WITH HOLD FOR            09878800
+098789              SELECT A.CUSTOMER_ID,                               09878900
+098790                     A.CONFIG_ID,                                 09879000
+098791                     A.EFFECTIVE_DT,                              09879100
+098792                     A.MAN,                                       09879200
+098793                     A.VALID_FLAG,                                09879300
+098794                     A.ORIG_SYSTEM_ID                             09879400
+098795              FROM BM_CONFIG_MAN_T A                              09879500
+098796              WHERE A.EFFECTIVE_DT IN (SELECT MAX(EFFECTIVE_DT)   09879600
+098797                     FROM BM_CONFIG_MAN_T B                       09879700
+098798                  WHERE A.CUSTOMER_ID    = B.CUSTOMER_ID AND      09879800
+098799                           A.CONFIG_ID   = B.CONFIG_ID)           09879900
+098800               AND   A.VALID_FLAG = 'Y'                           09880000
+098801               AND A.EFFECTIVE_DT = :CURRENT-TIMESTAMP            09880100
+098802              ORDER BY 1,2,3,4 ASC                                09880200
+098803     END-EXEC.                                                    09880300
+098804                                                                  09880400
+098805     EXEC SQL                                                     09880500
+098806         OPEN BM_MAN_CURI                                         09880600
+098807     END-EXEC.                                                    09880700
+098808     EXEC SQL                                                     09880800
+098809         COMMIT                                                   09880900
+098810     END-EXEC.                                                    09881000
+098811     EVALUATE SQLCODE                                             09881100
+098812      WHEN +000                                                   09881200
+098813          PERFORM C550-FETCH-CSRI                                 09881300
+098814             THRU C550-FETCH-CSRI-X                               09881400
+098815            UNTIL WS-EOF-BM-MAN-CSRI = 'Y'                        09881500
+098816          EXEC SQL                                                09881600
+098817              CLOSE BM_MAN_CURI                                   09881700
+098818          END-EXEC                                                09881800
+098819          PERFORM C580-DELETE-INVALIDATED                         09881900
+098820             THRU C580-DELETE-INVALIDATED-X                       09882000
+098821      WHEN OTHER                                                  09882100
+098822          DISPLAY 'ERROR C500-BMCFG-INSERT'                       09882200
+098823          PERFORM 9999-DB2-ERR-MESSAGE                            09882300
+098824             THRU 9999-EXIT                                       09882400
+098825     END-EVALUATE.                                                09882500
+098826 C500-BMCFG-INSERT-X.                                             09882600
+098827      EXIT.                                                       09882700
+098828                                                                  09882800
+098829 C550-FETCH-CSRI.                                                 09882900
+098830                                                                  09883000
+098831      EXEC SQL                                                    09883100
+098832          FETCH BM_MAN_CURI INTO :BMCFMANC-CUSTOMER-ID            09883200
+098833                               ,:BMCFMANC-CONFIG-ID               09883300
+098834                               ,:BMCFMANC-EFFECTIVE-DT            09883400
+098835                               ,:BMCFMANC-MAN                     09883500
+098836                               ,:BMCFMANC-VALID-FLAG              09883600
+098837                               ,:BMCFMANC-ORIG-SYSTEM-ID          09883700
+098838      END-EXEC.                                                   09883800
+098839      EVALUATE SQLCODE                                            09883900
+098840      WHEN +000                                                   09884000
+098841          PERFORM C575-BMFCG-DELETE-ROW                           09884100
+098842          THRU    C575-BMFCG-DELETE-ROW-X                         09884200
+098843          PERFORM C475-BMFCG-INSERT                               09884300
+098844          THRU    C475-BMFCG-INSERT-X                             09884400
+098845      WHEN +100                                                   09884500
+098846          MOVE 'Y' TO WS-EOF-BM-MAN-CSRI                          09884600
+098847      WHEN OTHER                                                  09884700
+098848           MOVE 'Y' TO WS-EOF-BM-MAN-CSRI                         09884800
+098849           DISPLAY 'ERROR c550-FETCH'                             09884900
+098850           PERFORM 9999-DB2-ERR-MESSAGE                           09885000
+098851              THRU 9999-EXIT                                      09885100
+098852      END-EVALUATE.                                               09885200
+098853                                                                  09885300
+098854 C550-FETCH-CSRI-X.                                               09885400
+098855      EXIT.                                                       09885500
+098856                                                                  09885600
+098857                                                                  09885700
+098858 C575-BMFCG-DELETE-ROW.                                           09885800
+098859      MOVE BMCFMANC-CUSTOMER-ID TO FETCH-CURRENT-CUST-ID          09885900
+098860      MOVE BMCFMANC-CONFIG-ID      TO FETCH-CURRENT-CON-ID        09886000
+098861      IF FETCH-CURRENT-CUST-ID NOT = FETCH-PREV-CUST-ID           09886100
+098862          OR  FETCH-CURRENT-CON-ID NOT = FETCH-PREV-CON-ID        09886200
+098863         EXEC SQL                                                 09886300
+098864            DELETE FROM BMCFG_MAN_CURR_T                          09886400
+098865            WHERE CUSTOMER_ID = :BMCFMANC-CUSTOMER-ID             09886500
+098866            AND   CONFIG_ID   = :BMCFMANC-CONFIG-ID               09886600
+098867            AND EFFECTIVE_DT <> :CURRENT-TIMESTAMP                09886700
+098868         END-EXEC                                                 09886800
+098869      END-IF.                                                     09886900
+098870      IF SQLCODE NOT= 0                                           09887000
+098871           PERFORM 9999-DB2-ERR-MESSAGE                           09887100
+098872              THRU 9999-EXIT                                      09887200
+098873      END-IF                                                      09887300
+098874      MOVE FETCH-CURRENT-CUST-ID TO FETCH-PREV-CUST-ID.           09887400
+098875      MOVE FETCH-CURRENT-CON-ID  TO FETCH-PREV-CON-ID.            09887500
+098876                                                                  09887600
+098877 C575-BMFCG-DELETE-ROW-X.                                         09887700
+098878      EXIT.                                                       09887800
+098879                                                                  09887900
+098880                                                                  09888000
+098881 C580-DELETE-INVALIDATED.                                         09888100
+098882      EXEC SQL                                                    09888200
+098883         DECLARE DEL_CUR CURSOR WITH HOLD FOR                     09888300
+098886             SELECT  B.CUSTOMER_ID, B.CONFIG_ID                   09888600
+098887               FROM BM_CONFIG_T B                                 09888700
+098891             WHERE  B.VALID_FLAG = 'N'                            09889100
+098892             AND B.EFFECTIVE_DT = :CURRENT-TIMESTAMP              09889200
+098908      END-EXEC.                                                   09890800
+098922      EVALUATE SQLCODE                                            09892200
+098923      WHEN 0                                                      09892300
+098924         EXEC SQL                                                 09892400
+098925            OPEN DEL_CUR                                          09892500
+098926         END-EXEC                                                 09892600
+098927         IF SQLCODE = 0                                           09892700
+098928           MOVE 'N' TO EOF-DEL                                    09892800
+098929           PERFORM C600-FETCH                                     09892900
+098930              THRU C600-FETCH-X UNTIL EOF-DEL = 'Y'               09893000
+098931         END-IF                                                   09893100
+098932      WHEN OTHER                                                  09893200
+098933           PERFORM 9999-DB2-ERR-MESSAGE                           09893300
+098934              THRU 9999-EXIT                                      09893400
+098935      END-EVALUATE.                                               09893500
+098936      EXEC SQL                                                    09893600
+098937           COMMIT                                                 09893700
+098938      END-EXEC.                                                   09893800
+098939 C580-DELETE-INVALIDATED-X.                                       09893900
+098940      EXIT.                                                       09894000
+098941                                                                  09894100
+098942 C600-FETCH.                                                      09894200
+098943                                                                  09894300
+098944      EXEC SQL                                                    09894400
+098945           FETCH DEL_CUR INTO                                     09894500
+098946             :BMCONFGT-CUSTOMER-ID                                09894600
+098947             ,:BMCONFGT-CONFIG-ID                                 09894700
+098948      END-EXEC.                                                   09894800
+098952      EVALUATE SQLCODE                                            09895200
+098953      WHEN 0                                                      09895300
+098954         EXEC SQL                                                 09895400
+098955            DELETE FROM BMCFG_MAN_CURR_T A                        09895500
+098956            WHERE A.CUSTOMER_ID = :BMCONFGT-CUSTOMER-ID           09895600
+098957            AND   A.CONFIG_ID = :BMCONFGT-CONFIG-ID               09895700
+098958         END-EXEC                                                 09895800
+098959         EXEC SQL                                                 09895900
+098960           COMMIT                                                 09896000
+098961         END-EXEC                                                 09896100
+098963      WHEN +100                                                   09896300
+098964          MOVE 'Y' TO EOF-DEL                                     09896400
+098965      WHEN OTHER                                                  09896500
+098966          MOVE 'Y' TO EOF-DEL                                     09896600
+098967          PERFORM 9999-DB2-ERR-MESSAGE                            09896700
+098968             THRU 9999-EXIT                                       09896800
+098969      END-EVALUATE.                                               09896900
+098970                                                                  09897000
+098971 C600-FETCH-X.                                                    09897100
+098972      EXIT.                                                       09897200
+098973                                                                  09897300
+098974 D000-FINISH-PGM.                                                 09897400
+098975      EXEC SQL                                                    09897500
+098976          CLOSE CUST_CSR                                          09897600
+098977      END-EXEC.                                                   09897700
+098978      DISPLAY 'D000-FINISH-PGM'                                   09897800
+098979      DISPLAY 'EOF PGM'.                                          09897900
+098980      CLOSE BILL-INP.                                             09898000
+098981      MOVE 'DESTROY' TO THREADIO-ENTRY                            09898100
+098982      CALL THREADIO-PGM USING THREADIO-PARMS.                     09898200
+098983 D000-FINISH-PGM-X.                                               09898300
+098984      EXIT.                                                       09898400
+098985                                                                  09898500
+098986 9999-DB2-ERR-MESSAGE.                                            09898600
+098987       MOVE SQLCODE    TO DISPLAY-SQLCODE.                        09898700
+098988       MOVE SQLSTATE   TO DISPLAY-SQLSTATE.                       09898800
+098989       DISPLAY 'SQLCODE=' DISPLAY-SQLCODE ',SQLSTATE='            09898900
+098990                          DISPLAY-SQLSTATE                        09899000
+098991       CALL DSNTIAR-PGM USING SQLCA                               09899100
+098992                              ERROR-MESSAGE                       09899200
+098993                              ERROR-TEXT-LEN                      09899300
+098994       PERFORM VARYING ERROR-INDEX FROM 1 BY 1                    09899400
+098995         UNTIL ERROR-INDEX > 8                                    09899500
+098996               DISPLAY ERROR-TEXT (ERROR-INDEX)                   09899600
+098997       END-PERFORM.                                               09899700
+098998 9999-EXIT.                                                       09899800
+099000      EXIT.                                                       09900000

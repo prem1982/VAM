@@ -1,0 +1,34 @@
+/******************************* rexx *********************************/        
+/*trace i*/                                                                     
+arg dsn                                                                         
+dsn = ''                                                                        
+dsn2 = 'BF3MB9T'                                                                
+filelist   = ''                                                                 
+out_string_all = ''                                                             
+file_ind = 'VSAM -----'                                                         
+date_ind = 'CREATION'                                                           
+dataset_name = ''                                                               
+dataset_date = ''                                                               
+file_cnt = 0                                                                    
+xx = outtrap(list.)                                                             
+"listcat all lvl('"dsn2"')"                                                     
+out_string = ''                                                                 
+do i = 1 to list.0 by 1                                                         
+     if lastpos(file_ind,list.i) > 0  then                                      
+     do                                                                         
+        dataset_name = word(list.i,3)                                           
+     end                                                                        
+     if lastpos(date_ind,list.i) > 0  then                                      
+     do                                                                         
+        dataset_date = right(word(list.i,2),8)                                  
+     end                                                                        
+     if dataset_name <> ''  &  dataset_date <> ''  then                         
+     do                                                                         
+           out_string = left(dataset_name,45) || left(dataset_date,8)           
+           say ' ' out_string                                                   
+           dataset_name = ''                                                    
+           dataset_date = ''                                                    
+           dsn = dsn ' '|| out_string                                           
+     end                                                                        
+end                                                                             
+return dsn                                                                      

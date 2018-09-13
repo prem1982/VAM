@@ -1,0 +1,10 @@
+/*REXX DEFGDG: REXX TO DEFINE A GDG STEM*/                              00010000
+ARG ENTRYNAME OWNER LIMIT RETDAYS                                       00020000
+"DELETE '"ENTRYNAME"' GDG PURGE"                                        00021107
+"DEFINE GENERATIONDATAGROUP",                                           00021206
+       " (NAME('"ENTRYNAME"')",                                         00022000
+       " NOEMPTY",                                                      00022100
+       " SCRATCH",                                                      00022200
+       " OWNER('"OWNER"')",                                             00022300
+       " FOR("RETDAYS")",                                               00022403
+       " LIMIT("LIMIT"))"                                               00022503

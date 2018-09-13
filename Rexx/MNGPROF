@@ -1,0 +1,785 @@
+/******************************* REXX *********************************/        
+/******************************* REXX *********************************/        
+                                                                                
+ARG db2sys oid .                                                                
+                                                                                
+ trace o                                                                        
+                                                                                
+ db2sys       = strip(db2sys)                                                   
+ i_oid        = strip(oid)                                                      
+                                                                                
+ say 'retrieving ' i_oid                                                        
+                                                                                
+ SELECT                                                                         
+   WHEN DB2SYS  = 'D001'                                                        
+     then do                                                                    
+          TABPREF = 'BMGVZT'                                                    
+          end                                                                   
+   WHEN DB2SYS  = 'D009'                                                        
+     then do                                                                    
+          TABPREF = 'BMGVZP'                                                    
+          end                                                                   
+   WHEN DB2SYS  = 'D38X'                                                        
+     then do                                                                    
+          TABPREF = 'BMGVZS'                                                    
+          end                                                                   
+   OTHERWISE                                                                    
+          do                                                                    
+          TABPREF = 'BMGVZP'                                                    
+          end                                                                   
+ END                                                                            
+                                                                                
+ SIGNAL OFF ERROR /* TURN ERROR-TRAPPING OFF */                                 
+ "SUBCOM DSNREXX"                                                               
+ IF RC THEN                                                                     
+    S_RC = RXSUBCOM('ADD','DSNREXX','DSNREXX')                                  
+                                                                                
+ ADDRESS DSNREXX "CONNECT "DB2SYS                                               
+ IF SQLCODE ^= 0                                                                
+ then do                                                                        
+      SAY ' ERROR CONNECTING TO ' db2sys                                        
+      CALL SQLCA                                                                
+      SAY '  END EXECUTION'                                                     
+      exit 12                                                                   
+      END                                                                       
+                                                                                
+                                                                                
+ PROC = TABPREF||.||'MANAGE_EM_PROFILE'                                         
+ call initialize_parms                                                          
+ call pad_parms                                                                 
+                                                                                
+ call call_the_sp                                                               
+                                                                                
+ if sqlcode = 466                                                               
+ then do                                                                        
+      say 'a result set was returned'                                           
+      call describe_resultset                                                   
+      call get_resultset                                                        
+      end                                                                       
+                                                                                
+ I_ACTION = 'U'                                                                 
+ I_PROF_STATUS_COMM  = 'Config updated to Fairpoint for Exit'                   
+ I_PROFILE_COMMENT   = 'Config updated to Fairpoint for Exit'                   
+ I_CUSTOMER_TYPE     = 'F'                                                      
+ i_subscriber_oid  = 0                                                          
+                                                                                
+ call pad_parms                                                                 
+                                                                                
+ call call_the_sp                                                               
+                                                                                
+ ADDRESS DSNREXX "EXECSQL COMMIT"                                               
+ IF SQLCODE ^= 0                                                                
+ THEN DO                                                                        
+      SAY 'ERROR WHILE COMMITING'                                               
+      CALL SQLCA                                                                
+      SAY '  END EXECUTION'                                                     
+      EXIT 12                                                                   
+      END                                                                       
+                                                                                
+ return                                                                         
+                                                                                
+initialize_parms:                                                               
+                                                                                
+ i_subscriber_oid                  = 0                                          
+ i_action                          = ' '                                        
+ i_BP_DAY                          = ' '                                        
+ i_START_DATE                      = ' '                                        
+ i_COMM_EDI_CUST_IND               = ' '                                        
+ i_PROF_STATUS_COMM                = ' '                                        
+ i_COMPANY_NAME                    = ' '                                        
+ i_CUSTOMER_TYPE                   = ' '                                        
+ i_DIVISION_SUBSID                 = ' '                                        
+ i_CUST_ADDR_TYPE                  = ' '                                        
+ i_CUST_ADDR_1                     = ' '                                        
+ i_CUST_ADDR_2                     = ' '                                        
+ i_CUST_CITY                       = ' '                                        
+ i_CUST_STATE                      = ' '                                        
+ i_CUST_ZIP                        = ' '                                        
+ i_CUST_COUNTRY                    = ' '                                        
+ i_LOA                             = ' '                                        
+ i_SERV_PVDR_LOC                   = ' '                                        
+ i_LOB_IND                         = ' '                                        
+ i_TOT_BILL_INV_AMT                = ' '                                        
+ i_TRANS_SW_PKG                    = ' '                                        
+ i_PLATFORM1                       = ' '                                        
+ i_PLATFORM2                       = ' '                                        
+ i_BUS_APP_SW_PKG                  = ' '                                        
+ i_CUST_SUPP_EDI_TRAN              = ' '                                        
+ i_CUST_SUPP_EDI_VER               = ' '                                        
+ i_EIGHT_11_FLAG                   = ' '                                        
+ i_ENTERPRISE_ID                   = ' '                                        
+ i_EDI_DELIV_OPT                   = ' '                                        
+ i_EFTP_DATA_GRP_ID                = ' '                                        
+ i_EFTP_DATA_GRP_NAM               = ' '                                        
+ i_EFTP_ENTERPRISE_ID              = ' '                                        
+ i_EFTP_USER_NAME                  = ' '                                        
+ i_EFTP_VBCC_USER_ID               = ' '                                        
+ i_EFTP_USER_PHONE                 = ' '                                        
+ i_EFTP_USER_EMAIL                 = ' '                                        
+ i_EFTP_REV_LOC                    = ' '                                        
+ i_EFTP_BILL_ID                    = ' '                                        
+ i_EFTP_SEGMENT                    = ' '                                        
+ i_EFTP_APP_ACTION                 = ' '                                        
+ i_COMM_METHOD                     = ' '                                        
+ i_VAN_NAME                        = ' '                                        
+ i_EDI_ENVIRONMENT                 = ' '                                        
+ i_PROD_ISA_RCVR_QUAL              = ' '                                        
+ i_PROD_ISA_RCVR_ID                = ' '                                        
+ i_PROD_GS_RCVR_ID                 = ' '                                        
+ i_TEST_ISA_RCVR_QUAL              = ' '                                        
+ i_TEST_ISA_RCVR_ID                = ' '                                        
+ i_TEST_GS_RCVR_ID                 = ' '                                        
+ i_ASCII_EBCDIC_FLAG               = ' '                                        
+ i_PROD_SEG_TERM                   = ' '                                        
+ i_PROD_ELE_SEP                    = ' '                                        
+ i_PROD_SUB_ELE_SEP                = ' '                                        
+ i_TEST_SEG_TERM                   = ' '                                        
+ i_TEST_ELE_SEP                    = ' '                                        
+ i_TEST_SUB_ELE_SEP                = ' '                                        
+ i_F_E_CONV_FLAG                   = ' '                                        
+ i_GCS_CONV_FLAG                   = ' '                                        
+ i_IDB_CONV_FLAG                   = ' '                                        
+ i_LBS_CONV_FLAG                   = ' '                                        
+ i_IXPLUS_CONV_FLAG                = ' '                                        
+ i_MEGAVOICE_CNV_FLAG              = ' '                                        
+ i_IBRS_CONV_FLAG                  = ' '                                        
+ i_VISION_CONV_FLAG                = ' '                                        
+ i_DIGEX_CONV_FLAG                 = ' '                                        
+ i_MILLEN_CONV_FLAG                = ' '                                        
+ i_MWAN_CONV_FLAG                  = ' '                                        
+ i_SVIEW_CONV_FLAG                 = ' '                                        
+ i_CAS_IND                         = ' '                                        
+ i_REGIONAL_IND                    = ' '                                        
+ i_DATBASE_PW                      = ' '                                        
+ i_CONFIG_NAME                     = ' '                                        
+ i_SOFTWARE_VER                    = ' '                                        
+ i_MEDIA_OPT                       = ' '                                        
+ i_NAT_BILL_PAY                    = ' '                                        
+ i_MAIL_IND                        = ' '                                        
+ i_OVERNIGHT_MAIL_OPT              = ' '                                        
+ i_CONFIG_NATL_IND                 = ' '                                        
+ i_BM_CD_CHG_WAIVER                = ' '                                        
+ i_BM_CD_CHG_ACCT                  = ' '                                        
+ i_BM_CD_CHG_WAIVE_CM              = ' '                                        
+ i_CUST_COMM_EMAIL                 = ' '                                        
+ i_TPV_NAME                        = ' '                                        
+ i_DD_DELIV_OPT                    = ' '                                        
+ i_DD_AUTO_ADD_IND                 = ' '                                        
+ i_PROFILE_COMPLETE                = ' '                                        
+ i_OTH_CONTACT_INFO_1              = ' '                                        
+ i_OTH_CONTACT_INFO_2              = ' '                                        
+ i_ORIG_SYSTEM_ID                  = ' '                                        
+ i_EDI_864                         = ' '                                        
+ i_CUST_CONTRACT_ID                = ' '                                        
+ i_SFTP_MAILBOX_ID                 = ' '                                        
+ i_SFTP_MAILBOX_NAME               = ' '                                        
+ i_CALL_DETAIL_IND                 = ' '                                        
+ i_PROFILE_COMMENT                 = ' '                                        
+                                                                                
+ i_SERV_PVDR_NBR                   = 0                                          
+ i_HOLD_DAYS                       = 0                                          
+                                                                                
+                                                                                
+return                                                                          
+                                                                                
+pad_parms:                                                                      
+                                                                                
+ i_action                = pad_field(i_action               ,1)                 
+ i_BP_DAY                = pad_field(i_BP_DAY               ,2)                 
+ i_START_DATE            = pad_field(i_START_DATE           ,10)                
+ i_COMM_EDI_CUST_IND     = pad_field(i_COMM_EDI_CUST_IND    ,4)                 
+ i_PROF_STATUS_COMM      = pad_field(i_PROF_STATUS_COMM     ,50)                
+ i_COMPANY_NAME          = pad_field(i_COMPANY_NAME         ,55)                
+ i_CUSTOMER_TYPE         = pad_field(i_CUSTOMER_TYPE        ,1)                 
+ i_DIVISION_SUBSID       = pad_field(i_DIVISION_SUBSID      ,30)                
+ i_CUST_ADDR_TYPE        = pad_field(i_CUST_ADDR_TYPE       ,1)                 
+ i_CUST_ADDR_1           = pad_field(i_CUST_ADDR_1          ,30)                
+ i_CUST_ADDR_2           = pad_field(i_CUST_ADDR_2          ,30)                
+ i_CUST_CITY             = pad_field(i_CUST_CITY            ,30)                
+ i_CUST_STATE            = pad_field(i_CUST_STATE           ,2)                 
+ i_CUST_ZIP              = pad_field(i_CUST_ZIP             ,10)                
+ i_CUST_COUNTRY          = pad_field(i_CUST_COUNTRY         ,40)                
+ i_LOA                   = pad_field(i_LOA                  ,1)                 
+ i_SERV_PVDR_LOC         = pad_field(i_SERV_PVDR_LOC        ,15)                
+ i_LOB_IND               = pad_field(i_LOB_IND              ,20)                
+ i_TOT_BILL_INV_AMT      = pad_field(i_TOT_BILL_INV_AMT     ,15)                
+ i_TRANS_SW_PKG          = pad_field(i_TRANS_SW_PKG         ,10)                
+ i_PLATFORM1             = pad_field(i_PLATFORM1            ,10)                
+ i_PLATFORM2             = pad_field(i_PLATFORM2            ,10)                
+ i_BUS_APP_SW_PKG        = pad_field(i_BUS_APP_SW_PKG       ,10)                
+ i_CUST_SUPP_EDI_TRAN    = pad_field(i_CUST_SUPP_EDI_TRAN   ,10)                
+ i_CUST_SUPP_EDI_VER     = pad_field(i_CUST_SUPP_EDI_VER    ,15)                
+ i_EIGHT_11_FLAG         = pad_field(i_EIGHT_11_FLAG        ,1)                 
+ i_ENTERPRISE_ID         = pad_field(i_ENTERPRISE_ID        ,8)                 
+ i_EDI_DELIV_OPT         = pad_field(i_EDI_DELIV_OPT        ,2)                 
+ i_EFTP_DATA_GRP_ID      = pad_field(i_EFTP_DATA_GRP_ID     ,8)                 
+ i_EFTP_DATA_GRP_NAM     = pad_field(i_EFTP_DATA_GRP_NAM    ,40)                
+ i_EFTP_ENTERPRISE_ID    = pad_field(i_EFTP_ENTERPRISE_ID   ,8)                 
+ i_EFTP_USER_NAME        = pad_field(i_EFTP_USER_NAME       ,30)                
+ i_EFTP_VBCC_USER_ID     = pad_field(i_EFTP_VBCC_USER_ID    ,8)                 
+ i_EFTP_USER_PHONE       = pad_field(i_EFTP_USER_PHONE      ,12)                
+ i_EFTP_USER_EMAIL       = pad_field(i_EFTP_USER_EMAIL      ,40)                
+ i_EFTP_REV_LOC          = pad_field(i_EFTP_REV_LOC         ,20)                
+ i_EFTP_BILL_ID          = pad_field(i_EFTP_BILL_ID         ,13)                
+ i_EFTP_SEGMENT          = pad_field(i_EFTP_SEGMENT         ,15)                
+ i_EFTP_APP_ACTION       = pad_field(i_EFTP_APP_ACTION      ,15)                
+ i_COMM_METHOD           = pad_field(i_COMM_METHOD          ,10)                
+ i_VAN_NAME              = pad_field(i_VAN_NAME             ,10)                
+ i_EDI_ENVIRONMENT       = pad_field(i_EDI_ENVIRONMENT      ,1)                 
+ i_PROD_ISA_RCVR_QUAL    = pad_field(i_PROD_ISA_RCVR_QUAL   ,2)                 
+ i_PROD_ISA_RCVR_ID      = pad_field(i_PROD_ISA_RCVR_ID     ,15)                
+ i_PROD_GS_RCVR_ID       = pad_field(i_PROD_GS_RCVR_ID      ,15)                
+ i_TEST_ISA_RCVR_QUAL    = pad_field(i_TEST_ISA_RCVR_QUAL   ,2)                 
+ i_TEST_ISA_RCVR_ID      = pad_field(i_TEST_ISA_RCVR_ID     ,15)                
+ i_TEST_GS_RCVR_ID       = pad_field(i_TEST_GS_RCVR_ID      ,15)                
+ i_ASCII_EBCDIC_FLAG     = pad_field(i_ASCII_EBCDIC_FLAG    ,1)                 
+ i_PROD_SEG_TERM         = pad_field(i_PROD_SEG_TERM        ,2)                 
+ i_PROD_ELE_SEP          = pad_field(i_PROD_ELE_SEP         ,2)                 
+ i_PROD_SUB_ELE_SEP      = pad_field(i_PROD_SUB_ELE_SEP     ,2)                 
+ i_TEST_SEG_TERM         = pad_field(i_TEST_SEG_TERM        ,2)                 
+ i_TEST_ELE_SEP          = pad_field(i_TEST_ELE_SEP         ,2)                 
+ i_TEST_SUB_ELE_SEP      = pad_field(i_TEST_SUB_ELE_SEP     ,2)                 
+ i_F_E_CONV_FLAG         = pad_field(i_F_E_CONV_FLAG        ,1)                 
+ i_GCS_CONV_FLAG         = pad_field(i_GCS_CONV_FLAG        ,1)                 
+ i_IDB_CONV_FLAG         = pad_field(i_IDB_CONV_FLAG        ,1)                 
+ i_LBS_CONV_FLAG         = pad_field(i_LBS_CONV_FLAG        ,1)                 
+ i_IXPLUS_CONV_FLAG      = pad_field(i_IXPLUS_CONV_FLAG     ,1)                 
+ i_MEGAVOICE_CNV_FLAG    = pad_field(i_MEGAVOICE_CNV_FLAG   ,1)                 
+ i_IBRS_CONV_FLAG        = pad_field(i_IBRS_CONV_FLAG       ,1)                 
+ i_VISION_CONV_FLAG      = pad_field(i_VISION_CONV_FLAG     ,1)                 
+ i_DIGEX_CONV_FLAG       = pad_field(i_DIGEX_CONV_FLAG      ,1)                 
+ i_MILLEN_CONV_FLAG      = pad_field(i_MILLEN_CONV_FLAG     ,1)                 
+ i_MWAN_CONV_FLAG        = pad_field(i_MWAN_CONV_FLAG       ,1)                 
+ i_SVIEW_CONV_FLAG       = pad_field(i_SVIEW_CONV_FLAG      ,1)                 
+ i_CAS_IND               = pad_field(i_CAS_IND              ,1)                 
+ i_REGIONAL_IND          = pad_field(i_REGIONAL_IND         ,4)                 
+ i_DATBASE_PW            = pad_field(i_DATBASE_PW           ,7)                 
+ i_CONFIG_NAME           = pad_field(i_CONFIG_NAME          ,20)                
+ i_SOFTWARE_VER          = pad_field(i_SOFTWARE_VER         ,3)                 
+ i_MEDIA_OPT             = pad_field(i_MEDIA_OPT            ,1)                 
+ i_NAT_BILL_PAY          = pad_field(i_NAT_BILL_PAY         ,1)                 
+ i_MAIL_IND              = pad_field(i_MAIL_IND             ,1)                 
+ i_OVERNIGHT_MAIL_OPT    = pad_field(i_OVERNIGHT_MAIL_OPT   ,1)                 
+ i_CONFIG_NATL_IND       = pad_field(i_CONFIG_NATL_IND      ,1)                 
+ i_BM_CD_CHG_WAIVER      = pad_field(i_BM_CD_CHG_WAIVER     ,1)                 
+ i_BM_CD_CHG_ACCT        = pad_field(i_BM_CD_CHG_ACCT       ,20)                
+ i_BM_CD_CHG_WAIVE_CM    = pad_field(i_BM_CD_CHG_WAIVE_CM   ,50)                
+ i_CUST_COMM_EMAIL       = pad_field(i_CUST_COMM_EMAIL      ,40)                
+ i_TPV_NAME              = pad_field(i_TPV_NAME             ,30)                
+ i_DD_DELIV_OPT          = pad_field(i_DD_DELIV_OPT         ,1)                 
+ i_DD_AUTO_ADD_IND       = pad_field(i_DD_AUTO_ADD_IND      ,1)                 
+ i_PROFILE_COMPLETE      = pad_field(i_PROFILE_COMPLETE     ,1)                 
+ i_OTH_CONTACT_INFO_1    = pad_field(i_OTH_CONTACT_INFO_1   ,50)                
+ i_OTH_CONTACT_INFO_2    = pad_field(i_OTH_CONTACT_INFO_2   ,50)                
+ i_ORIG_SYSTEM_ID        = pad_field(i_ORIG_SYSTEM_ID       ,2)                 
+ i_EDI_864               = pad_field(i_EDI_864              ,1)                 
+ i_CUST_CONTRACT_ID      = pad_field(i_CUST_CONTRACT_ID     ,15)                
+ i_SFTP_MAILBOX_ID       = pad_field(i_SFTP_MAILBOX_ID      ,10)                
+ i_SFTP_MAILBOX_NAME     = pad_field(i_SFTP_MAILBOX_NAME    ,20)                
+ i_CALL_DETAIL_IND       = pad_field(i_CALL_DETAIL_IND      ,1)                 
+ i_PROFILE_COMMENT       = pad_field(i_PROFILE_COMMENT      ,500)               
+                                                                                
+                                                                                
+return                                                                          
+                                                                                
+CALL_THE_SP:                                                                    
+                                                                                
+ app_user_id = 'V275365             '                                           
+ user_id     = 'V275365'                                                        
+ user_name   = 'Derek Strachan'                                                 
+ debug_level = ' '                                                              
+ return_code = 0                                                                
+ reason_code = pad_field('',8)                                                  
+ error_text  = pad_field('',2000)                                               
+                                                                                
+ sp_sqlcode  = 0                                                                
+ sp_sqltokens= pad_field(' ',70)                                                
+                                                                                
+ sp_sqlstate = '     '                                                          
+                                                                                
+ say 'calling sp:' PROC                                                         
+ say 'parms'                                                                    
+ say 'app_user_id ' app_user_id                                                 
+ say 'debug_level ' debug_level                                                 
+ say 'return_code ' return_code                                                 
+ say 'reason_code ' reason_code                                                 
+ say 'sp_sqlcode  ' sp_sqlcode                                                  
+ say 'sp_sqltokens' sp_sqltokens                                                
+ say 'sp_sqlstate ' sp_sqlstate                                                 
+ say 'config_subs_oid=' i_oid                                                   
+ say 'ACTION= ' i_action                                                        
+                                                                                
+ ADDRESS DSNREXX "EXECSQL",                                                     
+         "CALL" PROC "(:APP_USER_ID,",                                          
+                     ":USER_ID,",                                               
+                     ":USER_NAME,",                                             
+                     ":DEBUG_LEVEL,",                                           
+                     ":RETURN_CODE,",                                           
+                     ":REASON_CODE,",                                           
+                     ":ERROR_TEXT,",                                            
+                     ":SP_SQLCODE,",                                            
+                     ":SP_SQLTOKENS,",                                          
+                     ":SP_SQLSTATE,",                                           
+                     ":I_OID,",                                                 
+                     ":I_SUBSCRIBER_OID,",                                      
+                     ":I_ACTION,",                                              
+                     ":I_BP_DAY,",                                              
+                     ":I_START_DATE,",                                          
+                     ":I_COMM_EDI_CUST_IND,",                                   
+                     ":I_PROF_STATUS_COMM,",                                    
+                     ":I_COMPANY_NAME,",                                        
+                     ":I_CUSTOMER_TYPE,",                                       
+                     ":I_DIVISION_SUBSID,",                                     
+                     ":I_CUST_ADDR_TYPE,",                                      
+                     ":I_CUST_ADDR_1,",                                         
+                     ":I_CUST_ADDR_2,",                                         
+                     ":I_CUST_CITY,",                                           
+                     ":I_CUST_STATE,",                                          
+                     ":I_CUST_ZIP,",                                            
+                     ":I_CUST_COUNTRY,",                                        
+                     ":I_LOA,",                                                 
+                     ":I_SERV_PVDR_LOC,",                                       
+                     ":I_LOB_IND,",                                             
+                     ":I_TOT_BILL_INV_AMT,",                                    
+                     ":I_TRANS_SW_PKG,",                                        
+                     ":I_PLATFORM1,",                                           
+                     ":I_PLATFORM2,",                                           
+                     ":I_BUS_APP_SW_PKG,",                                      
+                     ":I_CUST_SUPP_EDI_TRAN,",                                  
+                     ":I_CUST_SUPP_EDI_VER,",                                   
+                     ":I_EIGHT_11_FLAG,",                                       
+                     ":I_ENTERPRISE_ID,",                                       
+                     ":I_EDI_DELIV_OPT,",                                       
+                     ":I_EFTP_DATA_GRP_ID,",                                    
+                     ":I_EFTP_DATA_GRP_NAM,",                                   
+                     ":I_EFTP_ENTERPRISE_ID,",                                  
+                     ":I_EFTP_USER_NAME,",                                      
+                     ":I_EFTP_VBCC_USER_ID,",                                   
+                     ":I_EFTP_USER_PHONE,",                                     
+                     ":I_EFTP_USER_EMAIL,",                                     
+                     ":I_EFTP_REV_LOC,",                                        
+                     ":I_EFTP_BILL_ID,",                                        
+                     ":I_EFTP_SEGMENT,",                                        
+                     ":I_EFTP_APP_ACTION,",                                     
+                     ":I_COMM_METHOD,",                                         
+                     ":I_VAN_NAME,",                                            
+                     ":I_EDI_ENVIRONMENT,",                                     
+                     ":I_PROD_ISA_RCVR_QUAL,",                                  
+                     ":I_PROD_ISA_RCVR_ID,",                                    
+                     ":I_PROD_GS_RCVR_ID,",                                     
+                     ":I_TEST_ISA_RCVR_QUAL,",                                  
+                     ":I_TEST_ISA_RCVR_ID,",                                    
+                     ":I_TEST_GS_RCVR_ID,",                                     
+                     ":I_ASCII_EBCDIC_FLAG,",                                   
+                     ":I_PROD_SEG_TERM,",                                       
+                     ":I_PROD_ELE_SEP,",                                        
+                     ":I_PROD_SUB_ELE_SEP,",                                    
+                     ":I_TEST_SEG_TERM,",                                       
+                     ":I_TEST_ELE_SEP,",                                        
+                     ":I_TEST_SUB_ELE_SEP,",                                    
+                     ":I_F_E_CONV_FLAG,",                                       
+                     ":I_GCS_CONV_FLAG,",                                       
+                     ":I_IDB_CONV_FLAG,",                                       
+                     ":I_LBS_CONV_FLAG,",                                       
+                     ":I_IXPLUS_CONV_FLAG,",                                    
+                     ":I_MEGAVOICE_CNV_FLAG,",                                  
+                     ":I_IBRS_CONV_FLAG,",                                      
+                     ":I_VISION_CONV_FLAG,",                                    
+                     ":I_DIGEX_CONV_FLAG,",                                     
+                     ":I_MILLEN_CONV_FLAG,",                                    
+                     ":I_MWAN_CONV_FLAG,",                                      
+                     ":I_SVIEW_CONV_FLAG,",                                     
+                     ":I_CAS_IND,",                                             
+                     ":I_REGIONAL_IND,",                                        
+                     ":I_DATBASE_PW,",                                          
+                     ":I_CONFIG_NAME,",                                         
+                     ":I_SOFTWARE_VER,",                                        
+                     ":I_MEDIA_OPT,",                                           
+                     ":I_NAT_BILL_PAY,",                                        
+                     ":I_MAIL_IND,",                                            
+                     ":I_OVERNIGHT_MAIL_OPT,",                                  
+                     ":I_CONFIG_NATL_IND,",                                     
+                     ":I_BM_CD_CHG_WAIVER,",                                    
+                     ":I_BM_CD_CHG_ACCT,",                                      
+                     ":I_BM_CD_CHG_WAIVE_CM,",                                  
+                     ":I_CUST_COMM_EMAIL,",                                     
+                     ":I_TPV_NAME,",                                            
+                     ":I_DD_DELIV_OPT,",                                        
+                     ":I_DD_AUTO_ADD_IND,",                                     
+                     ":I_PROFILE_COMPLETE,",                                    
+                     ":I_OTH_CONTACT_INFO_1,",                                  
+                     ":I_OTH_CONTACT_INFO_2,",                                  
+                     ":I_ORIG_SYSTEM_ID,",                                      
+                     ":I_EDI_864,",                                             
+                     ":I_CUST_CONTRACT_ID,",                                    
+                     ":I_SFTP_MAILBOX_ID,",                                     
+                     ":I_SFTP_MAILBOX_NAME,",                                   
+                     ":I_CALL_DETAIL_IND,",                                     
+                     ":I_PROFILE_COMMENT,",                                     
+                     ":I_SERV_PVDR_NBR,",                                       
+                     ":I_HOLD_DAYS )"                                           
+                                                                                
+ IF SQLCODE ^= 0 & sqlcode ^= 466                                               
+ then do                                                                        
+      SAY 'ERROR calling sp:' PROC                                              
+      CALL NEWSQLCA                                                             
+      exit 12                                                                   
+      END                                                                       
+                                                                                
+ say 'back from sp'                                                             
+ say 'return_code  = ' return_code                                              
+ say 'reason_code  = ' reason_code                                              
+ say 'error_text   = ' error_text                                               
+                                                                                
+ say 'values of in/out parms'                                                   
+ say 'i_subscriber_oid          :'  I_subscriber_oid                            
+ say 'i_action                  :'  I_action                                    
+ say 'i_BP_DAY                  :'  I_BP_DAY                                    
+ say 'i_START_DATE              :'  I_START_DATE                                
+ say 'i_COMM_EDI_CUST_IND       :'  I_COMM_EDI_CUST_IND                         
+ say 'i_PROF_STATUS_COMM        :'  I_PROF_STATUS_COMM                          
+ say 'i_COMPANY_NAME            :'  I_COMPANY_NAME                              
+ say 'i_CUSTOMER_TYPE           :'  I_CUSTOMER_TYPE                             
+ say 'i_DIVISION_SUBSID         :'  I_DIVISION_SUBSID                           
+ say 'i_CUST_ADDR_TYPE          :'  I_CUST_ADDR_TYPE                            
+ say 'i_CUST_ADDR_1             :'  I_CUST_ADDR_1                               
+ say 'i_CUST_ADDR_2             :'  I_CUST_ADDR_2                               
+ say 'i_CUST_CITY               :'  I_CUST_CITY                                 
+ say 'i_CUST_STATE              :'  I_CUST_STATE                                
+ say 'i_CUST_ZIP                :'  I_CUST_ZIP                                  
+ say 'i_CUST_COUNTRY            :'  I_CUST_COUNTRY                              
+ say 'i_LOA                     :'  I_LOA                                       
+ say 'i_SERV_PVDR_LOC           :'  I_SERV_PVDR_LOC                             
+ say 'i_LOB_IND                 :'  I_LOB_IND                                   
+ say 'i_TOT_BILL_INV_AMT        :'  I_TOT_BILL_INV_AMT                          
+ say 'i_TRANS_SW_PKG            :'  I_TRANS_SW_PKG                              
+ say 'i_PLATFORM1               :'  I_PLATFORM1                                 
+ say 'i_PLATFORM2               :'  I_PLATFORM2                                 
+ say 'i_BUS_APP_SW_PKG          :'  I_BUS_APP_SW_PKG                            
+ say 'i_CUST_SUPP_EDI_TRAN      :'  I_CUST_SUPP_EDI_TRAN                        
+ say 'i_CUST_SUPP_EDI_VER       :'  I_CUST_SUPP_EDI_VER                         
+ say 'i_EIGHT_11_FLAG           :'  I_EIGHT_11_FLAG                             
+ say 'i_ENTERPRISE_ID           :'  I_ENTERPRISE_ID                             
+ say 'i_EDI_DELIV_OPT           :'  I_EDI_DELIV_OPT                             
+ say 'i_EFTP_DATA_GRP_ID        :'  I_EFTP_DATA_GRP_ID                          
+ say 'i_EFTP_DATA_GRP_NAM       :'  I_EFTP_DATA_GRP_NAM                         
+ say 'i_EFTP_ENTERPRISE_ID      :'  I_EFTP_ENTERPRISE_ID                        
+ say 'i_EFTP_USER_NAME          :'  I_EFTP_USER_NAME                            
+ say 'i_EFTP_VBCC_USER_ID       :'  I_EFTP_VBCC_USER_ID                         
+ say 'i_EFTP_USER_PHONE         :'  I_EFTP_USER_PHONE                           
+ say 'i_EFTP_USER_EMAIL         :'  I_EFTP_USER_EMAIL                           
+ say 'i_EFTP_REV_LOC            :'  I_EFTP_REV_LOC                              
+ say 'i_EFTP_BILL_ID            :'  I_EFTP_BILL_ID                              
+ say 'i_EFTP_SEGMENT            :'  I_EFTP_SEGMENT                              
+ say 'i_EFTP_APP_ACTION         :'  I_EFTP_APP_ACTION                           
+ say 'i_COMM_METHOD             :'  I_COMM_METHOD                               
+ say 'i_VAN_NAME                :'  I_VAN_NAME                                  
+ say 'i_EDI_ENVIRONMENT         :'  I_EDI_ENVIRONMENT                           
+ say 'i_PROD_ISA_RCVR_QUAL      :'  I_PROD_ISA_RCVR_QUAL                        
+ say 'i_PROD_ISA_RCVR_ID        :'  I_PROD_ISA_RCVR_ID                          
+ say 'i_PROD_GS_RCVR_ID         :'  I_PROD_GS_RCVR_ID                           
+ say 'i_TEST_ISA_RCVR_QUAL      :'  I_TEST_ISA_RCVR_QUAL                        
+ say 'i_TEST_ISA_RCVR_ID        :'  I_TEST_ISA_RCVR_ID                          
+ say 'i_TEST_GS_RCVR_ID         :'  I_TEST_GS_RCVR_ID                           
+ say 'i_ASCII_EBCDIC_FLAG       :'  I_ASCII_EBCDIC_FLAG                         
+ say 'i_PROD_SEG_TERM           :'  I_PROD_SEG_TERM                             
+ say 'i_PROD_ELE_SEP            :'  I_PROD_ELE_SEP                              
+ say 'i_PROD_SUB_ELE_SEP        :'  I_PROD_SUB_ELE_SEP                          
+ say 'i_TEST_SEG_TERM           :'  I_TEST_SEG_TERM                             
+ say 'i_TEST_ELE_SEP            :'  I_TEST_ELE_SEP                              
+ say 'i_TEST_SUB_ELE_SEP        :'  I_TEST_SUB_ELE_SEP                          
+ say 'i_F_E_CONV_FLAG           :'  I_F_E_CONV_FLAG                             
+ say 'i_GCS_CONV_FLAG           :'  I_GCS_CONV_FLAG                             
+ say 'i_IDB_CONV_FLAG           :'  I_IDB_CONV_FLAG                             
+ say 'i_LBS_CONV_FLAG           :'  I_LBS_CONV_FLAG                             
+ say 'i_IXPLUS_CONV_FLAG        :'  I_IXPLUS_CONV_FLAG                          
+ say 'i_MEGAVOICE_CNV_FLAG      :'  I_MEGAVOICE_CNV_FLAG                        
+ say 'i_IBRS_CONV_FLAG          :'  I_IBRS_CONV_FLAG                            
+ say 'i_VISION_CONV_FLAG        :'  I_VISION_CONV_FLAG                          
+ say 'i_DIGEX_CONV_FLAG         :'  I_DIGEX_CONV_FLAG                           
+ say 'i_MILLEN_CONV_FLAG        :'  I_MILLEN_CONV_FLAG                          
+ say 'i_MWAN_CONV_FLAG          :'  I_MWAN_CONV_FLAG                            
+ say 'i_SVIEW_CONV_FLAG         :'  I_SVIEW_CONV_FLAG                           
+ say 'i_CAS_IND                 :'  I_CAS_IND                                   
+ say 'i_REGIONAL_IND            :'  I_REGIONAL_IND                              
+ say 'i_DATBASE_PW              :'  I_DATBASE_PW                                
+ say 'i_CONFIG_NAME             :'  I_CONFIG_NAME                               
+ say 'i_SOFTWARE_VER            :'  I_SOFTWARE_VER                              
+ say 'i_MEDIA_OPT               :'  I_MEDIA_OPT                                 
+ say 'i_NAT_BILL_PAY            :'  I_NAT_BILL_PAY                              
+ say 'i_MAIL_IND                :'  I_MAIL_IND                                  
+ say 'i_OVERNIGHT_MAIL_OPT      :'  I_OVERNIGHT_MAIL_OPT                        
+ say 'i_CONFIG_NATL_IND         :'  I_CONFIG_NATL_IND                           
+ say 'i_BM_CD_CHG_WAIVER        :'  I_BM_CD_CHG_WAIVER                          
+ say 'i_BM_CD_CHG_ACCT          :'  I_BM_CD_CHG_ACCT                            
+ say 'i_BM_CD_CHG_WAIVE_CM      :'  I_BM_CD_CHG_WAIVE_CM                        
+ say 'i_CUST_COMM_EMAIL         :'  I_CUST_COMM_EMAIL                           
+ say 'i_TPV_NAME                :'  I_TPV_NAME                                  
+ say 'i_DD_DELIV_OPT            :'  I_DD_DELIV_OPT                              
+ say 'i_DD_AUTO_ADD_IND         :'  I_DD_AUTO_ADD_IND                           
+ say 'i_PROFILE_COMPLETE        :'  I_PROFILE_COMPLETE                          
+ say 'i_OTH_CONTACT_INFO_1      :'  I_OTH_CONTACT_INFO_1                        
+ say 'i_OTH_CONTACT_INFO_2      :'  I_OTH_CONTACT_INFO_2                        
+ say 'i_ORIG_SYSTEM_ID          :'  I_ORIG_SYSTEM_ID                            
+ say 'i_EDI_864                 :'  I_EDI_864                                   
+ say 'i_CUST_CONTRACT_ID        :'  I_CUST_CONTRACT_ID                          
+ say 'i_SFTP_MAILBOX_ID         :'  I_SFTP_MAILBOX_ID                           
+ say 'i_SFTP_MAILBOX_NAME       :'  I_SFTP_MAILBOX_NAME                         
+ say 'i_CALL_DETAIL_IND         :'  I_CALL_DETAIL_IND                           
+ say 'i_PROFILE_COMMENT         :'  I_PROFILE_COMMENT                           
+                                                                                
+RETURN                                                                          
+                                                                                
+describe_resultset:                                                             
+                                                                                
+/****************************************************************/              
+/*  Get information about result sets returned by the           */              
+/*  stored procedure.                                           */              
+/****************************************************************/              
+                                                                                
+  ADDRESS DSNREXX "EXECSQL DESCRIBE PROCEDURE :PROC INTO :SQLDA"                
+  IF SQLCODE ^= 0 THEN CALL SQLCA                                               
+                                                                                
+  DO I = 1 TO SQLDA.SQLD                                                        
+     SAY "SQLDA."I".SQLNAME    ="SQLDA.I.SQLNAME";"                             
+     SAY "SQLDA."I".SQLTYPE    ="SQLDA.I.SQLTYPE";"                             
+     SAY "SQLDA."I".SQLLOCATOR ="SQLDA.I.SQLLOCATOR";"                          
+     SAY "SQLDA."I".SQLESTIMATE="SQLDA.I.SQLESTIMATE";"                         
+  END I                                                                         
+                                                                                
+                                                                                
+return                                                                          
+                                                                                
+get_resultset:                                                                  
+ /****************************************************************/             
+ /*  Set up a cursor to retrieve the rows from the result        */             
+ /*  set.                                                        */             
+ /****************************************************************/             
+                                                                                
+ ADDRESS DSNREXX "EXECSQL ASSOCIATE LOCATOR (:RESULT) WITH PROCEDURE ",         
+  ":PROC"                                                                       
+                                                                                
+ IF SQLCODE ^= 0 THEN CALL SQLCA                                                
+                                                                                
+ SAY RESULT                                                                     
+                                                                                
+ ADDRESS DSNREXX "EXECSQL ALLOCATE C101 CURSOR FOR RESULT SET :RESULT"          
+                                                                                
+ IF SQLCODE ^= 0 THEN CALL SQLCA                                                
+                                                                                
+ CURSOR = 'C101'                                                                
+ ADDRESS DSNREXX "EXECSQL DESCRIBE CURSOR :CURSOR INTO :SQLDA"                  
+ IF SQLCODE ^= 0 THEN CALL SQLCA                                                
+                                                                                
+ fetch_string  = "EXECSQL FETCH C101 INTO "                                     
+                                                                                
+  DO I = 1 TO SQLDA.SQLD                                                        
+  /* SAY "SQLDA."I".SQLNAME    ="SQLDA.I.SQLNAME";"  */                         
+  /* SAY "SQLDA."I".SQLTYPE    ="SQLDA.I.SQLTYPE";"  */                         
+     fetch_string = fetch_string||':'||sqlda.i.sqlname                          
+     if i < sqlda.sqld                                                          
+     then fetch_string = fetch_string||","                                      
+  END I                                                                         
+                                                                                
+  say fetch_string                                                              
+                                                                                
+ /****************************************************************/             
+ /*  Retrieve and display the rows from the result set, which    */             
+ /*  contain the command output message text.                    */             
+ /****************************************************************/             
+ DO UNTIL(SQLCODE ^= 0)                                                         
+   ADDRESS DSNREXX fetch_string                                                 
+   IF SQLCODE = 0                                                               
+   then do                                                                      
+        SAY "sqlcode is good, now how to display it "                           
+        do i = 1 to sqlda.sqld                                                  
+           interpret 'temp_var = ' sqlda.i.sqlname                              
+           len = length(sqlda.i.sqlname)                                        
+           pad = ''                                                             
+           if len < 18                                                          
+           then do                                                              
+                do j = 1 to (18 - len)                                          
+                  pad = pad || ' '                                              
+                end                                                             
+                end                                                             
+           say sqlda.i.sqlname pad ' = ' strip(temp_var)                        
+        END                                                                     
+        END                                                                     
+ END                                                                            
+                                                                                
+ IF SQLCODE ^= 0 & SQLCODE ^= 100 THEN CALL SQLCA                               
+ ADDRESS DSNREXX "EXECSQL CLOSE C101"                                           
+ IF SQLCODE ^= 0 THEN CALL SQLCA                                                
+ ADDRESS DSNREXX "EXECSQL COMMIT"                                               
+ IF SQLCODE ^= 0 THEN CALL SQLCA                                                
+                                                                                
+                                                                                
+return                                                                          
+                                                                                
+/************* SQL ERROR ROUTINE *************/                                 
+SQLCA:                                                                          
+   SAY "SQLSTATE =" SQLSTATE                                                    
+   SAY "SQLWARN =" SQLWARN.1",",                                                
+               || SQLWARN.2",",                                                 
+               || SQLWARN.3",",                                                 
+               || SQLWARN.4",",                                                 
+               || SQLWARN.5",",                                                 
+               || SQLWARN.6",",                                                 
+               || SQLWARN.7",",                                                 
+               || SQLWARN.8",",                                                 
+               || SQLWARN.9",",                                                 
+               || SQLWARN.10""                                                  
+   SAY "SQLERRD =" SQLERRD.1",",                                                
+               || SQLERRD.2",",                                                 
+               || SQLERRD.3",",                                                 
+               || SQLERRD.4",",                                                 
+               || SQLERRD.5",",                                                 
+               || SQLERRD.6                                                     
+   SAY "SQLERRP  =" SQLERRP                                                     
+   SAY "SQLERRMC =" SQLERRMC                                                    
+   SAY "SQLCODE  =" SQLCODE                                                     
+   RETURN                                                                       
+                                                                                
+/************* SQL ERROR ROUTINE *************/                                 
+NEWSQLCA:                                                                       
+                                                                                
+if right(sqlerrmc,1) <> 'FF'x then sqlerrmc = sqlerrmc || 'FF'x                 
+if sqlwarna          <> 'W'   then sqlwarna = ' '                               
+                                                                                
+SQLCA = 'SQLCA   '||,                                                           
+        x2c(d2x(136,8))||,                                                      
+        X2C(D2X(SQLCODE,8))||,                                                  
+        x2c(d2x(length(sqlerrmc),4))||,                                         
+        left(sqlerrmc,70)||,                                                    
+        left(SQLERRP,8)||,                                                      
+        x2c(d2x(sqlerrd.1,8))||,                                                
+        x2c(d2x(sqlerrd.2,8))||,                                                
+        x2c(d2x(sqlerrd.3,8))||,                                                
+        x2c(d2x(sqlerrd.4,8))||,                                                
+        x2c(d2x(sqlerrd.5,8))||,                                                
+        x2c(d2x(sqlerrd.6,8))||,                                                
+        left(SQLWARN.1,1)||,                                                    
+        left(SQLWARN.2,1)||,                                                    
+        left(SQLWARN.3,1)||,                                                    
+        left(SQLWARN.4,1)||,                                                    
+        left(SQLWARN.5,1)||,                                                    
+        left(SQLWARN.6,1)||,                                                    
+        left(SQLWARN.7,1)||,                                                    
+        left(SQLWARN.8,1)||,                                                    
+        left(SQLWARN.9,1)||,                                                    
+        left(SQLWARN.10,1)||,                                                   
+        left(SQLWARNA,1)||,                                                     
+        left(SQLSTATE,5)                                                        
+                                                                                
+message_llen  = 79                                                              
+message_lines = 12                                                              
+message_area  = x2c(d2x(message_llen*message_lines,4))||,                       
+                copies(' ',message_llen*message_lines)                          
+message_lrecl = x2c(d2x(message_llen,8))                                        
+address linkpgm "DSNTIAR sqlca message_area message_lrecl"                      
+message_line_start = 3                                                          
+                                                                                
+do messagei = 1 to message_lines                                                
+  message_line = substr(message_area,message_line_start,message_llen)           
+  message_line_start = message_line_start + message_llen                        
+  if message_line = '' then ITERATE                                             
+  msgtext=strip(message_line)                                                   
+  rc= say_msg(0)                                                                
+end                                                                             
+                                                                                
+msgtext='SQLSTATE='SQLSTATE                                                     
+rc= say_msg(0)                                                                  
+msgtext='SQLWARN ='SQLWARN.0",",                                                
+            || SQLWARN.1",",                                                    
+            || SQLWARN.2",",                                                    
+            || SQLWARN.3",",                                                    
+            || SQLWARN.4",",                                                    
+            || SQLWARN.5",",                                                    
+            || SQLWARN.6",",                                                    
+            || SQLWARN.7",",                                                    
+            || SQLWARN.8",",                                                    
+            || SQLWARN.9",",                                                    
+            || SQLWARN.10                                                       
+rc= say_msg(0)                                                                  
+msgtext='SQLERRD ='SQLERRD.1",",                                                
+            || SQLERRD.2",",                                                    
+            || SQLERRD.3",",                                                    
+            || SQLERRD.4",",                                                    
+            || SQLERRD.5",",                                                    
+            || SQLERRD.6                                                        
+rc= say_msg(0)                                                                  
+msgtext='SQLERRP  ='SQLERRP                                                     
+rc= say_msg(0)                                                                  
+msgtext='SQLERRMC ='SQLERRMC                                                    
+rc= say_msg(0)                                                                  
+msgtext='SQLCODE  ='SQLCODE                                                     
+rc= say_msg(0)                                                                  
+                                                                                
+if sqlstmt <> '' & sqlerrd.5 > 0 then                                           
+  do                                                                            
+    do i_text_pos = 1 to length(sqlstmt) by 72                                  
+      msgtext=substr(sqlstmt,i_text_pos,72)                                     
+      rc= say_msg(0)                                                            
+      if (sqlerrd.5 >= i_text_pos) &,                                           
+         (sqlerrd.5 <= i_text_pos+71) then                                      
+        do                                                                      
+          i_syn_pos = sqlerrd.5 - i_text_pos + 1                                
+          select                                                                
+            when i_syn_pos = 1 then                                             
+              syn_err_message = '|<- ThereØs a syntax error here *****'         
+            when i_syn_pos < 5 then                                             
+              syn_err_message = copies('*',i_syn_pos-1)||,                      
+                                '|<- ThereØs a syntax error here *****'         
+            when i_syn_pos < 34 then                                            
+              syn_err_message = '****'copies(' ',i_syn_pos-5)||,                
+                                '|<- ThereØs a syntax error here *****'         
+            otherwise                                                           
+              syn_err_message = '****'copies(' ',i_syn_pos-30)||,               
+                                'ThereØs a syntax error here ->| *****'         
+          end                                                                   
+          msgtext=syn_err_message                                               
+           rc= say_msg(0)                                                       
+       end                                                                      
+     end                                                                        
+   end                                                                          
+                                                                                
+return                                                                          
+                                                                                
+pad_field:                                                                      
+arg fl,len                                                                      
+                                                                                
+pad_fl = "'"left(fl,len,' ')"'"                                                 
+                                                                                
+return pad_fl                                                                   
+                                                                                
+                                                                                
+SAY_MSG:                                                                        
+arg bl                                                                          
+if datatype(msgtext.0) = 'NUM' then ,                                           
+   do m=1 to msgtext.0                                                          
+      m=right(m,2,0)                                                            
+      say msgtext.m                                                             
+   end                                                                          
+else ,                                                                          
+   do                                                                           
+      say msgtext                                                               
+   end                                                                          
+do bl                                                                           
+   say ' '                                                                      
+end                                                                             
+drop msgtext.                                                                   
+RETURN 1                                                                        
+                                                                                
+/*************  SYNTAX ERROR HANDLER **********/                                
+CRAPCODE:                                                                       
+SAY 'YOU HAVE CRAP CODE AT LINE' SIGL                                           
+SAY SOURCELINE(SIGL)                                                            
+SAY 'REXX GAVE A RETURN CODE OF' RC ', WHICH MEANS :'                           
+SAY ERRORTEXT(RC)                                                               
+EXIT                                                                            
+/************* EXTERNAL ERROR HANDLER **********/                               
+BADDIES:                                                                        
+SAY 'YOU HAVE BEEN LET DOWN BY FACTORS BEYOND YOUR CONTROL AT LINE' SIGL        
+SAY SOURCELINE(SIGL)                                                            
+SAY 'RC =' RC                                                                   
+EXIT                                                                            

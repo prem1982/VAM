@@ -1,0 +1,94 @@
+/* REXX */                                                                      
+/***********************************************************************        
+* THIS ROUTINE WILL SCAN AN SQLOUT FILE AND COLLAPSE THE OUTPUT                 
+* COMMONLY USED TO CHECK IF ACCOUNTS EXIST IN PRODUCTION.                       
+***********************************************************************/        
+ARG  INPUTFILE OUTPUTFILE                                                       
+/*                                                                              
+   TRACE R                                                                      
+ MSGS=MSG(ON)                                                                   
+  */                                                                            
+/* FOR DEBUGGING  */                                                            
+SAY  "INPUT  "  INPUTFILE                                                       
+SAY  "OUTPUT "  OUTPUTFILE                                                      
+/* END DEBUGGING  */                                                            
+                                                                                
+I = 0                                                                           
+NUMBERDELTAS = 0                                                                
+RTNRC = 0                                                                       
+MAXRC = 0                                                                       
+                                                                                
+"FREE FI(INPUTFILE, OUTPUTFILE)"                                                
+                                                                                
+/* NOW READ THE COMPFILE TO CREATE TO COMPLETE NEW AND OLD FILE NAMES */        
+"EXECIO * DISKR "INPUTFILE" (STEM REC. FINIS"                                   
+"FREE FI(INPUTFILE) "                                                           
+SAY 'NUMBER OF LINES IN INPUT FILE = ' REC.0                                    
+SAY '---------------------------------------'                                   
+                                                                                
+DO IX = 1 TO REC.0                                                              
+      COMPNAME = WORD(REC.IX,1)                                                 
+      CALL COMPARE                                                              
+END                                                                             
+                                                                                
+SAY 'NUMBER OF FILES COMPARED = ' I                                             
+SAY 'NUMBER OF DELTAS         = ' NUMBERDELTAS                                  
+IF NUMBERDELTAS > 0 THEN MAXRC = 1                                              
+RETURN MAXRC                                                                    
+/* END OF MAIN ROUTINE */                                                       
+                                                                                
+/*---------------------------------------------------------------------         
+* CREATE DSNAMES AND MAKE SURE FILES EXIST                                      
+*--------------------------------------------------------------------*/         
+COMPARE:                                                                        
+NEWDD = NEWHLQ"."COMPNAME"."CYCLE                                               
+OLDDD = OLDHLQ"."COMPNAME"."CYCLE                                               
+OUTDD = OUTHLQ"("COMPNAME")"                                                    
+SYSIN = CARDFILE"("COMPNAME")"                                                  
+SYSCARD = 0                                                                     
+                                                                                
+IF (SYSDSN("'"NEWDD"'") = "OK"  & ,                                             
+    SYSDSN("'"OLDDD"'") = "OK") THEN DO                                         
+   /* ALLOCATE OLD AND NEW FILES, AND OUTPUT MEMBER */                          
+/* "ALLOC DATASET('"NEWDD"') DDN(NEWDD) SHR" */                                 
+   "ALLOC DATASET('"NEWDD"') DDN(NEWDD) OLD"                                    
+/* "ALLOC DATASET('"OLDDD"') DDN(OLDDD) OLD" */                                 
+   "ALLOC DATASET('"OLDDD"') DDN(OLDDD) SHR"                                    
+/* "ALLOC DATASET('"OUTDD"') DDN(OUTDD) OLD" */                                 
+   "ALLOC DATASET('"OUTDD"') DDN(OUTDD) SHR"                                    
+    I = I + 1                                                                   
+   /* DETERMINE IF SYSIN PARAMETERS ARE REQUIRED */                             
+   IF SYSDSN("'"SYSIN"'") = "OK" THEN DO                                        
+/*   "ALLOC DATASET('"SYSIN"') DDN(SYSIN) OLD"  */                              
+     "ALLOC DATASET('"SYSIN"') DDN(SYSIN) SHR"                                  
+     SYSCARD = 1                                                                
+   END                                                                          
+/*---------------------------------------------------------------------         
+* INVOKE SUPERC ROUTINE                                                         
+*--------------------------------------------------------------------*/         
+/*  CALL SUPERC  */                                                             
+  "CALL 'SYS1.SISPLPA(ISRSUPC)' 'OVSUML,LINECMP,,'"                             
+   RTNRC = RC                                                                   
+                                                                                
+   IF RTNRC > 0 THEN DO                                                         
+      IF RTNRC = 1 THEN DO                                                      
+        NUMBERDELTAS = NUMBERDELTAS + 1                                         
+        SAY COMPNAME ' HAD DIFFERENCES DETECTED. SEE MEMBER IN 'OUTHLQ          
+      END                                                                       
+      ELSE IF RTNRC = 28 THEN DO                                                
+        SAY COMPNAME ' IS AN EMPTY FILE'                                        
+      END                                                                       
+      ELSE DO                                                                   
+        SAY 'UNEXPECTED RETURN CODE 'RTNRC' ON ' COMPNAME                       
+      END                                                                       
+   END                                                                          
+   ELSE SAY COMPNAME ' IS IDENTICAL'                                            
+                                                                                
+  RTNRC = 0                                                                     
+  "FREE   FI(NEWDD,OLDDD,OUTDD) "                                               
+  IF SYSCARD = 1 THEN "FREE   FI(SYSIN) "                                       
+END                                                                             
+ELSE SAY COMPNAME ' OLD OR NEW FILE NOT FOUND IN CATALOG'                       
+                                                                                
+RETURN                                                                          
+                                                                                

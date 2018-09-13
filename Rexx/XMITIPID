@@ -1,0 +1,137 @@
+        /* --------------------  rexx procedure  -------------------- *         
+         * Name:      XMITIPID                                        *         
+         *                                                            *         
+         * Function:  Test the validity of an e-mail address          *         
+         *            by accessing a ldap mail address server         *         
+         *                                                            *         
+         * Syntax:    %xmitipid address                               *         
+         *                                                            *         
+         * Return:    0 = successful - address found                  *         
+         *            4 = address not found                           *         
+         *            8 = ldap server did not respond                 *         
+         *                                                            *         
+         * Author:    Lionel B. Dyck                                  *         
+         *            Kaiser Permanente Information Technology        *         
+         *            Walnut Creek, CA 94598                          *         
+         *            (925) 926-5332                                  *         
+         *            Internet: lionel.b.dyck@kp.org                  *         
+         *                                                            *         
+         * Customizations Required: see below for *custom*            *         
+         *                                                            *         
+         * NOTE: If you do not want to use this exec then find *exit* *         
+         *                                                            *         
+         * It should be noted that customizations for this exec are   *         
+         * not included in XMITIPCU for various reasons (trust me).   *         
+         *                                                            *         
+         * Assumptions:                                               *         
+         *   1. GLD.SGLDLNK is in your linklist                       *         
+         *                                                            *         
+         * History:                                                   *         
+         *            11/05/01 - test for idval of 3 and exit         *         
+         *            10/10/01 - clean up ldap variables              *         
+         *            06/21/01 - fix gldsrch in case user does not    *         
+         *                       have an omvs racf segment.           *         
+         *            05/29/01 - xmitipcu char option                 *         
+         *            04/26/01 - add AtSign support                   *         
+         *            11/21/00 - clean up                             *         
+         *            11/09/00 - creation                             *         
+         *                                                            *         
+         * ---------------------------------------------------------- */        
+         arg address                                                            
+                                                                                
+        /* ----------------------------------------------------- *              
+         * Invoke XMITIPCU for local customization values        *              
+         * ----------------------------------------------------- */             
+        cu = xmitipcu()                                                         
+                                                                                
+        /* ----------------------------------------------------- *              
+         * parse the customization defaults to use them here     *              
+         * ----------------------------------------------------- */             
+        /*FEC 20010423: AtSign Support                           */             
+        parse value cu with center "/" zone "/" smtp "/" ,                      
+                vio "/" smtp_secure "/" smtp_address "/" ,                      
+                smtp_domain "/" font "/" tenter "/" ,                           
+                sysout_class "/" from_center "/" writer "/" ,                   
+                mtop "/" mbottom "/" mleft "/" mright "/" ,                     
+                host "/" name "/" domain "/" from_default ,                     
+                "/" append_domain "/" zip_type "/" zip_load "/" ,               
+                zip_unit "/" interlink "/" size_limit "/" ,                     
+                b64_load "/" batch_idval "/" create_dsn_lrecl ,                 
+                "/" receipt_type "/" paper_size "/" file_suf ,                  
+                "/" mail_relay "/" AtSign "/" ispffrom "/" char                 
+                                                                                
+        /* --------------------------------------------------------- *          
+         * Test for Batch_IDVal of 3 and exit if so                  *          
+         * --------------------------------------------------------- */         
+         if batch_idval = 3 then exit 0                                         
+                                                                                
+        /* Ensure correct Email-Address translation for ldap : */               
+        LdapAtSign    = "@"                                                     
+        AtSign        = left(strip(AtSign),1,LdapAtSign)                        
+        if AtSign \= LdapAtSign then                                            
+           address = translate(address,LdapAtSign,AtSign)                       
+                                                                                
+        /* ----------------------------------------------------- *              
+         * *CUSTOM* - Local Customizations required              *              
+         *  ldap_s is the ldap server with mail addresses        *              
+         *        note: a value of zero disables this code       *              
+         *  ldap_o is the name of your organization              *              
+         *  ldap_c is your country abbreviation                  *              
+         *  local_nodes is your local ip address(s) - all others *              
+         *             will be ignored                           *              
+         *             e.g. kp.org notes.kp.org                  *              
+         * ----------------------------------------------------- *              
+         *  IF in doubt as your ldap admin.                      *              
+         * ----------------------------------------------------- */             
+         x=xmitldap()                                                           
+         parse value x with ldap_s "/" ldap_o "/" local_nodes                   
+         if ldap_s = 0 then exit 0                                              
+         ldap_s = strip(ldap_s)                                                 
+         ldap_o = strip(ldap_o)                                                 
+                                                                                
+        /* ----------------------------------------------------- *              
+         * Setup work                                            *              
+         * ----------------------------------------------------- */             
+         work_dd = "ldap"random(999)                                            
+        "Alloc f("work_dd") new spa(1,1) tr"                                    
+                                                                                
+        /* ----------------------------------------------------- *              
+         * Test to see if the address node is one we want to chk *              
+         * ----------------------------------------------------- */             
+         parse value address with . (LdapAtSign) node                           
+         local_nodes = translate(local_nodes)                                   
+         if wordpos(node,local_nodes) = 0 then signal out_a_here                
+                                                                                
+        /* ----------------------------------------------------- *              
+         * Call the LDAP Search command                          *              
+         * ----------------------------------------------------- */             
+         cmd = 'GLDSRCH ENVAR("LIBPATH=/")' ,                                   
+               '/ -h' ldap_s '-b "'ldap_o'"' ,                                  
+               '"mail='address'"',                                              
+               ">DD:"work_dd                                                    
+         cmd                                                                    
+         x_rc = rc                                                              
+                                                                                
+        /* ----------------------------------------------------- *              
+         * Test for results, if any                              *              
+         * ----------------------------------------------------- */             
+         "Execio * diskr" work_dd "(finis stem ldap."                           
+         call msg 'off'                                                         
+         "Free f("work_dd")"                                                    
+                                                                                
+        /* ----------------------------------------------------- *              
+         * If the return from the search is 1 then server not ok *              
+         * ----------------------------------------------------- */             
+         if x_rc = 1 then exit 8                                                
+                                                                                
+        /* ----------------------------------------------------- *              
+         * Return code 0 is good, 4 means not found              *              
+         * ----------------------------------------------------- */             
+         if ldap.0 = 0 then exit 4                                              
+                       else exit 0                                              
+        /* ----------------------------------------------------- *              
+         * Leave                                                 *              
+         * ----------------------------------------------------- */             
+         Out_A_Here:                                                            
+            "Free f("work_dd")"                                                 
+            exit 0                                                              

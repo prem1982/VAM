@@ -1,0 +1,31 @@
+/*REXX*/                                                                        
+ARG TESTID MODULE                                                               
+CARDDSN = "'"TESTID"."MODULE".LINK.SYSIN'"                                      
+SELECT                                                                          
+   WHEN MODULE = 'SAMS100C' THEN DO                                             
+                                    ENTRY = 'SAMS100C'                          
+                                    PRODLIB = 'PRODLIB'                         
+                                    LOADMOD = 'SAMS100C'                        
+                                    INSWITCH = '1'                              
+                                 END                                            
+   OTHERWISE                     DO                                             
+                                    ENTRY = MODULE                              
+                                    PRODLIB = 'PRODLIB'                         
+                                    LOADMOD = MODULE                            
+                                    INSWITCH = '0'                              
+                                 END                                            
+END                                                                             
+/*  */                                                                          
+"FREE FI(CARDDSN)"                                                              
+"DELETE "CARDDSN                                                                
+"ALLOC FI(CARDDSN) DA("CARDDSN") NEW TRACKS SPACE(1,1)"                         
+QUEUE ' ENTRY 'ENTRY                                                            
+QUEUE ' INCLUDE SYSLIB('MODULE')'                                               
+QUEUE ' INCLUDE SYSLIB(DSNRLI)'                                                 
+IF INSWITCH = '1' THEN DO                                                       
+   QUEUE ' INCLUDE 'PRODLIB'('LOADMOD')'                                        
+                  END                                                           
+QUEUE ' NAME 'LOADMOD'(R)'                                                      
+QUEUE                                                                           
+"EXECIO * DISKW CARDDSN (FINIS"                                                 
+"FREE FI(CARDDSN)"                                                              

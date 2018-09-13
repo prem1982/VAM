@@ -1,0 +1,12 @@
+/*REXX STORPROC: REXX TO CREATE DB2 STORED PROCEDURE */                         
+ARG TESTID DB2DB DB2TS                                                          
+/****************************************************/                          
+/****       CREATE TERM UTILITY CARDS           *****/                          
+/****************************************************/                          
+STATSCDS = TESTID".RUNSTATS."DB2DB"."DB2TS                                      
+"FREE FI(STATSCDS)"                                                             
+"DELETE '"STATSCDS"'"                                                           
+"ALLOC FI(STATSCDS) DA('"STATSCDS"') NEW"                                       
+QUEUE " RUNSTATS TABLESPACE "DB2DB"."DB2TS" INDEX(ALL) SHRLEVEL"                
+"EXECIO * DISKW STATSCDS (FINIS"                                                
+"FREE FI(STATSCDS)"                                                             

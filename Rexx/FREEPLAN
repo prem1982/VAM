@@ -1,0 +1,14 @@
+/*REXX FREEPLAN: REXX TO CREATE DB2 FREE CARDS */                       00010004
+ARG TESTID PLANNAME DB2SYS                                              00020008
+/****************************************************/                  00021004
+/****       CREATE FREE STORED PROCEDURE CARDS  *****/                  00022004
+/****************************************************/                  00023004
+FREECDS = TESTID".FREEPLAN."PLANNAME"."DB2SYS                           00024004
+"FREE FI(FREECDS)"                                                      00025004
+"DELETE '"FREECDS"'"                                                    00026004
+"ALLOC FI(FREECDS) DA('"FREECDS"') NEW"                                 00027004
+QUEUE "DSN SYSTEM("DB2SYS")"                                            00028004
+QUEUE "   FREE PLAN ("PLANNAME")"                                       00029008
+QUEUE "END"                                                             00029104
+"EXECIO * DISKW FREECDS (FINIS"                                         00029204
+"FREE FI(FREECDS)"                                                      00029304

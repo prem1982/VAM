@@ -1,0 +1,161 @@
+/*REXX EDISTATS:REXX TO CALCULATE EDI AND MAGTAPE STATS*/                       
+ARG HILVL YYYY MM                                                               
+/***** GET MONTH/YEAR SYMBOLICS *****/                                          
+BPMON  = YYYY'-'MM                                                              
+SAY 'BPMON='BPMON                                                               
+MMM    = GETMMM(MM)                                                             
+/***** DEFINE DATASET NAMES *****/                                              
+PATHNM = HILVL".EDI."MMM||YYYY                                                  
+DTLSE1 = HILVL"."MMM||YYYY".E1.DETAILS"                                         
+STATSE1 = HILVL"."MMM||YYYY".E1.STATS"                                          
+DTLSM1 = HILVL"."MMM||YYYY".M1.DETAILS"                                         
+STATSM1 = HILVL"."MMM||YYYY".M1.STATS"                                          
+/***** SCRATCH OUTPUT DATSETS *****/                                            
+"DELETE '"DTLSE1"'"                                                             
+"DELETE '"STATSE1"'"                                                            
+"DELETE '"DTLSM1"'"                                                             
+"DELETE '"STATSM1"'"                                                            
+/***** ALLOCATE UNIX DATASET AS LISTIN *****/                                   
+"FREE FI(LISTIN)"                                                               
+"ALLOC FI(LISTIN) DA('"PATHNM"') SHR"                                           
+/***** ALLOC REPORT/OUTPUT DATSETS *****/                                       
+"ALLOC FI(STATSE1) DA('"STATSE1"') NEW CATALOG DATACLAS(PSVB) LRECL(80)"        
+"ALLOC FI(DTLSE1) DA('"DTLSE1"') NEW CATALOG DATACLAS(PSVB) LRECL(4096)"        
+"ALLOC FI(STATSM1) DA('"STATSM1"') NEW CATALOG DATACLAS(PSVB) LRECL(80)"        
+"ALLOC FI(DTLSM1) DA('"DTLSM1"') NEW CATALOG DATACLAS(PSVB) LRECL(4096)"        
+/***** INITIALIZE ARRAY FOR HOLDING COUNTS *****/                               
+ARRY.0 = 2310                                                                   
+DO TX = 1 TO ARRY.0                                                             
+   ARRY.TX = 0                                                                  
+END                                                                             
+/***** LOOP TO READ INPUT DATASET AND ACCUMULATE COUNTS ****/                   
+"EXECIO 1      DISKR LISTIN (STEM LISTREC."                                     
+INCNT = 0                                                                       
+DO WHILE LISTREC.0 > 0                                                          
+   DO TX = 1 TO LISTREC.0                                                       
+      LNGX = LENGTH(LISTREC.TX)                                                 
+      INCNT = INCNT + 1                                                         
+      BPMM = SUBSTR(LISTREC.TX,15,7)                                            
+      OSYS = SUBSTR(LISTREC.TX,26,2)                                            
+      ODIS = SUBSTR(LISTREC.TX,29,2)                                            
+      GOGO = 'N'                                                                
+      IF ODIS = 'E1' THEN GOGO = 'Y'                                            
+      IF ODIS = 'M1' THEN GOGO = 'Y'                                            
+      IF BPMM ^= BPMON THEN GOGO = 'N'                                          
+      IF GOGO = 'Y' THEN                                                        
+        DO                                                                      
+         QUEUE LISTREC.TX                                                       
+         QUEUE                                                                  
+         SELECT                                                                 
+           WHEN ODIS = 'E1' THEN "EXECIO * DISKW DTLSE1"                        
+           OTHERWISE "EXECIO * DISKW DTLSM1"                                    
+         END                                                                    
+         LNG = LENGTH(LISTREC.TX) - 38                                          
+         INSTR = SUBSTR(LISTREC.TX,39,LNG)                                      
+         XARR.0 = 0                                                             
+         BEG = 1                                                                
+         XSTR = ''                                                              
+         DO WHILE BEG <= LNG                                                    
+             XCH = SUBSTR(INSTR,BEG,1)                                          
+             IF XCH = '|' THEN                                                  
+                DO                                                              
+                   XARR.0 = XARR.0 + 1                                          
+                   VV = XARR.0                                                  
+                   XARR.VV = XSTR                                               
+                   XSTR = ''                                                    
+                   IF VV = 8 THEN BEG = LNG                                     
+               END                                                              
+             ELSE                                                               
+               DO                                                               
+                   XSTR = XSTR||XCH                                             
+               END                                                              
+             BEG = BEG + 1                                                      
+         END                                                                    
+         XARR.0 = XARR.0 + 1                                                    
+         VV = XARR.0                                                            
+         XARR.VV = XSTR                                                         
+         Z1 = 0                                                                 
+         IF ODIS = 'E1' THEN Z1 = (OSYS * 10) + 1                               
+         IF ODIS = 'M1' THEN Z1 = (OSYS * 10) + 6                               
+         IF Z1 ^= 0 THEN                                                        
+            DO                                                                  
+                Z2 = Z1 + 1                                                     
+                Z3 = Z1 + 2                                                     
+                Z4 = Z1 + 3                                                     
+                Z5 = Z1 + 4                                                     
+                ARRY.Z1 = ARRY.Z1 + 1                                           
+                ONTIME = 'Y'                                                    
+                IF XARR.4 > 5 THEN ONTIME = 'N'                                 
+                IF XARR.6 > 7 THEN ONTIME = 'N'                                 
+                IF XARR.8 > 9 THEN ONTIME = 'N'                                 
+                IF ONTIME = 'Y' THEN ARRY.Z2 = ARRY.Z2 + 1                      
+                IF XARR.6 > 7 THEN ARRY.Z3 = ARRY.Z3 + 1                        
+                IF XARR.8 > 9 THEN ARRY.Z4 = ARRY.Z4 + 1                        
+            END                                                                 
+        END                                                                     
+   END                                                                          
+   IF INCNT = 10000 THEN SAY 'UP TO 10000 INPUT RECS'                           
+   IF INCNT = 100000 THEN SAY 'UP TO 100000 INPUT RECS'                         
+   IF INCNT = 250000 THEN SAY 'UP TO 250000 INPUT RECS'                         
+   IF INCNT = 500000 THEN SAY 'UP TO 500000 INPUT RECS'                         
+   IF INCNT = 1000000 THEN SAY 'UP TO 1000000 INPUT RECS'                       
+   IF INCNT = 2000000 THEN SAY 'UP TO 2000000 INPUT RECS'                       
+   IF INCNT = 5000000 THEN SAY 'UP TO 5000000 INPUT RECS'                       
+   IF INCNT = 10000000 THEN SAY 'UP TO 10000000 INPUT RECS'                     
+   "EXECIO 1      DISKR LISTIN (STEM LISTREC."                                  
+END                                                                             
+"EXECIO 0 DISKR LISTIN (STEM LISTREC. FINIS"                                    
+"FREE FI(LISTIN)"                                                               
+QUEUE                                                                           
+"EXECIO * DISKW DTLSE1 (FINIS"                                                  
+QUEUE                                                                           
+"EXECIO * DISKW DTLSM1 (FINIS"                                                  
+/***** GO BACK THRU STATS AND WRITE EDI COUNTS ****/                            
+DO VSYS = 1 TO 23                                                               
+   Z1 = (VSYS * 10) + 1                                                         
+   XSYS = VSYS                                                                  
+   IF VSYS < 10 THEN XSYS = '0'VSYS                                             
+   Z2 = Z1 + 1                                                                  
+   Z3 = Z1 + 2                                                                  
+   Z4 = Z1 + 3                                                                  
+   IF ARRY.Z1 = 0 THEN                                                          
+      DO                                                                        
+         PCTX = 0.00                                                            
+      END                                                                       
+   ELSE                                                                         
+      DO                                                                        
+         PCTX = (ARRY.Z2/ARRY.Z1) * 100                                         
+      END                                                                       
+      PCTY = DECPLACE(PCTX 2)                                                   
+   QUEUE BPMON'|'XSYS'|'ARRY.Z1'|'ARRY.Z2'|'ARRY.Z3'|'ARRY.Z4'|'PCTY            
+END                                                                             
+QUEUE                                                                           
+"EXECIO * DISKW STATSE1 (FINIS"                                                 
+/***** GO BACK THRU STATS AND WRITE MAG TAPE COUNTS *****/                      
+TX = 1                                                                          
+DO VSYS = 1 TO 23                                                               
+   Z1 = (VSYS * 10) + 6                                                         
+   XSYS = VSYS                                                                  
+   IF VSYS < 10 THEN XSYS = '0'VSYS                                             
+   Z2 = Z1 + 1                                                                  
+   Z3 = Z1 + 2                                                                  
+   Z4 = Z1 + 3                                                                  
+   IF ARRY.Z1 = 0 THEN                                                          
+      DO                                                                        
+         PCTX = 0.00                                                            
+      END                                                                       
+   ELSE                                                                         
+      DO                                                                        
+         PCTX = (ARRY.Z2/ARRY.Z1) * 100                                         
+      END                                                                       
+      PCTY = DECPLACE(PCTX 2)                                                   
+   QUEUE BPMON'|'XSYS'|'ARRY.Z1'|'ARRY.Z2'|'ARRY.Z3'|'ARRY.Z4'|'PCTY            
+END                                                                             
+QUEUE                                                                           
+"EXECIO * DISKW STATSM1 (FINIS"                                                 
+/***** FREE DDS ASSOCIATED WITH REPORTS *****/                                  
+"FREE FI(STATSE1)"                                                              
+"FREE FI(DTLSE1)"                                                               
+"FREE FI(STATSM1)"                                                              
+"FREE FI(DTLSM1)"                                                               
+EXIT                                                                            

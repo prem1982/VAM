@@ -1,0 +1,59 @@
+    SELECT HDR258.ACCT_NBR                                                      
+          ,HDR258.ACCT_ALIAS                                                    
+          ,' ' GBR                                                              
+          ,HDR258.COST_CNTR                                                     
+          ,HDR258.WTN                                                           
+          ,HDR258.CUST_ID_CD                                                    
+          ,CASE SUBSTR(CHAR(HDR258.FROM_DATE),6,2)                              
+                 WHEN '01' THEN 'Jan'                                           
+                 WHEN '02' THEN 'Feb'                                           
+                 WHEN '03' THEN 'Mar'                                           
+                 WHEN '04' THEN 'Apr'                                           
+                 WHEN '05' THEN 'May'                                           
+                 WHEN '06' THEN 'Jun'                                           
+                 WHEN '07' THEN 'Jul'                                           
+                 WHEN '08' THEN 'Aug'                                           
+                 WHEN '09' THEN 'Sep'                                           
+                 WHEN '10' THEN 'Oct'                                           
+                 WHEN '11' THEN 'Nov'                                           
+                 ELSE 'Dec' END                                                 
+               || ' ' || SUBSTR(CHAR(HDR258.FROM_DATE),3,2)                     
+              FROM_DATE                                                         
+           ,CASE SUBSTR(CHAR(HDR258.THRU_DATE),6,2)                             
+                 WHEN '01' THEN 'Jan'                                           
+                 WHEN '02' THEN 'Feb'                                           
+                 WHEN '03' THEN 'Mar'                                           
+                 WHEN '04' THEN 'Apr'                                           
+                 WHEN '05' THEN 'May'                                           
+                 WHEN '06' THEN 'Jun'                                           
+                 WHEN '07' THEN 'Jul'                                           
+                 WHEN '08' THEN 'Aug'                                           
+                 WHEN '09' THEN 'Sep'                                           
+                 WHEN '10' THEN 'Oct'                                           
+                 WHEN '11' THEN 'Nov'                                           
+                 ELSE 'Dec' END                                                 
+               || ' ' || SUBSTR(CHAR(HDR258.THRU_DATE),3,2)                     
+              THRU_DATE                                                         
+         FROM (                                                                 
+           SELECT %CONSTANT1% ACCT_NBR                                          
+                 ,DTS.FROM_DATE                                                 
+                 ,DTS.THRU_DATE                                                 
+                 ,WTN% WTN                                                      
+                 ,%CONSTANT2% COST_CNTR                                         
+                 ,%CONSTANT3% CUST_ID_CD                                        
+                 ,ACCT_ALIAS% ACCT_ALIAS                                        
+             FROM SYSIBM.SYSDUMMY1                                              
+            INNER JOIN (                                                        
+              SELECT 1 LINE_NO                                                  
+               ,DATE(CASE WHEN FROM_DATE% = ' ' THEN                            
+                 SUBSTR(CHAR(CURRENT DATE),1,8)                                 
+                      || '01'                                                   
+                ELSE FROM_DATE% END) FROM_DATE                                  
+               ,CASE WHEN THRU_DATE% = ' ' THEN                                 
+                 DATE(SUBSTR(CHAR(CURRENT DATE),1,8)                            
+                      || '01') + 1 MONTH - 1 DAY                                
+                ELSE DATE(THRU_DATE%) END THRU_DATE                             
+                FROM SYSIBM.SYSDUMMY1                                           
+              ) DTS                                                             
+            ON DTS.LINE_NO = 1                                                  
+       ) HDR258                                                                 

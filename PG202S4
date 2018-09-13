@@ -1,0 +1,8 @@
+SELECT SC1.DESCRIPTION                                                          
+FROM                                                                            
+( SELECT IN1.TEXT_1 AS DESCRIPTION                                              
+FROM BMGVZP.TEXT_FYI_T IN1                                                      
+WHERE IN1.RECORD_NBR = 72                                                       
+AND IN1.MAN = '9L9I0OQYP'                                                       
+AND IN1.MAN_BILL_DATE = '2012-03-23'                                            
+AND IN1.TEXT_TYPE = 'FNT') SC1                                                  

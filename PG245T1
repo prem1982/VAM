@@ -1,0 +1,115 @@
+ SELECT 'Total' ACCT_NBR                                                        
+    ,CASE WHEN ALIAS_FLAG% <> 'Y' THEN ''                                       
+          ELSE ' ' END ACCT_ALIAS                                               
+    ,' ' WTN                                                                    
+    ,' ' CUST_ID_CD                                                             
+    ,' ' USER_ID                                                                
+    ,' ' PLAN_DESC                                                              
+    ,' ' COST_CNTR                                                              
+    ,CHAR(SUM(SC1.ACCT_CHGS)) ACCT_CHGS                                         
+    ,CHAR(SUM(SC1.VOICE_CHGS)) VOICE_CHGS                                       
+    ,CHAR(SUM(SC1.ACCESS_CHGS)) ACCESS_CHGS                                     
+    ,CHAR(SUM(SC1.EQUIP_CHGS)) EQUIP_CHGS                                       
+    ,CHAR(SUM(SC1.ROAMER_CHGS)) ROAMER_CHGS                                     
+    ,CHAR(SUM(SC1.MSG_CHGS))    MSG_CHGS                                        
+    ,CHAR(SUM(SC1.DATA_USAGE_CHGS)) DATA_USAGE_CHGS                             
+    ,CHAR(SUM(SC1.OTHER_CHGS)) OTHER_CHGS                                       
+    ,CHAR(SUM(SC1.TAX_SURCHGS)) TAX_SURCHGS                                     
+    ,CHAR(SUM(SC1.THIRD_PARTY_LINE)) THIRD_PARTY_LINE                           
+    ,CHAR(SUM(SC1.TOT_CURR_CHGS)) TOT_CURR_CHGS                                 
+   FROM (                                                                       
+     SELECT INR.MAN                                                             
+           ,INR.WTN                                                             
+           ,CASE WHEN INR.CUST_ID_CD = ' ' THEN 'No User Name'                  
+                 ELSE INR.CUST_ID_CD END CUST_ID_CD                             
+           ,CASE WHEN INR.USER_ID = ' ' THEN 'No User ID'                       
+                 ELSE INR.USER_ID END USER_ID                                   
+           ,INR.ACCT_NBR                                                        
+           ,CASE WHEN ALIAS_FLAG% = 'Y'                                         
+                   THEN INR.ACCT_ALIAS || ' '                                   
+                ELSE '' END ACCT_ALIAS                                          
+           ,MAX(INR.MAN_BILL_DATE) MAN_BILL_DATE                                
+           ,INR.LAST_BILL_DATE                                                  
+           ,CASE WHEN INR.COST_CNTR = ' ' THEN 'No Cost Center'                 
+                 ELSE INR.COST_CNTR END COST_CNTR                               
+           ,CASE WHEN INR.EMAIL_ID = ' ' THEN 'No Email Address'                
+                 ELSE INR.EMAIL_ID END EMAIL_ID                                 
+           ,INR.PLAN_DESC                                                       
+           ,SUM(INR.ACCT_CHGS) ACCT_CHGS                                        
+           ,SUM(INR.MONTHLY_CHGS) ACCESS_CHGS                                   
+           ,SUM(INR.EQUIP_CHGS) EQUIP_CHGS                                      
+           ,SUM(INR.VOICE_CHGS) VOICE_CHGS                                      
+           ,SUM(INR.DATA_CHGS) DATA_USAGE_CHGS                                  
+           ,SUM(INR.MSG_CHGS)  MSG_CHGS                                         
+           ,SUM(INR.ROAMER_CHGS) ROAMER_CHGS                                    
+           ,SUM(INR.OTHER_CHGS) OTHER_CHGS                                      
+           ,SUM(INR.TAXES_SURCHGS) TAX_SURCHGS                                  
+           ,SUM(INR.THIRD_PARTY_LINE) THIRD_PARTY_LINE                          
+           ,SUM(INR.ACCT_CHGS                                                   
+              + INR.MONTHLY_CHGS                                                
+              + INR.EQUIP_CHGS                                                  
+              + INR.VOICE_CHGS                                                  
+              + INR.DATA_CHGS                                                   
+              + INR.MSG_CHGS                                                    
+              + INR.ROAMER_CHGS                                                 
+              + INR.OTHER_CHGS                                                  
+              + INR.THIRD_PARTY_LINE                                            
+              + INR.TAXES_SURCHGS) TOT_CURR_CHGS                                
+        FROM (                                                                  
+      SELECT STG.MAN                                                            
+            ,STG.WTN                                                            
+            ,STG.VCH_50_A CUST_ID_CD                                            
+            ,STG.VCH_50_C USER_ID                                               
+            ,STG.WIRELESS_DAN ACCT_NBR                                          
+            ,STG.ACCT_ALIAS                                                     
+            ,STG.MAN_BILL_DATE                                                  
+            ,STG.BILL_DATE LAST_BILL_DATE                                       
+            ,STG.VCH_500_B || ' ' PLAN_DESC                                     
+            ,STG.VCH_50_B COST_CNTR                                             
+            ,STG.VCH_100_B EMAIL_ID                                             
+            ,CASE WHEN ACCTLVL.LOW_MTN IS NULL THEN 0                           
+                  WHEN ACCTLVL.LOW_MTN = STG.WTN                                
+                           THEN ACCTLVL.LOW_MTN_CHGS                            
+                  ELSE ACCTLVL.MTN_CHGS                                         
+              END ACCT_CHGS                                                     
+            ,STG.AMT_1 MONTHLY_CHGS                                             
+            ,STG.AMT_2 EQUIP_CHGS                                               
+            ,STG.AMT_3 VOICE_CHGS                                               
+            ,STG.AMT_4 DATA_CHGS                                                
+            ,STG.AMT_5 ROAMER_CHGS                                              
+            ,STG.AMT_6 OTHER_CHGS                                               
+            ,STG.AMT_7 TAXES_SURCHGS                                            
+            ,STG.AMT_11 MSG_CHGS                                                
+            ,STG.AMT_13 THIRD_PARTY_LINE                                        
+        FROM STG_LOB_RPT_T        STG                                           
+       LEFT OUTER JOIN (                                                        
+      SELECT STG.MAN                                                            
+            ,STG.MAN_BILL_DATE                                                  
+            ,STG.WTN  AS LOW_MTN                                                
+            ,SUM(STG.CHG_AMT) TOT_ACCT_CHGS                                     
+            ,SUM(STG.AMT_3) MTN_CHGS                                            
+            ,SUM(STG.AMT_1) LOW_MTN_CHGS                                        
+        FROM STG_LOB_RPT_T        STG                                           
+       WHERE STG.REPORT_ID_TS = ?                                               
+         AND STG.LINE_NUM < 0                                                   
+      GROUP BY STG.MAN                                                          
+            ,STG.MAN_BILL_DATE                                                  
+            ,STG.WTN                                                            
+                ) ACCTLVL                                                       
+          ON STG.MAN = ACCTLVL.MAN                                              
+         AND STG.MAN_BILL_DATE = ACCTLVL.MAN_BILL_DATE                          
+       WHERE STG.REPORT_ID_TS = ?                                               
+         AND STG.LINE_NUM >= 0                                                  
+         ) INR                                                                  
+     GROUP BY INR.MAN                                                           
+           ,INR.WTN                                                             
+           ,INR.CUST_ID_CD                                                      
+           ,INR.USER_ID                                                         
+           ,INR.ACCT_NBR                                                        
+           ,INR.ACCT_ALIAS                                                      
+           ,INR.LAST_BILL_DATE                                                  
+           ,INR.COST_CNTR                                                       
+           ,INR.EMAIL_ID                                                        
+           ,INR.PLAN_DESC                                                       
+       ) SC1                                                                    
+  WFILTER = ?                                                                   

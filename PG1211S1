@@ -1,0 +1,83 @@
+ SELECT  SC1.LAST_NAME                                                          
+        ,SC1.FIRST_NAME                                                         
+        ,SC1.USER_ID                                                            
+        ,SC1.ROLE_NAME                                                          
+        ,SC1.EMAIL                                                              
+        ,SC1.CONTACT_NUM                                                        
+        ,SC1.PUSH_TO_TALK                                                       
+        ,SC1.GRP_COMM                                                           
+        ,SC1.MTM                                                                
+        ,SC1.SPLIT_BILL                                                         
+        ,SC1.EMAP                                                               
+        ,SC1.PCID                                                               
+        ,SC1.BOB                                                                
+      FROM (                                                                    
+    SELECT UP.LOGIN_ID USER_ID                                                  
+          ,PS.FIRST_NAME                                                        
+          ,PS.LAST_NAME                                                         
+          ,VR.ROLE_NAME                                                         
+          ,MAX(CASE WHEN PC.CONTACT_TYPE_OID = 0                                
+                      OR PC.CONTACT_TYPE_OID = 6                                
+                 THEN PC.EMAIL ELSE ' ' END) EMAIL                              
+          ,MAX(CASE WHEN PC.CONTACT_TYPE_OID = 1                                
+                 THEN CONTACT_INFO ELSE ' ' END) CONTACT_NUM                    
+          ,MAX(CASE                                                             
+           WHEN US.PERMISSION_OID IS NULL THEN 'N'                              
+           WHEN US.PERMISSION_OID = 1804 THEN 'Y'                               
+                 ELSE 'N'                                                       
+           END) PUSH_TO_TALK                                                    
+          ,MAX(CASE                                                             
+           WHEN US.PERMISSION_OID IS NULL THEN 'N'                              
+           WHEN US.PERMISSION_OID = 1773 THEN 'Y'                               
+                 ELSE 'N'                                                       
+           END) GRP_COMM                                                        
+          ,MAX(CASE                                                             
+           WHEN US.PERMISSION_OID IS NULL THEN 'N'                              
+           WHEN US.PERMISSION_OID = 1702 THEN 'Y'                               
+           WHEN US.PERMISSION_OID = 1709 THEN 'Y'                               
+                 ELSE 'N'                                                       
+           END) MTM                                                             
+          ,MAX(CASE                                                             
+           WHEN US.PERMISSION_OID IS NULL THEN 'N'                              
+           WHEN US.PERMISSION_OID = 1557 THEN 'Y'                               
+                 ELSE 'N'                                                       
+           END) SPLIT_BILL                                                      
+          ,MAX(CASE                                                             
+           WHEN US.PERMISSION_OID IS NULL THEN 'N'                              
+           WHEN US.PERMISSION_OID = 1952 THEN 'Y'                               
+                 ELSE 'N'                                                       
+           END) EMAP                                                            
+          ,MAX(CASE                                                             
+           WHEN US.PERMISSION_OID IS NULL THEN 'N'                              
+           WHEN US.PERMISSION_OID = 1966 THEN 'Y'                               
+                 ELSE 'N'                                                       
+           END) PCID                                                            
+          ,MAX(CASE                                                             
+           WHEN US.PERMISSION_OID IS NULL THEN 'N'                              
+           WHEN US.PERMISSION_OID = 2506 THEN 'Y'                               
+                 ELSE 'N'                                                       
+           END) BOB                                                             
+         FROM USER_PROFILE UPA                                                  
+        INNER JOIN USER_SB_MAP SBA                                              
+           ON UPA.USER_OID   = SBA.USER_OID                                     
+        INNER JOIN USER_SB_MAP SB                                               
+           ON SBA.SUBSCRIBER_OID   = SB.SUBSCRIBER_OID                          
+        INNER JOIN USER_PROFILE UP                                              
+           ON UP.USER_OID   = SB.USER_OID                                       
+          AND UP.STATUS = 'A'                                                   
+        INNER JOIN PERSON PS                                                    
+           ON UP.PERSON_OID = PS.PERSON_OID                                     
+        INNER JOIN PERSON_CONTACT PC                                            
+           ON UP.PERSON_OID = PC.PERSON_OID                                     
+        INNER JOIN USER_PERMISSION_MAP US                                       
+           ON UP.USER_OID   = US.USER_OID                                       
+        INNER JOIN VZW_ROLE   VR                                                
+           ON SB.VZW_ROLE_OID = VR.VZW_ROLE_OID                                 
+       WHERE UPA.LOGIN_ID = LOGIN_ID%                                           
+    GROUP BY UP.LOGIN_ID                                                        
+          ,PS.FIRST_NAME                                                        
+          ,PS.LAST_NAME                                                         
+          ,VR.ROLE_NAME                                                         
+    ) SC1                                                                       
+                                                                                
+  WFILTER = ?                                                                   

@@ -1,0 +1,11 @@
+/*REXX RUNTASK: REXX TO EXEC PGM VIA NDM PROCESS*/                              
+ARG TESTID REMOTDSN LOCALDSN NOTIFYID                                           
+PROCCRDS = TESTID".RUNTASK.DATASET.NAMES"                                       
+NOTIFYID = SYSVAR(SYSUID)                                                       
+/****************************************************/                          
+"FREE FI(PROCCRDS)"                                                             
+"DELETE '"PROCCRDS"'"                                                           
+"ALLOC FI(PROCCRDS) DA('"PROCCRDS"') NEW"                                       
+QUEUE "   SUB PROC=RUNTASK -"                                                   
+"EXECIO * DISKW PROCCRDS (FINIS"                                                
+"FREE FI(PROCCRDS)"                                                             

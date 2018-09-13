@@ -1,0 +1,89 @@
+   SELECT SC1.WTN                                                               
+       ,'S' SELECT_LINK                                                         
+       ,'204' TARGET_PAGE_ID                                                    
+       ,'ALL' TARGET_SUBSET                                                     
+       ,'MAN = ' || X'7D' || SC1.MAN  || X'7D'                                  
+          || ' AND MAN_BILL_DATE = ' || X'7D'                                   
+                     || CHAR(SC1.MAN_BILL_DATE)   || X'7D'                      
+          || ' AND ORIG_SYSTEM_ID = ' || X'7D'                                  
+                          || SC1.ORIG_SYSTEM_ID  || X'7D'                       
+          || ' AND BAN = ' || X'7D' || SC1.BAN || X'7D'                         
+          || ' AND BILL_DATE = ' || X'7D'                                       
+                          || CHAR(SC1.BILL_DATE) || X'7D'                       
+          || ' AND WTN = ' || X'7D'|| SC1.WTN || X'7D'                          
+          || ' AND SERVICE_TYPE = ' || X'7D'|| 'MTN' || X'7D'                   
+          || ' AND GBR = ' || X'7D' || GBR% || X'7D'                            
+           AS TARGET_PARMS                                                      
+         ,SC1.CUST_ID_CD                                                        
+         ,CASE WHEN SC1.VOICE_USAGE    = 0 THEN X'60' || X'60'                  
+           ELSE CHAR(SC1.VOICE_USAGE)    || ' ' END VOICE_USAGE                 
+         ,CASE WHEN SC1.MSG_USAGE = 0 THEN X'60' || X'60'                       
+           ELSE CHAR(SC1.MSG_USAGE) || ' ' END MSG_USAGE                        
+         ,CASE WHEN SC1.DATA_USAGE   = '0' THEN X'60' || X'60'                  
+               WHEN SC1.DATA_USAGE = '*' THEN CHAR(SC1.DATA_USAGE)              
+           ELSE CHAR(SC1.DATA_USAGE) || SC1.KB_MB_GB END DATA_USAGE             
+         ,CASE WHEN SC1.VOICE_ROAMING     = 0 THEN X'60' || X'60'               
+           ELSE CHAR(SC1.VOICE_ROAMING)     END VOICE_ROAMING                   
+         ,CASE WHEN SC1.MSG_ROAMING = 0 THEN X'60' || X'60'                     
+           ELSE CHAR(SC1.MSG_ROAMING) || 'KB' END MSG_ROAMING                   
+         ,CASE WHEN SC1.DATA_ROAMING = 0 THEN X'60' || X'60'                    
+           ELSE CHAR(SC1.DATA_ROAMING) END DATA_ROAMING                         
+    FROM (                                                                      
+   SELECT IN1.MAN                                                               
+         ,IN1.MAN_BILL_DATE                                                     
+         ,IN1.ORIG_SYSTEM_ID                                                    
+         ,IN1.BAN                                                               
+         ,IN1.BILL_DATE                                                         
+         ,IN1.WTN                                                               
+         ,IN1.CUST_ID_CD                                                        
+         ,IN1.VOICE_USAGE                                                       
+         ,IN1.MSG_USAGE                                                         
+         ,CASE WHEN IN1.DATA_USAGE_DIS_PROP = '1'                               
+               THEN '*'                                                         
+               ELSE CHAR(IN1.DATA_USAGE)                                        
+               END DATA_USAGE                                                   
+         ,IN1.VOICE_ROAMING                                                     
+         ,IN1.MSG_ROAMING                                                       
+         ,IN1.DATA_ROAMING                                                      
+         ,IN1.KB_MB_GB                                                          
+     FROM (                                                                     
+         SELECT V50S.MAN                                                        
+               ,V50S.MAN_BILL_DATE                                              
+               ,V50S.ORIG_SYSTEM_ID                                             
+               ,V50S.MAN BAN                                                    
+               ,V50S.MAN_BILL_DATE BILL_DATE                                    
+               ,V50S.WORKING_TEL_NBR AS WTN                                     
+               ,SUBSTR(V50S.USER_NAME,1,28) CUST_ID_CD                          
+               ,INTEGER(V50S.USG_COL1) VOICE_USAGE                              
+               ,INTEGER(V50S.USG_COL2) MSG_USAGE                                
+--             ,INTEGER(V50S.USG_COL3) IN_USE                                   
+               ,INTEGER(V50S.USG_COL4) VOICE_ROAMING                            
+               ,INTEGER(V50S.USG_COL5) MSG_ROAMING                              
+               ,INTEGER(V50S.USG_COL6) DATA_ROAMING                             
+               ,INTEGER(CASE WHEN WTX.DATA_USAGE_KB <> 0                        
+                    THEN WTX.DATA_USAGE_KB                                      
+                   WHEN WTX.DATA_USAGE_MB <> 0                                  
+                    THEN WTX.DATA_USAGE_MB                                      
+                    ELSE WTX.DATA_USAGE_GB                                      
+                 END) DATA_USAGE                                                
+               ,CASE WHEN WTX.DATA_USAGE_KB <> 0 THEN 'KB'                      
+                     WHEN WTX.DATA_USAGE_MB <> 0 THEN 'MB'                      
+                     ELSE 'GB'                                                  
+                 END KB_MB_GB                                                   
+               ,V50S.DATA_USAGE_DIS_PROP                                        
+         FROM DESCRIPTION2~ STG                                                 
+        INNER JOIN VZ450_VMT50200_T V50S                                        
+           ON STG.MAN = V50S.MAN                                                
+          AND STG.MAN_BILL_DATE = V50S.MAN_BILL_DATE                            
+          AND STG.ORIG_SYSTEM_ID = V50S.ORIG_SYSTEM_ID                          
+          AND STG.WTN_CKT_CLI = V50S.WORKING_TEL_NBR                            
+        INNER JOIN WTN_T WTX                                                    
+          ON STG.BAN = WTX.BAN                                                  
+         AND STG.BILL_DATE = WTX.BILL_DATE                                      
+         AND STG.ORIG_SYSTEM_ID = WTX.ORIG_SYSTEM_ID                            
+         AND STG.WTN_CKT_CLI = WTX.WORKING_TEL_NBR                              
+       WHERE STG.REPORT_ID_TS = ?                                               
+         AND V50S.CHARGE_CD = '0100'                                            
+          ) IN1                                                                 
+         ) SC1                                                                  
+  WFILTER = ?                                                                   

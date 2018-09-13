@@ -1,0 +1,79 @@
+/*REXX PAPERMET:CREATE PAPER Free metrics ftp cards   */                00010000
+ARG VZID HIGHLVL MMMYEAR CYCLE                                          00020000
+/*                                                                      00030000
+X = OUTTRAP(DSN.)                                                       00040000
+*/                                                                      00050000
+MMM = SUBSTR(MMMYEAR,1,3)                                               00060000
+YYYY = SUBSTR(MMMYEAR,4,4)                                              00070000
+SELECT                                                                  00080000
+  WHEN MMM = 'JAN' THEN MM = '01'                                       00090000
+  WHEN MMM = 'FEB' THEN MM = '02'                                       00100000
+  WHEN MMM = 'MAR' THEN MM = '03'                                       00110000
+  WHEN MMM = 'APR' THEN MM = '04'                                       00120000
+  WHEN MMM = 'MAY' THEN MM = '05'                                       00130000
+  WHEN MMM = 'JUN' THEN MM = '06'                                       00140000
+  WHEN MMM = 'JUL' THEN MM = '07'                                       00150000
+  WHEN MMM = 'AUG' THEN MM = '08'                                       00160000
+  WHEN MMM = 'SEP' THEN MM = '09'                                       00170000
+  WHEN MMM = 'OCT' THEN MM = '10'                                       00180000
+  WHEN MMM = 'NOV' THEN MM = '11'                                       00190000
+  WHEN MMM = 'DEC' THEN MM = '12'                                       00200000
+  OTHERWISE MM = 'XX'                                                   00210000
+END                                                                     00220000
+SELECT                                                                  00230000
+  WHEN MMM = 'JAN' THEN MM2 = '02'                                      00240000
+  WHEN MMM = 'FEB' THEN MM2 = '03'                                      00250000
+  WHEN MMM = 'MAR' THEN MM2 = '04'                                      00260000
+  WHEN MMM = 'APR' THEN MM2 = '05'                                      00270000
+  WHEN MMM = 'MAY' THEN MM2 = '06'                                      00280000
+  WHEN MMM = 'JUN' THEN MM2 = '07'                                      00290000
+  WHEN MMM = 'JUL' THEN MM2 = '08'                                      00300000
+  WHEN MMM = 'AUG' THEN MM2 = '09'                                      00310000
+  WHEN MMM = 'SEP' THEN MM2 = '10'                                      00320000
+  WHEN MMM = 'OCT' THEN MM2 = '11'                                      00330000
+  WHEN MMM = 'NOV' THEN MM2 = '12'                                      00340000
+  WHEN MMM = 'DEC' THEN MM2 = '01'                                      00350000
+  OTHERWISE MM2 = 'XX'                                                  00360000
+END                                                                     00370000
+YYYY2 = YYYY                                                            00380000
+IF MMM = 'DEC' THEN YYYY2 = YYYY + 1                                    00390000
+LODATE = YYYY"-"MM"-01"                                                 00400000
+HIDATE = YYYY2"-"MM2"-01"                                               00410000
+                                                                        00420000
+XDATE = DATE('S')                                                       00430000
+XTIME = TIME(LONG)                                                      00440000
+DTIME = SUBSTR(XTIME,1,2) || SUBSTR(XTIME,4,2) || SUBSTR(XTIME,7,2)     00450000
+YTIME = SUBSTR(XTIME,10,6)                                              00460000
+TSTAMP = XDATE || DTIME || YTIME                                        00470000
+                                                                        00480000
+dsname1=highlvl||'.bmgpmet.metcom.'||cycle                              00481000
+file1='944687.'||vzid||'.'||tstamp||'.PAPER_METCOM_'||mmmyear,          00481100
+      ||'.BILRPT.csv'                                                   00481200
+queue " PUT '"dsname1"' + "                                             00482000
+queue "     "file1                                                      00482101
+                                                                        00483000
+dsname2=highlvl||'.bmgpmet.metoth.'||cycle                              00484000
+file2='944687.'||vzid||'.'||tstamp||'.PAPER_METOTH_'||mmmyear,          00485000
+      ||'.BILRPT.csv'                                                   00486000
+queue " PUT '"dsname2"' + "                                             00487000
+queue "     "file2                                                      00488001
+                                                                        00489000
+dsname3=highlvl||'.bmgpmet.metrpt.'||cycle                              00490000
+file3='944687.'||vzid||'.'||tstamp||'.PAPER_METRPT_'||mmmyear,          00500000
+      ||'.BILRPT.csv'                                                   00510000
+queue " PUT '"dsname3"' + "                                             00520000
+queue "     "file3                                                      00530001
+                                                                        00530100
+dsname4=highlvl||'.bmgpmet.metsys.'||cycle                              00530200
+file4='944687.'||vzid||'.'||tstamp||'.PAPER_METSYS_'||mmmyear,          00530300
+      ||'.BILRPT.csv'                                                   00530400
+queue " PUT '"dsname4"' + "                                             00530500
+queue "     "file4                                                      00530601
+                                                                        00531000
+dsname5=highlvl||'.bmgpmet.mets01.'||cycle                              00532000
+file5='944687.'||vzid||'.'||tstamp||'.PAPER_METS01_'||mmmyear,          00533000
+      ||'.BILRPT.csv'                                                   00534000
+queue " PUT '"dsname5"' + "                                             00535000
+queue "     "file5                                                      00536001
+                                                                        00537000
+RETURN 0                                                                00540000
